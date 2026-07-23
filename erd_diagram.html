@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>TrustBridge — Chen Notation ERD</title>
+    <title>ShohojRin — Chen Notation ERD</title>
     <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -18,13 +18,13 @@
 <body>
 
 <div id="sidebar">
-    <h3>TrustBridge ERD</h3>
+    <h3>ShohojRin ERD</h3>
     <p style="font-size: 12px; color: #666; margin-top:-10px;">
         Layout freezes after generation. Drag nodes to adjust.
     </p>
     <textarea id="dbmlInput" placeholder="Paste your DBML here...">
 // ============================================================
-// TRUSTBRIDGE — STRICT CHEN NOTATION ERD
+// ShohojRin — STRICT CHEN NOTATION ERD
 // Entities = boxes (name only) | Attributes = ovals (outside box)
 // Relationships = diamonds | Derived from SCHEMA_GUIDE.md + db.sql
 // FK columns are represented by relationship diamonds below,
@@ -323,6 +323,7 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
     <button onclick="parseAndDraw()">Generate Diagram</button>
     <button onclick="exportERD()" style="background-color: #28a745; margin-top: 10px;">Export as PNG</button>
     <button onclick="exportHighResPDF()" style="background-color: #dc3545; margin-top: 10px;">Export Hi-Res PDF</button>
+    <button onclick="exportHighResSVG()" style="background-color: #fd7e14; margin-top: 10px;">Export Hi-Res SVG</button>
     <div style="margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px;">
         <strong>Project Management:</strong><br>
         <button onclick="saveProject()" style="background-color: #17a2b8; margin-top: 5px;">💾 Save Project (JSON)</button>
@@ -350,6 +351,14 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
 
 <script>
     let network = null;
+
+    // Helper for accurate text measurement using Canvas API
+    const textCanvas = document.createElement('canvas');
+    const textCtx = textCanvas.getContext('2d');
+    function measureTextWidth(text, font) {
+        textCtx.font = font;
+        return textCtx.measureText(text).width;
+    }
 
     function parseAndDraw() {
         const input = document.getElementById('dbmlInput').value;
@@ -440,7 +449,11 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
                 id: id, 
                 image: entitySvg, 
                 shape: 'image', 
-                hiddenLabel: name 
+                hiddenLabel: name,
+                // Store semantic data for true SVG export
+                erdType: 'entity',
+                labelName: name,
+                isWeak: t.isWeak
             });
 
             // Generate Attribute Ovals (one per column) connected by a plain line
@@ -451,7 +464,13 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
                     id: attrId,
                     image: attrSvg,
                     shape: 'image',
-                    hiddenLabel: `${name}.${col.name}`
+                    hiddenLabel: `${name}.${col.name}`,
+                    erdType: 'attribute',
+                    labelName: col.name,
+                    isPk: col.isPk,
+                    isDiscriminator: col.isDiscriminator,
+                    isMultivalued: col.isMultivalued,
+                    isDerived: col.isDerived
                 });
                 edges.push({
                     from: attrId, to: id,
@@ -514,7 +533,10 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
                         id: relId, 
                         shape: 'image', 
                         image: svgDiamond,
-                        hiddenLabel: uniqueSig // Store signature for position matching
+                        hiddenLabel: uniqueSig, // Store signature for position matching
+                        erdType: 'relationship',
+                        labelName: label,
+                        isIdentifying: isIdentifying
                     });
 
                     let arrowToT1 = op.includes('<');
@@ -579,7 +601,8 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
     function createEntitySVG(name, isWeak) {
         const paddingX = 22;
         const height = 50;
-        const width = Math.max(120, name.length * 11 + paddingX * 2);
+        const measuredWidth = measureTextWidth(name, "bold 14px sans-serif");
+        const width = Math.max(120, measuredWidth + paddingX * 2);
 
         const strokeColor = "#000"; const fillColor = "#E8F4F8"; const strokeWidth = 2;
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`;
@@ -595,8 +618,8 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
     // Multivalued: double (concentric) ellipse | Derived: dashed ellipse border
     function createAttributeSVG(name, isPk, isDiscriminator, isMultivalued, isDerived) {
         const fontSize = 12;
-        const textWidth = name.length * 7.2;
-        const width = Math.max(76, textWidth + 26);
+        const textWidth = measureTextWidth(name, "12px sans-serif");
+        const width = Math.max(76, textWidth + 30); // 15px padding each side
         const height = isMultivalued ? 46 : 38;
         const cx = width / 2, cy = height / 2;
         const rx = width / 2 - 3, ry = height / 2 - 3;
@@ -621,11 +644,13 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
     }
 
     function createRelationshipSVG(label, isIdentifying) {
-        const width = 100; const height = 60;
+        const measuredWidth = measureTextWidth(label, "11px sans-serif");
+        const width = Math.max(100, measuredWidth + 40); // ensure some padding around the diamond
+        const height = 60;
         const strokeColor = "#000"; const fillColor = "#FFF0F0";
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`;
-        svg += `<polygon points="50,2 98,30 50,58 2,30" style="fill:${fillColor};stroke:${strokeColor};stroke-width:2" />`;
-        if (isIdentifying) svg += `<polygon points="50,10 88,30 50,50 12,30" style="fill:none;stroke:${strokeColor};stroke-width:2" />`;
+        svg += `<polygon points="${width/2},2 ${width-2},30 ${width/2},58 2,30" style="fill:${fillColor};stroke:${strokeColor};stroke-width:2" />`;
+        if (isIdentifying) svg += `<polygon points="${width/2},10 ${width-12},30 ${width/2},50 12,30" style="fill:none;stroke:${strokeColor};stroke-width:2" />`;
         svg += `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="11">${label}</text>`;
         svg += `</svg>`;
         return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
@@ -640,7 +665,13 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
             physics: {
                 enabled: true, 
                 stabilization: { enabled: true, iterations: 2000 },
-                barnesHut: { gravitationalConstant: -2500, springLength: 130, springConstant: 0.03, avoidOverlap: 0.7 }
+                barnesHut: { 
+                    gravitationalConstant: -5000, // Stronger repulsion for space
+                    springLength: 250, // Longer springs
+                    springConstant: 0.02, // Weaker spring to allow stretch
+                    avoidOverlap: 1.0, // Maximize overlap avoidance
+                    centralGravity: 0.1
+                }
             },
             interaction: { dragNodes: true },
             edges: { smooth: { enabled: true, type: 'continuous', roundness: 0.5 } }
@@ -680,7 +711,7 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
         const canvas = document.querySelector('#network canvas');
         const link = document.createElement('a');
         link.href = canvas.toDataURL('image/png');
-        link.download = 'trustbridge_erd.png';
+        link.download = 'ShohojRin_erd.png';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -768,7 +799,7 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
                 const pdf = new jsPDF(orientation, 'px', [finalWidth, finalHeight]);
                 
                 pdf.addImage(imgData, 'JPEG', 0, 0, finalWidth, finalHeight);
-                pdf.save('trustbridge_erd.pdf');
+                pdf.save('ShohojRin_erd.pdf');
 
             } catch (e) {
                 console.error("Export failed:", e);
@@ -781,6 +812,119 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
                 network.redraw();
             }
         }, 1000); // 1 second delay
+    }
+
+    function exportHighResSVG() {
+        const nodeIds = network.body.data.nodes.getIds();
+        if (nodeIds.length === 0) {
+            alert("No nodes to export!");
+            return;
+        }
+
+        const positions = network.getPositions();
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+        nodeIds.forEach(id => {
+            const pos = positions[id];
+            if (!pos) return;
+            if (pos.x < minX) minX = pos.x;
+            if (pos.x > maxX) maxX = pos.x;
+            if (pos.y < minY) minY = pos.y;
+            if (pos.y > maxY) maxY = pos.y;
+        });
+
+        const pad = 150;
+        minX -= pad; minY -= pad;
+        maxX += pad; maxY += pad;
+        const width = maxX - minX;
+        const height = maxY - minY;
+
+        let svgData = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${minX} ${minY} ${width} ${height}">`;
+        
+        // 1. Background
+        svgData += `<rect x="${minX}" y="${minY}" width="${width}" height="${height}" fill="#f4f4f4" />`;
+
+        // 2. Edges
+        const edges = network.body.data.edges.get();
+        edges.forEach(edge => {
+            const from = positions[edge.from];
+            const to = positions[edge.to];
+            if (!from || !to) return;
+
+            let strokeWidth = edge.width || 1.5;
+            let strokeColor = 'black';
+            if (edge.color) {
+                if (typeof edge.color === 'string') strokeColor = edge.color;
+                else if (edge.color.color) strokeColor = edge.color.color;
+                if (edge.color.opacity === 0) return; 
+            }
+
+            // Draw line
+            svgData += `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" stroke="${strokeColor}" stroke-width="${strokeWidth}" />`;
+
+            // Draw label background and text
+            if (edge.label) {
+                const midX = (from.x + to.x) / 2;
+                const midY = (from.y + to.y) / 2;
+                svgData += `<rect x="${midX - 10}" y="${midY - 12}" width="20" height="24" fill="white" />`;
+                svgData += `<text x="${midX}" y="${midY}" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-weight="bold" font-size="14" fill="black">${edge.label}</text>`;
+            }
+
+            // Draw Arrow (approximation)
+            if (edge.arrows && edge.arrows.to && edge.arrows.to.enabled && strokeColor !== 'white') {
+                const dx = to.x - from.x;
+                const dy = to.y - from.y;
+                const angle = Math.atan2(dy, dx);
+                // Node radius approx 45px
+                const radius = 50; 
+                const arrowX = to.x - Math.cos(angle) * radius;
+                const arrowY = to.y - Math.sin(angle) * radius;
+                const headlen = 12;
+                const a1 = angle - Math.PI / 6;
+                const a2 = angle + Math.PI / 6;
+                svgData += `<polygon points="${arrowX},${arrowY} ${arrowX - headlen * Math.cos(a1)},${arrowY - headlen * Math.sin(a1)} ${arrowX - headlen * Math.cos(a2)},${arrowY - headlen * Math.sin(a2)}" fill="black" />`;
+            }
+        });
+
+        // 3. Nodes
+        const nodes = network.body.data.nodes.get();
+        nodes.forEach(node => {
+            const pos = positions[node.id];
+            if (!pos) return;
+            
+            // Extract the actual SVG from data URI
+            if (node.image && node.image.startsWith('data:image/svg+xml')) {
+                let innerSvg = decodeURIComponent(node.image.replace("data:image/svg+xml;charset=utf-8,", ""));
+                
+                // parse width/height to offset position (Vis.js positions are center)
+                const wMatch = innerSvg.match(/width="([0-9.]+)"/);
+                const hMatch = innerSvg.match(/height="([0-9.]+)"/);
+                const w = wMatch ? parseFloat(wMatch[1]) : 100;
+                const h = hMatch ? parseFloat(hMatch[1]) : 50;
+                
+                const svgX = pos.x - w/2;
+                const svgY = pos.y - h/2;
+
+                // Strip the outermost <svg> tags and replace with <g transform="...">
+                innerSvg = innerSvg.replace(/<svg[^>]*>/, `<g transform="translate(${svgX}, ${svgY})">`);
+                innerSvg = innerSvg.replace(/<\/svg>$/, `</g>`);
+                
+                svgData += innerSvg;
+            }
+        });
+
+        svgData += `</svg>`;
+
+        // Trigger download
+        const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "ShohojRin_erd.svg";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     }
 
     function saveProject() {
