@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>TrustBridge — Chen Notation ERD</title>
+    <title>TrustBridge — Strict Chen Notation ERD (CSE215 Lec 7 Aligned)</title>
     <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -20,16 +20,35 @@
 <div id="sidebar">
     <h3>TrustBridge ERD</h3>
     <p style="font-size: 12px; color: #666; margin-top:-10px;">
-        Layout freezes after generation. Drag nodes to adjust.
+        Strict Chen notation, aligned to CSE215 Lecture 7 (ER Diagrams):
+        entity sets are name-only rectangles, attributes are ovals with
+        keys underlined, relationships are diamonds that may carry their
+        own attributes, and multiplicity is shown only via arrowhead
+        ("one" side) vs. plain line ("many" side) — no participation
+        lines, no min/max labels. Layout freezes after generation. Drag
+        nodes to adjust.
     </p>
     <textarea id="dbmlInput" placeholder="Paste your DBML here...">
 // ============================================================
-// TRUSTBRIDGE — STRICT CHEN NOTATION ERD
+// TRUSTBRIDGE — STRICT CHEN NOTATION ERD (CSE215 Lecture 7 aligned)
 // Entities = boxes (name only) | Attributes = ovals (outside box)
 // Relationships = diamonds | Derived from SCHEMA_GUIDE.md + db.sql
 // FK columns are represented by relationship diamonds below,
 // so they are intentionally omitted from each entity's attribute list.
-// 21 entities / 29 relationships
+//
+// Multiplicity: shown ONLY via arrow ("one" side) vs. plain line
+// ("many" side), exactly as in the lecture's "Reading Multiplicity"
+// rule — no min/max labels, no total/partial participation lines
+// (that notation is not taught in this lecture, so it has been
+// removed from this diagram).
+//
+// Relationship attributes: a fact that only makes sense once the two
+// connected entities are fixed together belongs on the relationship,
+// not on either entity alone (Lecture, "When to Use a Relationship
+// Attribute"). Written as: // label {attr1, attr2}
+//
+// 21 entities / 29 relationships (2 relationships carry their own
+// attributes: reviews_request, reviews_flag)
 // ============================================================
 
 // ---------------- AUTHENTICATION ----------------
@@ -89,9 +108,11 @@ Table verification_requests {
   request_id uuid [pk]
   verification_type varchar
   status varchar
-  reviewer_notes text
   submitted_at timestamptz
-  reviewed_at timestamptz
+  // reviewer_notes and reviewed_at moved to the reviews_request
+  // relationship below — they only make sense once a reviewer is
+  // connected to this request, so per the lecture's rule of thumb
+  // (slide 57) they belong on the relationship, not the entity.
 }
 
 Table verification_documents {
@@ -233,9 +254,9 @@ Table fraud_flags {
   severity varchar
   description text
   status varchar
-  resolution_notes text
   flagged_at timestamptz
-  resolved_at timestamptz
+  // resolution_notes and resolved_at moved to the reviews_flag
+  // relationship below — same rule of thumb as reviews_request.
 }
 
 // ---------------- AUDIT ----------------
@@ -266,59 +287,65 @@ Table notifications {
 }
 
 // ============================================================
-// RELATIONSHIPS & CARDINALITY
-// [leftCard, rightCard] leftParticipation-rightParticipation label
-// arrow (< or >) = "one" side | plain (-) = many-to-many | <> = 1:1
+// RELATIONSHIPS & MULTIPLICITY (strict Chen — Lecture slides 26-31)
+// Ref: leftEntity op rightEntity // label {optional relationship attrs}
+// op reading: "<" arrow points to the LEFT entity  -> left is "one"
+//             ">" arrow points to the RIGHT entity -> right is "one"
+//             "<>" arrows on both sides            -> one-to-one
+//             "-"  no arrows either side            -> many-to-many
+// An arrowhead means "at most one"; a plain connector means "many".
+// No numeric labels, no participation lines — this lecture does not
+// teach that notation, so the diagram does not draw it.
 // ============================================================
 
 // AUTHENTICATION
-Ref: users.user_id < login_sessions.user_id // [1..1, 0..*] partial-total opens_session
+Ref: users.user_id < login_sessions.user_id // opens_session
 
 // USER INFORMATION
-Ref: institutions.institution_id < user_profiles.institution_id // [0..1, 0..*] partial-partial affiliated_with
-Ref: users.user_id <> user_profiles.user_id // [1..1, 0..1] partial-total has_profile
+Ref: institutions.institution_id < user_profiles.institution_id // affiliated_with
+Ref: users.user_id <> user_profiles.user_id // has_profile
 
 // VERIFICATION
-Ref: users.user_id < verification_requests.user_id // [1..1, 0..*] partial-total submits_verification
-Ref: users.user_id < verification_requests.reviewer_id // [0..1, 0..*] partial-partial reviews_request
-Ref: verification_requests.request_id < verification_documents.request_id // [1..1, 0..*] partial-total uploads_document
-Ref: users.user_id < guarantors.user_id // [1..1, 0..*] partial-total provides_guarantor
+Ref: users.user_id < verification_requests.user_id // submits_verification
+Ref: users.user_id < verification_requests.reviewer_id // reviews_request {reviewed_at, reviewer_notes}
+Ref: verification_requests.request_id < verification_documents.request_id // uploads_document
+Ref: users.user_id < guarantors.user_id // provides_guarantor
 
 // TRUST ENGINE
-Ref: users.user_id < trust_scores.user_id // [1..1, 0..*] partial-total accumulates_score
-Ref: trust_scores.score_id < trust_score_factors.score_id // [1..1, 0..*] total-total explains_score
+Ref: users.user_id < trust_scores.user_id // accumulates_score
+Ref: trust_scores.score_id < trust_score_factors.score_id // explains_score
 
 // LOAN MANAGEMENT
-Ref: users.user_id < loan_applications.user_id // [1..1, 0..*] partial-total submits_application
-Ref: funding_partners.partner_id < loan_applications.partner_id // [0..1, 0..*] partial-partial routed_to_partner
-Ref: trust_scores.score_id < loan_applications.trust_score_id // [0..1, 0..*] partial-partial snapshot_of_score
-Ref: loan_applications.application_id <> loan_offers.application_id // [1..1, 0..1] partial-total receives_offer
-Ref: funding_partners.partner_id < loan_offers.partner_id // [1..1, 0..*] partial-total extends_offer
-Ref: loan_applications.application_id <> loans.application_id // [1..1, 0..1] partial-total becomes_loan
-Ref: loan_offers.offer_id <> loans.offer_id // [1..1, 0..1] partial-total converts_to_loan
-Ref: users.user_id < loans.user_id // [1..1, 0..*] partial-total borrows
-Ref: funding_partners.partner_id < loans.partner_id // [1..1, 0..*] partial-total funds_loan
-Ref: loans.loan_id < loan_disbursements.loan_id // [1..1, 0..*] partial-total disburses
+Ref: users.user_id < loan_applications.user_id // submits_application
+Ref: funding_partners.partner_id < loan_applications.partner_id // routed_to_partner
+Ref: trust_scores.score_id < loan_applications.trust_score_id // snapshot_of_score
+Ref: loan_applications.application_id <> loan_offers.application_id // receives_offer
+Ref: funding_partners.partner_id < loan_offers.partner_id // extends_offer
+Ref: loan_applications.application_id <> loans.application_id // becomes_loan
+Ref: loan_offers.offer_id <> loans.offer_id // converts_to_loan
+Ref: users.user_id < loans.user_id // borrows
+Ref: funding_partners.partner_id < loans.partner_id // funds_loan
+Ref: loans.loan_id < loan_disbursements.loan_id // disburses
 
 // REPAYMENT
-Ref: loans.loan_id < repayment_schedules.loan_id // [1..1, 0..*] total-total generates_schedule
-Ref: repayment_schedules.schedule_id < repayments.schedule_id // [1..1, 0..*] partial-total records_payment
+Ref: loans.loan_id < repayment_schedules.loan_id // generates_schedule
+Ref: repayment_schedules.schedule_id < repayments.schedule_id // records_payment
 
 // PARTNER ENGINE
-Ref: funding_partners.partner_id < partner_rules.partner_id // [1..1, 0..*] partial-total defines_rule
-Ref: loan_applications.application_id < partner_decisions.application_id // [1..1, 0..*] partial-total decided_on
-Ref: funding_partners.partner_id < partner_decisions.partner_id // [1..1, 0..*] partial-total makes_decision
-Ref: users.user_id < partner_decisions.decided_by // [0..1, 0..*] partial-partial decided_by_reviewer
+Ref: funding_partners.partner_id < partner_rules.partner_id // defines_rule
+Ref: loan_applications.application_id < partner_decisions.application_id // decided_on
+Ref: funding_partners.partner_id < partner_decisions.partner_id // makes_decision
+Ref: users.user_id < partner_decisions.decided_by // decided_by_reviewer
 
 // FRAUD
-Ref: users.user_id < fraud_flags.user_id // [1..1, 0..*] partial-total flagged_for
-Ref: users.user_id < fraud_flags.reviewed_by // [0..1, 0..*] partial-partial reviews_flag
+Ref: users.user_id < fraud_flags.user_id // flagged_for
+Ref: users.user_id < fraud_flags.reviewed_by // reviews_flag {resolved_at, resolution_notes}
 
 // AUDIT
-Ref: users.user_id < audit_logs.user_id // [0..1, 0..*] partial-partial performs_action
+Ref: users.user_id < audit_logs.user_id // performs_action
 
 // NOTIFICATION
-Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receives_notification
+Ref: users.user_id < notifications.user_id // receives_notification
 </textarea>
     <button onclick="parseAndDraw()">Generate Diagram</button>
     <button onclick="exportERD()" style="background-color: #28a745; margin-top: 10px;">Export as PNG</button>
@@ -331,18 +358,19 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
     </div>
 
     <div class="legend">
-        <strong>Visual Rules:</strong><br>
-        • Strong Entity: Single Box (name only)<br>
-        • Weak Entity: Double Box<br>
+        <strong>Visual Rules (Lecture 7, ER Notation Summary):</strong><br>
+        • Entity set: Rectangle (name only)<br>
+        • Weak entity set: Double rectangle<br>
         • Attribute: Oval, linked to its entity<br>
-        • Multivalued Attribute: Double Oval<br>
-        • Derived Attribute: Dashed Oval<br>
-        • PK: Solid Underline (in oval)<br>
-        • Discriminator: Dashed Underline (in oval)<br>
-        • Strong Rel: Single Diamond<br>
-        • Identifying Rel: Double Diamond<br>
-        • Arrow ($\rightarrow$): 'One' Cardinality<br>
-        • Line (—): 'Many' Cardinality
+        • Key attribute: Underlined oval<br>
+        • Partial key (weak entity): Dashed-underlined oval<br>
+        • Relationship: Diamond<br>
+        • Relationship attribute: Oval linked to the diamond<br>
+        • Identifying relationship: Double diamond<br>
+        • Arrow on connector: "One" side of multiplicity<br>
+        • Plain connector: "Many" side of multiplicity<br>
+        <em>No participation lines, no min/max labels — not covered
+        in this lecture, so not drawn here.</em>
     </div>
 </div>
 
@@ -414,17 +442,14 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
                     if (colName) {
                         let lowerLine = line.toLowerCase();
                         let isPk = lowerLine.includes('[pk]') || lowerLine.includes('primary key');
-                        let isDiscriminator = lowerLine.includes("'discriminator'");
-                        
-                        let isMultivalued = lowerLine.includes("'multivalued'");
-                        let isDerived = lowerLine.includes("'derived'");
+                        // Partial key = dashed underline, used only for the
+                        // partial key of a weak entity set (Lecture slide 80).
+                        let isPartialKey = lowerLine.includes('[partial]');
 
                         tableData[currentTable].columns.push({
                             name: colName, 
                             isPk, 
-                            isDiscriminator, 
-                            isMultivalued, 
-                            isDerived
+                            isPartialKey
                         });
                     }
                 }
@@ -446,7 +471,7 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
             // Generate Attribute Ovals (one per column) connected by a plain line
             t.columns.forEach(col => {
                 const attrId = idCounter++;
-                const attrSvg = createAttributeSVG(col.name, col.isPk, col.isDiscriminator, col.isMultivalued, col.isDerived);
+                const attrSvg = createAttributeSVG(col.name, col.isPk, col.isPartialKey);
                 nodes.push({
                     id: attrId,
                     image: attrSvg,
@@ -462,7 +487,7 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
             });
         }
 
-        // --- Pass 2: Relationships ---
+        // --- Pass 2: Relationships (strict Chen — arrow = "one", plain = "many") ---
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
             
@@ -473,34 +498,25 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
                     const op = refMatch[2];
                     const t2Name = refMatch[3];
                     let comment = refMatch[4] || "";
-                    
-                    let label = "relates";
-                    let cardLeft = "";
-                    let cardRight = "";
 
-                    const cardMatch = comment.match(/\[(.*?),(.*?)\]/);
-                    
-                    if (cardMatch) {
-                        cardLeft = cardMatch[1].trim();
-                        cardRight = cardMatch[2].trim();
-                        comment = comment.replace(/\[.*?\]/, '');
-                    } else {
-                        if (op.includes('<')) cardLeft = "1"; else cardLeft = "N";
-                        if (op.includes('>')) cardRight = "1"; else cardRight = "N";
-                        if (op === '-') { cardLeft = "M"; cardRight = "N"; }
-                    }
+                    let label = "relates";
+                    let relAttrNames = [];
 
                     if (comment.includes('//')) {
                         let rawComment = comment.split('//')[1].trim();
-                        label = rawComment.replace(/(total|partial)-(total|partial)/gi, '').trim();
-                        if(!label) label = "relates";
-                    }
 
-                    let leftPart = 'partial';
-                    let rightPart = 'partial';
-                    if (comment.includes('total-total')) { leftPart = 'total'; rightPart = 'total'; }
-                    else if (comment.includes('total-partial')) { leftPart = 'total'; rightPart = 'partial'; }
-                    else if (comment.includes('partial-total')) { leftPart = 'partial'; rightPart = 'total'; }
+                        // Optional relationship attributes: // label {attr1, attr2}
+                        const attrBlockMatch = rawComment.match(/\{(.*?)\}/);
+                        if (attrBlockMatch) {
+                            relAttrNames = attrBlockMatch[1]
+                                .split(',')
+                                .map(s => s.trim())
+                                .filter(Boolean);
+                            rawComment = rawComment.replace(/\{.*?\}/, '').trim();
+                        }
+
+                        if (rawComment) label = rawComment;
+                    }
 
                     let isIdentifying = false;
                     if (lines[i+1] && lines[i+1].includes("'identifying'")) isIdentifying = true;
@@ -520,54 +536,45 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
                     let arrowToT1 = op.includes('<');
                     let arrowToT2 = op.includes('>');
 
-                    // Helper: Add Edge with Masking & Labels
-                    const addEdge = (from, to, hasArrow, participation, textLabel) => {
-                        const isTotal = (participation === 'total');
-                        const smoothConfig = { enabled: true, type: 'continuous', roundness: 0.5 };
-                        const fontConfig = { size: 14, color: 'black', background: 'white', strokeWidth: 0, align: 'horizontal' };
-
-                        if (isTotal) {
-                            // Layer 1: Base Edge (Thick Black)
-                            edges.push({
-                                from: from, to: to,
-                                width: 5, color: { color: 'black' },
-                                arrows: '', smooth: smoothConfig, arrowStrikethrough: false, label: '' 
-                            });
-
-                            // Layer 2: Mask Edge (Thin White)
-                            edges.push({
-                                from: from, to: to,
-                                width: 2, color: { color: 'white' },
-                                arrows: '', smooth: smoothConfig, arrowStrikethrough: false, label: textLabel, font: fontConfig
-                            });
-
-                            // Layer 3: Arrow Carrier (Invisible Line, Black Arrow)
-                            if (hasArrow) {
-                                edges.push({
-                                    from: from, to: to,
-                                    width: 1, color: { opacity: 0 }, 
-                                    arrows: { 
-                                        to: { enabled: true, scaleFactor: 1.0, type: 'arrow', color: '#000000' } 
-                                    },
-                                    smooth: smoothConfig, arrowStrikethrough: false, label: ''
-                                });
-                            }
-                        } else {
-                            // Single Line
-                            const edge = {
-                                from: from, to: to,
-                                width: 1.5, color: { color: 'black' },
-                                smooth: smoothConfig, arrowStrikethrough: false, label: textLabel, font: fontConfig
-                            };
-                            if (hasArrow) {
-                                edge.arrows = { to: { enabled: true, scaleFactor: 1.0, type: 'arrow' } };
-                            }
-                            edges.push(edge);
+                    // A relationship is drawn as a single plain line; an
+                    // arrowhead is added toward an entity set only when
+                    // that side is the "one" side (Lecture slide 26-28).
+                    // No cardinality text, no participation styling.
+                    const addEdge = (from, to, hasArrow) => {
+                        const edge = {
+                            from: from, to: to,
+                            width: 1.5, color: { color: 'black' },
+                            smooth: { enabled: true, type: 'continuous', roundness: 0.5 },
+                            arrowStrikethrough: false
+                        };
+                        if (hasArrow) {
+                            edge.arrows = { to: { enabled: true, scaleFactor: 1.0, type: 'arrow' } };
                         }
+                        edges.push(edge);
                     };
 
-                    addEdge(relId, tables[t1Name], arrowToT1, leftPart, cardLeft);
-                    addEdge(relId, tables[t2Name], arrowToT2, rightPart, cardRight);
+                    addEdge(relId, tables[t1Name], arrowToT1);
+                    addEdge(relId, tables[t2Name], arrowToT2);
+
+                    // Relationship attributes: ovals linked to the diamond,
+                    // not to either entity (Lecture slide 15, "Relationship
+                    // Attributes" — e.g. grade on enrolls).
+                    relAttrNames.forEach(attrName => {
+                        const attrId = idCounter++;
+                        const attrSvg = createAttributeSVG(attrName, false, false);
+                        nodes.push({
+                            id: attrId,
+                            image: attrSvg,
+                            shape: 'image',
+                            hiddenLabel: `${uniqueSig}.${attrName}`
+                        });
+                        edges.push({
+                            from: attrId, to: relId,
+                            width: 1.5, color: { color: '#555555' },
+                            arrows: '',
+                            smooth: { enabled: true, type: 'continuous', roundness: 0.4 }
+                        });
+                    });
                 }
             }
         }
@@ -590,30 +597,29 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
         return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
     }
 
-    // --- SVG Generator: Attributes (STRICT CHEN — ovals, connected to their entity) ---
-    // PK: solid underline | Discriminator (weak-entity partial key): dashed underline
-    // Multivalued: double (concentric) ellipse | Derived: dashed ellipse border
-    function createAttributeSVG(name, isPk, isDiscriminator, isMultivalued, isDerived) {
+    // --- SVG Generator: Attributes (STRICT CHEN — ovals) ---
+    // Per the lecture's ER Notation Summary, only two attribute markings
+    // are taught: a key attribute is a solid-underlined oval, and a weak
+    // entity's partial key is a dashed-underlined oval. Multivalued and
+    // derived attribute notation are not covered in this lecture, so they
+    // are intentionally not drawn.
+    function createAttributeSVG(name, isPk, isPartialKey) {
         const fontSize = 12;
         const textWidth = name.length * 7.2;
         const width = Math.max(76, textWidth + 26);
-        const height = isMultivalued ? 46 : 38;
+        const height = 38;
         const cx = width / 2, cy = height / 2;
         const rx = width / 2 - 3, ry = height / 2 - 3;
         const fillColor = "#FFF6D6";
         const strokeColor = "#000";
-        const dashAttr = isDerived ? ' stroke-dasharray="4,3"' : '';
 
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`;
-        svg += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" style="fill:${fillColor};stroke:${strokeColor};stroke-width:2"${dashAttr} />`;
-        if (isMultivalued) {
-            svg += `<ellipse cx="${cx}" cy="${cy}" rx="${rx-4}" ry="${ry-4}" style="fill:none;stroke:${strokeColor};stroke-width:1.5" />`;
-        }
+        svg += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" style="fill:${fillColor};stroke:${strokeColor};stroke-width:2" />`;
         svg += `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="${fontSize}">${name}</text>`;
 
         if (isPk) {
             svg += `<line x1="${cx - textWidth/2}" y1="${cy + 8}" x2="${cx + textWidth/2}" y2="${cy + 8}" style="stroke:black;stroke-width:1" />`;
-        } else if (isDiscriminator) {
+        } else if (isPartialKey) {
             svg += `<line x1="${cx - textWidth/2}" y1="${cy + 8}" x2="${cx + textWidth/2}" y2="${cy + 8}" style="stroke:black;stroke-width:1;stroke-dasharray:3,2" />`;
         }
         svg += `</svg>`;
@@ -621,12 +627,19 @@ Ref: users.user_id < notifications.user_id // [1..1, 0..*] partial-total receive
     }
 
     function createRelationshipSVG(label, isIdentifying) {
-        const width = 100; const height = 60;
+        const fontSize = 11;
+        const textWidth = label.length * 6.4;
+        const width = Math.max(100, textWidth + 34);
+        const height = Math.max(60, Math.round(width * 0.55));
+        const cx = width / 2, cy = height / 2;
         const strokeColor = "#000"; const fillColor = "#FFF0F0";
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`;
-        svg += `<polygon points="50,2 98,30 50,58 2,30" style="fill:${fillColor};stroke:${strokeColor};stroke-width:2" />`;
-        if (isIdentifying) svg += `<polygon points="50,10 88,30 50,50 12,30" style="fill:none;stroke:${strokeColor};stroke-width:2" />`;
-        svg += `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="11">${label}</text>`;
+        svg += `<polygon points="${cx},2 ${width-2},${cy} ${cx},${height-2} 2,${cy}" style="fill:${fillColor};stroke:${strokeColor};stroke-width:2" />`;
+        if (isIdentifying) {
+            const inset = 8;
+            svg += `<polygon points="${cx},${2+inset} ${width-2-inset},${cy} ${cx},${height-2-inset} ${2+inset},${cy}" style="fill:none;stroke:${strokeColor};stroke-width:2" />`;
+        }
+        svg += `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="${fontSize}">${label}</text>`;
         svg += `</svg>`;
         return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
     }
