@@ -3,9 +3,6 @@
 > **A Trust-Based Verification & Loan Orchestration Platform for
 > Inclusive Microcredit**
 
-> **Note:** *ShohojRin* is a placeholder name and may be changed in
-> the final implementation.
-
 ------------------------------------------------------------------------
 
 # Overview

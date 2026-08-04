@@ -1,8 +1,8 @@
 # SCHEMA_GUIDE.md
 
-# TrustBridge Database Design Guide
+# ShohojRin Database Design Guide
 
-> This document serves as the database design specification for TrustBridge.
+> This document serves as the database design specification for ShohojRin.
 >
 > It explains **why each entity exists**, **why it should be separated into its own table**, **its relationships**, and **how the final ERD should be derived**.
 >
