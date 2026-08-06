@@ -7,6 +7,7 @@ import { Card, CardBody, CardHeader } from '../components/Card';
 import { activeLoan, applications, transactions } from '../lib/mock-data';
 import { formatDate, formatPercent, formatTaka } from '../lib/format';
 import type { PageName, Transaction } from '../types';
+import { getDisplayName, useStoredUser } from '../lib/session';
 
 interface BorrowerDashboardProps {
   onNavigate: (page: PageName) => void;
@@ -47,17 +48,20 @@ function TransactionIcon({ type }: { type: Transaction['type'] }) {
 }
 
 export default function BorrowerDashboard({ onNavigate }: BorrowerDashboardProps) {
+  const { user } = useStoredUser();
   const now = new Date();
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const openApplications = applications.filter((a) => a.status === 'under-review' || a.status === 'info-required');
+  const userName = getDisplayName(user, 'Riya Ahmed');
+  const firstName = userName.split(' ')[0] ?? userName;
 
   return (
-    <AppLayout onNavigate={onNavigate} currentPage="borrower-dashboard" userType="borrower" userName="Riya Ahmed">
+    <AppLayout onNavigate={onNavigate} currentPage="borrower-dashboard" userType="borrower" userName={userName}>
       <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
         <header className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold text-navy">{greeting}, Riya</h1>
+            <h1 className="text-2xl font-semibold text-navy">{greeting}, {firstName}</h1>
             <p className="mt-0.5 text-sm text-stone-500">
               {now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>

@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Logo } from '../components/Logo';
 import { Button } from '../components/Button';
 import { TextInput, PasswordInput, Checkbox } from '../components/Input';
 import { Alert } from '../components/Alert';
 import type { PageName } from '../types';
+import { apiRequest } from '../lib/api';
+import { storeUser } from '../lib/session';
 
 type AuthMode = 'login' | 'register' | 'forgot';
 
@@ -16,6 +18,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [apiError, setApiError] = useState('');
 
   const [form, setForm] = useState({
     name: '', email: '', phone: '', password: '', confirm: '', remember: false
@@ -23,10 +26,11 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
 
   const update = (k: string, v: string | boolean) => setForm(f => ({ ...f, [k]: v }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
-    if (mode !== 'forgot' && !form.email && !form.phone) errs.email = 'Email or phone is required';
+    if (mode === 'login' && !form.email) errs.email = 'Email, phone, or admin ID is required';
+    if (mode === 'register' && !form.email) errs.email = 'Email address is required';
     if (mode !== 'forgot' && !form.password) errs.password = 'Password is required';
     if (mode === 'register') {
       if (!form.name) errs.name = 'Full name is required';
@@ -37,11 +41,42 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
     if (Object.keys(errs).length > 0) return;
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      if (mode === 'forgot') { setSuccess(true); return; }
+    setApiError('');
+
+    try {
+      if (mode === 'forgot') {
+        setSuccess(true);
+        return;
+      }
+
+      const payload = mode === 'register'
+        ? {
+            fullName: form.name.trim(),
+            email: form.email.trim(),
+            phone: form.phone.trim() || undefined,
+            password: form.password,
+          }
+        : {
+            identifier: form.email.trim(),
+            password: form.password,
+          };
+
+      const data = await apiRequest<{ user: unknown; accessToken: string; refreshToken: string }>(
+        mode === 'register' ? '/auth/register' : '/auth/login',
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        },
+      );
+
+      storeUser(data.user as never);
+
       onNavigate(mode === 'register' ? 'onboarding' : 'borrower-dashboard');
-    }, 1200);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -116,6 +151,12 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
             </Alert>
           )}
 
+          {apiError && (
+            <Alert variant="error" title="Authentication failed" dismissible>
+              {apiError}
+            </Alert>
+          )}
+
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {mode === 'register' && (
               <TextInput
@@ -130,14 +171,14 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
             )}
 
             <TextInput
-              label="Email address"
-              type="email"
-              placeholder="you@example.com"
+              label={mode === 'login' ? 'Email, phone, or admin ID' : 'Email address'}
+              type={mode === 'login' ? 'text' : 'email'}
+              placeholder={mode === 'login' ? 'admin' : 'you@example.com'}
               value={form.email}
               onChange={e => update('email', e.target.value)}
               error={errors.email}
               required
-              autoComplete="email"
+              autoComplete={mode === 'login' ? 'username' : 'email'}
             />
 
             {mode === 'register' && (

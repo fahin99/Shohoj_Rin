@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Logo } from './Logo';
 import { Button } from './Button';
 import type { PageName } from '../types';
+import { clearStoredUser, getStoredUser, getDisplayName, useStoredUser } from '../lib/session';
+import { apiRequest } from '../lib/api';
 
 interface NavbarProps {
   onNavigate: (page: PageName) => void;
@@ -17,6 +19,22 @@ const navLinks: { label: string; href?: string; page?: PageName }[] = [
 
 export function Navbar({ onNavigate, transparent = false }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user } = useStoredUser();
+  const isAuthenticated = Boolean(user ?? getStoredUser());
+  const userName = getDisplayName(user ?? getStoredUser(), 'Account');
+
+  const handleLogout = async () => {
+    try {
+      await apiRequest('/auth/logout', { method: 'POST' });
+    } catch {
+      // Clear local state even if the network request fails; the SQL session
+      // may already be expired or unavailable.
+    } finally {
+      clearStoredUser();
+      window.dispatchEvent(new Event('storage'));
+      onNavigate('landing');
+    }
+  };
 
   return (
     <header
@@ -51,12 +69,29 @@ export function Navbar({ onNavigate, transparent = false }: NavbarProps) {
         </nav>
 
         <div className="hidden md:flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => onNavigate('auth')}>
-            Log in
-          </Button>
-          <Button variant="primary" size="sm" onClick={() => onNavigate('auth')}>
-            Get Started
-          </Button>
+          {isAuthenticated ? (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => onNavigate('borrower-dashboard')}>
+                Dashboard
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => { void handleLogout(); }}
+              >
+                Log out {userName !== 'Account' ? `(${userName})` : ''}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => onNavigate('auth')}>
+                Log in
+              </Button>
+              <Button variant="primary" size="sm" onClick={() => onNavigate('auth')}>
+                Get Started
+              </Button>
+            </>
+          )}
         </div>
 
         <button
@@ -108,12 +143,33 @@ export function Navbar({ onNavigate, transparent = false }: NavbarProps) {
             ),
           )}
           <div className="mt-3 flex gap-2 border-t border-stone-200 pt-3">
-            <Button variant="secondary" size="sm" fullWidth onClick={() => { setMenuOpen(false); onNavigate('auth'); }}>
-              Log in
-            </Button>
-            <Button variant="primary" size="sm" fullWidth onClick={() => { setMenuOpen(false); onNavigate('auth'); }}>
-              Get Started
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <Button variant="secondary" size="sm" fullWidth onClick={() => { setMenuOpen(false); onNavigate('borrower-dashboard'); }}>
+                  Dashboard
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  fullWidth
+                  onClick={() => {
+                    setMenuOpen(false);
+                    void handleLogout();
+                  }}
+                >
+                  Log out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="secondary" size="sm" fullWidth onClick={() => { setMenuOpen(false); onNavigate('auth'); }}>
+                  Log in
+                </Button>
+                <Button variant="primary" size="sm" fullWidth onClick={() => { setMenuOpen(false); onNavigate('auth'); }}>
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
         </nav>
       )}

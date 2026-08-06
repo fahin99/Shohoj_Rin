@@ -9,6 +9,7 @@ import { Tabs, TabPanel } from '../components/Tabs';
 import { Alert } from '../components/Alert';
 import { formatTaka, formatDate } from '../lib/format';
 import type { PageName } from '../types';
+import { getDisplayName, useStoredUser } from '../lib/session';
 
 interface Props {
   onNavigate: (page: PageName) => void;
@@ -45,9 +46,11 @@ const providers = [
 ];
 
 export default function AdminDashboard({ onNavigate }: Props) {
+  const { user } = useStoredUser();
   const [queue, setQueue] = useState<PendingApplication[]>(initialQueue);
   const [confirmation, setConfirmation] = useState<{ type: 'approved' | 'rejected'; applicant: string } | null>(null);
   const [tab, setTab] = useState('applications');
+  const userName = getDisplayName(user, 'Admin — Nusrat Jahan');
 
   const handleDecision = (id: string, decision: 'approved' | 'rejected') => {
     const app = queue.find((q) => q.id === id);
@@ -91,7 +94,7 @@ export default function AdminDashboard({ onNavigate }: Props) {
   const pendingCount = queue.filter((q) => q.status === 'pending').length;
 
   return (
-    <AppLayout onNavigate={onNavigate} currentPage="admin" userType="admin" userName="Admin — Nusrat Jahan">
+    <AppLayout onNavigate={onNavigate} currentPage="admin" userType="admin" userName={userName}>
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
         <PageHeader
           eyebrow="Platform overview"

@@ -29,6 +29,13 @@ app.get("/", (_req, res) => {
     name: "ShohojRin Microcredit API Server",
     version: "1.0.0",
     healthCheck: "/api/v1/health",
+    auth: {
+      register: "/api/v1/auth/register",
+      login: "/api/v1/auth/login",
+      refresh: "/api/v1/auth/refresh",
+      logout: "/api/v1/auth/logout",
+      me: "/api/v1/auth/me",
+    },
     frontendUrl: "http://localhost:8080",
   });
 });

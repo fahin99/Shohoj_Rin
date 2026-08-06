@@ -8,6 +8,7 @@ import { Button } from '../components/Button';
 import { ProgressBar } from '../components/Progress';
 import { formatTaka, formatPercent } from '../lib/format';
 import type { PageName, LoanStatus } from '../types';
+import { getDisplayName, useStoredUser } from '../lib/session';
 
 interface Props {
   onNavigate: (page: PageName) => void;
@@ -64,7 +65,10 @@ const riskBreakdown = [
 ];
 
 export default function LenderDashboard({ onNavigate }: Props) {
+  const { user } = useStoredUser();
   const [funded, setFunded] = useState<Set<string>>(new Set());
+  const userName = getDisplayName(user, 'Tanvir Hossain');
+  const firstName = userName.split(' ')[0] ?? userName;
 
   const columns: Column<FundedLoan>[] = [
     { key: 'borrower', header: 'Borrower', render: (r) => <span className="font-medium">{r.borrowerAlias}</span> },
@@ -79,11 +83,11 @@ export default function LenderDashboard({ onNavigate }: Props) {
   const maxDeployed = Math.max(...monthlyPerformance.map((m) => m.deployed));
 
   return (
-    <AppLayout onNavigate={onNavigate} currentPage="lender-dashboard" userType="lender" userName="Tanvir Hossain">
+    <AppLayout onNavigate={onNavigate} currentPage="lender-dashboard" userType="lender" userName={userName}>
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
         <PageHeader
           eyebrow="Lender portfolio"
-          title="Welcome back, Tanvir"
+          title={`Welcome back, ${firstName}`}
           description="Track your deployed capital, funded loans, and new funding opportunities."
           actions={<Button variant="primary" size="sm" onClick={() => onNavigate('loan-marketplace')}>Find opportunities</Button>}
         />
