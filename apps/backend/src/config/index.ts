@@ -15,6 +15,6 @@ export const config = {
     refreshExpiresIn: "7d",
   },
   database: {
-    url: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/shohoj_rin_db",
+    url: process.env.DATABASE_URL || "postgresql://postgres:2405012@localhost:5432/shohoj_rin_db",
   },
 } as const;
