@@ -1,3 +1,4 @@
+import { redirect } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
 export interface StoredUserProfile {
@@ -84,4 +85,17 @@ export function getDisplayName(user: StoredUserProfile | null, fallback: string)
   }
 
   return fallback;
+}
+
+/**
+ * Call this inside a route's `beforeLoad` to require authentication.
+ * Throws a redirect to /auth when no user session is found in localStorage.
+ * TanStack Router catches the thrown redirect automatically.
+ */
+export function requireAuth() {
+  const user = readStoredUser();
+  if (!user) {
+    throw redirect({ to: '/auth' });
+  }
+  return { user };
 }

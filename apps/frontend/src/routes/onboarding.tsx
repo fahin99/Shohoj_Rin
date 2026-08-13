@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import OnboardingPage from "../pages/OnboardingPage";
 import { useAppNavigate } from "../lib/navigation";
+import { requireAuth } from "../lib/session";
 
 export const Route = createFileRoute("/onboarding")({
+  beforeLoad: () => requireAuth(),
   head: () => ({
     meta: [
       { title: "Set up your Shohoj_Rin profile" },

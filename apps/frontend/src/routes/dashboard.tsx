@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import BorrowerDashboard from "../pages/BorrowerDashboard";
 import { useAppNavigate } from "../lib/navigation";
+import { requireAuth } from "../lib/session";
 
 export const Route = createFileRoute("/dashboard")({
+  beforeLoad: () => requireAuth(),
   head: () => ({
     meta: [
       { title: "Borrower dashboard — Shohoj_Rin" },

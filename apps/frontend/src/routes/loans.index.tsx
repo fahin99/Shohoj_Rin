@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import LoanMarketplace from "../pages/LoanMarketplace";
 import { useAppNavigate } from "../lib/navigation";
+import { requireAuth } from "../lib/session";
 
 export const Route = createFileRoute("/loans/")({
+  beforeLoad: () => requireAuth(),
   head: () => ({
     meta: [
       { title: "Loan marketplace — compare loans clearly" },

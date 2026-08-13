@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import RepaymentPage from "../pages/RepaymentPage";
 import { useAppNavigate } from "../lib/navigation";
+import { requireAuth } from "../lib/session";
 
 export const Route = createFileRoute("/repayment")({
+  beforeLoad: () => requireAuth(),
   head: () => ({
     meta: [
       { title: "Make a repayment — Shohoj_Rin" },

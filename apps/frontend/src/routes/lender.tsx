@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import LenderDashboard from "../pages/LenderDashboard";
 import { useAppNavigate } from "../lib/navigation";
+import { requireAuth } from "../lib/session";
 
 export const Route = createFileRoute("/lender")({
+  beforeLoad: () => requireAuth(),
   head: () => ({
     meta: [
       { title: "Lender portfolio — Shohoj_Rin" },

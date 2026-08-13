@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import FinancialEducation from "../pages/FinancialEducation";
 import { useAppNavigate } from "../lib/navigation";
+import { requireAuth } from "../lib/session";
 
 export const Route = createFileRoute("/learn")({
+  beforeLoad: () => requireAuth(),
   head: () => ({
     meta: [
       { title: "Financial education — learn before you borrow" },

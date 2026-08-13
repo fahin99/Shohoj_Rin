@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import AdminDashboard from "../pages/AdminDashboard";
 import { useAppNavigate } from "../lib/navigation";
+import { requireAuth } from "../lib/session";
 
 export const Route = createFileRoute("/admin")({
+  beforeLoad: () => requireAuth(),
   head: () => ({
     meta: [
       { title: "Admin console — Shohoj_Rin" },

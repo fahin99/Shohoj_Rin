@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import SystemStates from "../pages/SystemStates";
 import { useAppNavigate } from "../lib/navigation";
+import { requireAuth } from "../lib/session";
 
 export const Route = createFileRoute("/system-states")({
+  beforeLoad: () => requireAuth(),
   head: () => ({
     meta: [
       { title: "System states reference — Shohoj_Rin" },

@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import ActiveLoanDetails from "../pages/ActiveLoanDetails";
 import { useAppNavigate } from "../lib/navigation";
+import { requireAuth } from "../lib/session";
 
 export const Route = createFileRoute("/my-loans")({
+  beforeLoad: () => requireAuth(),
   head: () => ({
     meta: [
       { title: "My active loan — Shohoj_Rin" },
