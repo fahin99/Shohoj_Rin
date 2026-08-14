@@ -20,7 +20,7 @@ export function Logo({ size = 'md', variant = 'default', onClick }: LogoProps) {
       onClick={onClick}
       className="inline-flex min-w-0 cursor-pointer select-none items-center gap-2.5"
       type="button"
-      aria-label="Shohoj_Rin home"
+      aria-label="Shohoj Rin home"
     >
       <svg
         width={s.mark}
@@ -45,7 +45,7 @@ export function Logo({ size = 'md', variant = 'default', onClick }: LogoProps) {
         className={`font-semibold ${s.text} tracking-tight`}
         style={{ color: textColor }}
       >
-        Shohoj<span style={{ color: accentColor }}>_Rin</span>
+        Shohoj <span style={{ color: accentColor }}>Rin</span>
       </span>
     </button>
   );

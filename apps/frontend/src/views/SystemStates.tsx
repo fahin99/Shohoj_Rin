@@ -37,7 +37,7 @@ export default function SystemStates({ onNavigate }: Props) {
         <PageHeader
           eyebrow="Design system"
           title="System states reference"
-          description="A gallery of loading, empty, error, success, and component states used across Shohoj_Rin."
+          description="A gallery of loading, empty, error, success, and component states used across Shohoj Rin."
         />
 
         {/* Loading states */}

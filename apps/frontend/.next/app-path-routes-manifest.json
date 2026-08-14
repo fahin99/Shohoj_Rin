@@ -1,18 +1,18 @@
 {
   "/sitemap.xml/route": "/sitemap.xml",
   "/_not-found/page": "/_not-found",
-  "/admin/page": "/admin",
   "/applications/page": "/applications",
   "/auth/page": "/auth",
-  "/learn/page": "/learn",
+  "/admin/page": "/admin",
+  "/loans/details/page": "/loans/details",
   "/dashboard/page": "/dashboard",
+  "/apply/page": "/apply",
   "/lender/page": "/lender",
+  "/learn/page": "/learn",
+  "/repayment/page": "/repayment",
+  "/my-loans/page": "/my-loans",
   "/loans/page": "/loans",
   "/onboarding/page": "/onboarding",
-  "/apply/page": "/apply",
-  "/loans/details/page": "/loans/details",
-  "/my-loans/page": "/my-loans",
-  "/repayment/page": "/repayment",
-  "/system-states/page": "/system-states",
-  "/page": "/"
+  "/page": "/",
+  "/system-states/page": "/system-states"
 }

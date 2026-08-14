@@ -108,7 +108,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
             ))}
           </div>
         </div>
-        <p className="text-xs text-stone-600">© 2025 Shohoj_Rin Technologies Ltd. BFIU Registered.</p>
+        <p className="text-xs text-stone-600">© 2025 Shohoj Rin Technologies Ltd. BFIU Registered.</p>
       </div>
 
       {/* Right: form panel */}

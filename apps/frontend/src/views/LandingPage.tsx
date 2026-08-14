@@ -83,7 +83,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
             <em className="not-italic text-teal">simpler.</em>
           </h1>
           <p className="text-lg text-stone-500 leading-relaxed max-w-lg mb-8">
-            Discover loans that fit your life, understand every term clearly, and manage your repayments without stress. Shohoj_Rin is built for first-time borrowers.
+            Discover loans that fit your life, understand every term clearly, and manage your repayments without stress. Shohoj Rin is built for first-time borrowers.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Button variant="primary" size="lg" onClick={() => onNavigate('auth')}>
@@ -157,7 +157,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-16">
           <div className="text-center mb-12">
             <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">Simple by design</p>
-            <h2 className="font-display text-4xl text-navy">How Shohoj_Rin works</h2>
+            <h2 className="font-display text-4xl text-navy">How Shohoj Rin works</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {howItWorks.map((item) => (
@@ -240,7 +240,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
       {/* Trust section */}
       <section className="max-w-6xl mx-auto px-4 md:px-6 py-16">
         <div className="text-center mb-10">
-          <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">Why Shohoj_Rin</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">Why Shohoj Rin</p>
           <h2 className="font-display text-4xl text-navy mb-3">Built on trust</h2>
           <p className="text-stone-500 max-w-lg mx-auto">
             We designed every part of this platform so you always know exactly where you stand financially.
@@ -269,7 +269,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               Ready to take<br />control of your finances?
             </h2>
             <p className="text-stone-400 max-w-md leading-relaxed">
-              Join over 50,000 people who have used Shohoj_Rin to find the right loan and manage their repayments clearly.
+              Join over 50,000 people who have used Shohoj Rin to find the right loan and manage their repayments clearly.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 shrink-0">

@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * ── Shohoj_Rin brand layer ──────────────────────────────────────────────
+ * ── Shohoj Rin brand layer ──────────────────────────────────────────────
  * Trust-first fintech with minimal neubrutalist personality.
  * Typography: Bricolage Grotesque (display) / IBM Plex Sans (UI + body) /
  * IBM Plex Mono (financial figures, tabular numerals).
@@ -185,7 +185,7 @@
   }
 }
 
-/* ── Shohoj_Rin typography scale ───────────────────────────────────────── */
+/* ── Shohoj Rin typography scale ───────────────────────────────────────── */
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;

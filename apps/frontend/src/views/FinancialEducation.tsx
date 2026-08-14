@@ -27,9 +27,9 @@ const glossary = [
 
 const faqs = [
   { q: 'How is my interest rate decided?', a: 'Your rate depends on the loan product, requested amount, tenure, and your credit history. Shorter tenures and smaller amounts often carry lower rates.' },
-  { q: 'Can I repay my loan early?', a: 'Most Shohoj_Rin partner products allow early repayment. Check the specific loan\u2019s terms for any prepayment charges before applying.' },
+  { q: 'Can I repay my loan early?', a: 'Most Shohoj Rin partner products allow early repayment. Check the specific loan\u2019s terms for any prepayment charges before applying.' },
   { q: 'What happens if I miss a payment?', a: 'A short grace period usually applies before a late fee. Contact your lender early — many offer restructuring options rather than default.' },
-  { q: 'Do I need collateral for every loan?', a: 'No. Many personal, education, and emergency loans on Shohoj_Rin are collateral-free, though larger business loans may require security.' },
+  { q: 'Do I need collateral for every loan?', a: 'No. Many personal, education, and emergency loans on Shohoj Rin are collateral-free, though larger business loans may require security.' },
 ];
 
 export default function FinancialEducation({ onNavigate }: Props) {

@@ -25,12 +25,12 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Shohoj_Rin — Simple, transparent borrowing",
+  title: "Shohoj Rin — Simple, transparent borrowing",
   description:
-    "Shohoj_Rin helps first-time borrowers discover loans, understand every term, and manage repayments with total clarity.",
-  authors: [{ name: "Shohoj_Rin" }],
+    "Shohoj Rin helps first-time borrowers discover loans, understand every term, and manage repayments with total clarity.",
+  authors: [{ name: "Shohoj Rin" }],
   openGraph: {
-    title: "Shohoj_Rin — Simple, transparent borrowing",
+    title: "Shohoj Rin — Simple, transparent borrowing",
     description:
       "Discover loans that fit your life, understand every term clearly, and manage repayments without stress.",
     type: "website",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/icon.svg",
   },
 };
 
