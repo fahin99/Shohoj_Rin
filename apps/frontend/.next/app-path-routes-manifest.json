@@ -1,0 +1,18 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/sitemap.xml/route": "/sitemap.xml",
+  "/applications/page": "/applications",
+  "/dashboard/page": "/dashboard",
+  "/admin/page": "/admin",
+  "/auth/page": "/auth",
+  "/apply/page": "/apply",
+  "/learn/page": "/learn",
+  "/lender/page": "/lender",
+  "/loans/details/page": "/loans/details",
+  "/loans/page": "/loans",
+  "/onboarding/page": "/onboarding",
+  "/my-loans/page": "/my-loans",
+  "/page": "/",
+  "/repayment/page": "/repayment",
+  "/system-states/page": "/system-states"
+}
