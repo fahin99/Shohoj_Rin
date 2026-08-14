@@ -36,6 +36,10 @@ app.get("/", (_req, res) => {
       logout: "/api/v1/auth/logout",
       me: "/api/v1/auth/me",
     },
+    repayments: {
+      schedules: "/api/v1/repayments/loans/:loanId/schedules",
+      payments: "/api/v1/repayments/payments",
+    },
     frontendUrl: "http://localhost:8080",
   });
 });

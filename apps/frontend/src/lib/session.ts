@@ -1,3 +1,4 @@
+import { redirect } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 

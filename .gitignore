@@ -34,4 +34,5 @@ out/
 *.sw?
 
 # Backend
-apps/backend/.env
+.env
+**/.env

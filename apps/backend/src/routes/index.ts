@@ -1,11 +1,13 @@
 import { Router } from "express";
 import healthRouter from "./health.js";
 import authRouter from "./auth.js";
+import repaymentsRouter from "./repayments.js";
 
 const router = Router();
 
 router.use("/health", healthRouter);
 router.use("/auth", authRouter);
+router.use("/repayments", repaymentsRouter);
 
 // Future route mounts:
 // router.use("/users", usersRouter);
@@ -14,7 +16,6 @@ router.use("/auth", authRouter);
 // router.use("/verification", verificationRouter);
 // router.use("/trust", trustRouter);
 // router.use("/partners", partnersRouter);
-// router.use("/repayments", repaymentsRouter);
 // router.use("/notifications", notificationsRouter);
 // router.use("/audit", auditRouter);
 // router.use("/admin", adminRouter);
