@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Logo } from './Logo';
 import { Button } from './Button';
 import type { PageName } from '../types';
@@ -19,8 +19,14 @@ const navLinks: { label: string; href?: string; page?: PageName }[] = [
 
 export function Navbar({ onNavigate, transparent = false }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const { user } = useStoredUser();
-  const isAuthenticated = Boolean(user ?? getStoredUser());
+  const isAuthenticated = mounted && Boolean(user ?? getStoredUser());
   const userName = getDisplayName(user ?? getStoredUser(), 'Account');
 
   const handleLogout = async () => {

@@ -100,6 +100,11 @@
       }
     },
     "outputFileTracingRoot": "D:\\Documents\\Projects\\ShohojRIn",
+    "allowedDevOrigins": [
+      "localhost:3000",
+      "192.168.56.1",
+      "192.168.56.1:3000"
+    ],
     "experimental": {
       "useSkewCookie": false,
       "cacheLife": {
