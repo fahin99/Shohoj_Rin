@@ -7,7 +7,7 @@ interface FooterProps {
 
 const footerLinks = {
   Product: ['Explore Loans', 'Repayment Calculator', 'Loan Tracker', 'For Lenders'],
-  Company: ['About Shohoj_Rin', 'How It Works', 'Partners', 'Careers'],
+  Company: ['About Shohoj Rin', 'How It Works', 'Partners', 'Careers'],
   Resources: ['Financial Education', 'Loan Guide', 'Repayment Tips', 'FAQ'],
   Legal: ['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'Licenses'],
 };
@@ -53,7 +53,7 @@ export function Footer({ onNavigate }: FooterProps) {
 
         <div className="border-t border-stone-700 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-stone-500">
-            © 2025 Shohoj_Rin Technologies Ltd. All rights reserved.
+            © 2025 Shohoj Rin Technologies Ltd. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <span className="text-xs text-stone-500 flex items-center gap-1.5">

@@ -1,4 +1,4 @@
-import { useRouter } from "@tanstack/react-router";
+import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 import type { PageName } from "../types";
 
@@ -44,7 +44,7 @@ export function useAppNavigate() {
   const router = useRouter();
   return useCallback(
     (page: PageName) => {
-      void router.navigate({ to: PAGE_ROUTES[page] });
+      router.push(PAGE_ROUTES[page]);
     },
     [router],
   );

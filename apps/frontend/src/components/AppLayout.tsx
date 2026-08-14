@@ -155,7 +155,7 @@ export function AppLayout({ children, onNavigate, currentPage, userType = 'borro
           </button>
 
           <p className="min-w-0 flex-1 truncate text-sm font-medium text-stone-500">
-            {navItems.find((i) => i.page === currentPage)?.label ?? 'Shohoj_Rin'}
+            {navItems.find((i) => i.page === currentPage)?.label ?? 'Shohoj Rin'}
           </p>
 
           <div className="relative">
