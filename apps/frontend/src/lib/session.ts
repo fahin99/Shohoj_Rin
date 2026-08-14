@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export interface StoredUserProfile {
   userId?: string;
@@ -84,4 +85,21 @@ export function getDisplayName(user: StoredUserProfile | null, fallback: string)
   }
 
   return fallback;
+}
+
+export function useRequireAuth(redirectTo: string = '/auth') {
+  const { user } = useStoredUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    // If not SSR, and user state has been resolved as null
+    if (typeof window !== 'undefined') {
+      const stored = readStoredUser();
+      if (!stored) {
+        router.replace(redirectTo);
+      }
+    }
+  }, [user, router, redirectTo]);
+
+  return { user };
 }

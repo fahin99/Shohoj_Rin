@@ -1,7 +1,18 @@
 {
+  "/sitemap.xml/route": "app/sitemap.xml/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/admin/page": "app/admin/page.js",
   "/applications/page": "app/applications/page.js",
   "/auth/page": "app/auth/page.js",
+  "/learn/page": "app/learn/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/lender/page": "app/lender/page.js",
   "/loans/page": "app/loans/page.js",
+  "/onboarding/page": "app/onboarding/page.js",
+  "/apply/page": "app/apply/page.js",
+  "/loans/details/page": "app/loans/details/page.js",
+  "/my-loans/page": "app/my-loans/page.js",
+  "/repayment/page": "app/repayment/page.js",
+  "/system-states/page": "app/system-states/page.js",
   "/page": "app/page.js"
 }
