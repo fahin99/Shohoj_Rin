@@ -96,7 +96,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           <div className="flex items-center gap-6 mt-8 pt-8 border-t border-stone-200">
             {[['৳240 Cr+', 'Loans facilitated'], ['50K+', 'Active borrowers'], ['98%', 'Repayment rate']].map(([val, label]) => (
               <div key={label}>
-                <p className="font-mono-sr text-xl font-semibold text-navy">{val}</p>
+                <p className="font-display tabular-nums text-xl font-semibold text-navy">{val}</p>
                 <p className="text-xs text-stone-500">{label}</p>
               </div>
             ))}
@@ -113,18 +113,18 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <p className="text-xs text-stone-500 font-medium uppercase tracking-wide">Education Loan</p>
-                  <p className="text-xl font-semibold text-navy mt-0.5">৳2,00,000</p>
+                  <p className="font-display tabular-nums text-xl font-semibold text-navy mt-0.5">৳2,00,000</p>
                 </div>
                 <span className="px-2 py-1 bg-emerald-light text-emerald text-xs font-medium rounded-[4px] border border-emerald/30">Approved</span>
               </div>
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-stone-500">Interest rate</span>
-                  <span className="font-mono-sr font-medium text-navy">8.5% p.a.</span>
+                  <span className="tabular-nums font-medium text-navy">8.5% p.a.</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-stone-500">Monthly payment</span>
-                  <span className="font-mono-sr font-medium text-navy">৳4,500</span>
+                  <span className="tabular-nums font-medium text-navy">৳4,500</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-stone-500">Duration</span>
@@ -134,7 +134,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               <div className="bg-stone-50 border border-stone-200 rounded-[4px] p-3">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs text-stone-500">Repayment progress</span>
-                  <span className="text-xs font-mono-sr text-navy">14 / 48 months</span>
+                  <span className="text-xs tabular-nums text-navy">14 / 48 months</span>
                 </div>
                 <div className="w-full h-2 bg-stone-200 rounded-full overflow-hidden">
                   <div className="h-full bg-teal rounded-full" style={{ width: '29%' }} />
@@ -145,7 +145,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
             {/* Small floating secondary card */}
             <div className="absolute -top-6 -left-10 bg-white border-[1.5px] border-navy rounded-[6px] shadow-nb p-3 w-40">
               <p className="text-xs text-stone-500">Total repaid</p>
-              <p className="font-mono-sr text-base font-semibold text-navy">৳63,000</p>
+              <p className="font-display tabular-nums text-base font-semibold text-navy">৳63,000</p>
               <p className="text-xs text-emerald mt-0.5">↑ On track</p>
             </div>
           </div>
@@ -162,7 +162,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {howItWorks.map((item) => (
               <div key={item.step} className="bg-white border-[1.5px] border-navy rounded-[6px] shadow-nb p-5">
-                <p className="font-mono-sr text-3xl font-medium text-stone-200 mb-3">{item.step}</p>
+                <p className="font-display tabular-nums text-3xl font-medium text-stone-200 mb-3">{item.step}</p>
                 <h3 className="text-base font-semibold text-navy mb-2">{item.title}</h3>
                 <p className="text-sm text-stone-500 leading-relaxed">{item.desc}</p>
               </div>
@@ -195,7 +195,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                 <p className="text-sm text-stone-500 mt-1 leading-relaxed">{cat.desc}</p>
               </div>
               <div className="mt-auto pt-3 border-t border-stone-200/60 flex items-center justify-between">
-                <span className={`text-xs font-medium font-mono-sr ${cat.accent}`}>{cat.rate}</span>
+                <span className={`text-xs font-medium tabular-nums ${cat.accent}`}>{cat.rate}</span>
                 <span className="text-xs text-stone-500">{cat.amount}</span>
               </div>
             </div>

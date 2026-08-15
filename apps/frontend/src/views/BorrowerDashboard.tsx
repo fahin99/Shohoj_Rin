@@ -105,7 +105,7 @@ export default function BorrowerDashboard({ onNavigate }: BorrowerDashboardProps
                 <div className="min-w-0">
                   <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Active loan</p>
                   <h2 className="mt-0.5 text-base font-semibold leading-snug text-navy">{activeLoan.name}</h2>
-                  <p className="mt-0.5 font-mono-sr text-xs text-stone-500">{activeLoan.id}</p>
+                  <p className="mt-0.5 tabular-nums text-xs text-stone-500">{activeLoan.id}</p>
                 </div>
                 <LoanStatusBadge status="active" />
               </div>
@@ -113,17 +113,17 @@ export default function BorrowerDashboard({ onNavigate }: BorrowerDashboardProps
               <dl className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="min-w-0">
                   <dt className="text-xs text-stone-500">Amount borrowed</dt>
-                  <dd className="mt-0.5 font-mono-sr font-semibold text-navy">{formatTaka(activeLoan.principal)}</dd>
+                  <dd className="mt-0.5 tabular-nums font-semibold text-navy">{formatTaka(activeLoan.principal)}</dd>
                 </div>
                 <div className="min-w-0">
                   <dt className="text-xs text-stone-500">Remaining balance</dt>
-                  <dd className="mt-0.5 font-mono-sr font-semibold text-navy">
+                  <dd className="mt-0.5 tabular-nums font-semibold text-navy">
                     {formatTaka(activeLoan.remainingBalance)}
                   </dd>
                 </div>
                 <div className="min-w-0">
                   <dt className="text-xs text-stone-500">Interest rate</dt>
-                  <dd className="mt-0.5 font-mono-sr font-semibold text-navy">
+                  <dd className="mt-0.5 tabular-nums font-semibold text-navy">
                     {formatPercent(activeLoan.interestRate)}
                   </dd>
                 </div>
@@ -141,7 +141,7 @@ export default function BorrowerDashboard({ onNavigate }: BorrowerDashboardProps
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-4">
                 <p className="min-w-0 text-xs text-stone-500">
                   Next payment {formatDate(activeLoan.nextPaymentDate)} —{' '}
-                  <span className="font-mono-sr font-medium text-navy">{formatTaka(activeLoan.monthlyPayment)}</span>
+                  <span className="tabular-nums font-medium text-navy">{formatTaka(activeLoan.monthlyPayment)}</span>
                 </p>
                 <Button variant="tertiary" size="sm" onClick={() => onNavigate('active-loan')}>
                   View loan details
@@ -169,7 +169,7 @@ export default function BorrowerDashboard({ onNavigate }: BorrowerDashboardProps
                         <p className="mt-0.5 text-xs text-stone-500">{formatDate(tx.date)}</p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
-                        <span className={`font-mono-sr text-sm font-semibold ${out ? 'text-navy' : 'text-emerald'}`}>
+                        <span className={`tabular-nums text-sm font-semibold ${out ? 'text-navy' : 'text-emerald'}`}>
                           {out ? '−' : '+'}
                           {formatTaka(Math.abs(tx.amount))}
                         </span>
@@ -231,7 +231,7 @@ export default function BorrowerDashboard({ onNavigate }: BorrowerDashboardProps
                     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                       <div className="min-w-0">
                         <p className="text-sm font-medium leading-snug text-navy">{app.product}</p>
-                        <p className="mt-0.5 font-mono-sr text-xs text-stone-500">{app.id}</p>
+                        <p className="mt-0.5 tabular-nums text-xs text-stone-500">{app.id}</p>
                       </div>
                       <Badge
                         variant={
@@ -263,7 +263,7 @@ export default function BorrowerDashboard({ onNavigate }: BorrowerDashboardProps
 
             <section className="rounded-[8px] border-[1.5px] border-yellow bg-yellow-light p-4">
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-yellow-dark">Upcoming payment</p>
-              <p className="font-mono-sr text-2xl font-semibold text-navy">{formatTaka(activeLoan.monthlyPayment)}</p>
+              <p className="font-display tabular-nums text-2xl font-semibold text-navy">{formatTaka(activeLoan.monthlyPayment)}</p>
               <p className="mt-0.5 text-xs text-stone-600">Due {formatDate(activeLoan.nextPaymentDate)}</p>
               <Button variant="primary" size="sm" fullWidth className="mt-3" onClick={() => onNavigate('repayment')}>
                 Pay now

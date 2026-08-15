@@ -137,7 +137,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
           )}
 
           <div className="mb-6">
-            <h1 className="font-display text-2xl text-navy">
+            <h1 className="text-2xl font-semibold text-navy">
               {mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Create your account' : 'Reset your password'}
             </h1>
             <p className="text-sm text-stone-500 mt-1">

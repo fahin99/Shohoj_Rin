@@ -88,11 +88,11 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                   <div className="min-w-0">
                     <p className="text-base font-semibold text-navy truncate">{app.product}</p>
                     <p className="text-sm text-stone-500 truncate">{app.provider}</p>
-                    <p className="text-xs font-mono-sr text-stone-400 mt-1">{app.id} · Submitted {formatDate(app.submitted)}</p>
+                    <p className="text-xs tabular-nums text-stone-400 mt-1">{app.id} · Submitted {formatDate(app.submitted)}</p>
                   </div>
                   <div className="shrink-0 flex flex-col items-end gap-2">
                     <AppStatusBadge status={app.status} />
-                    <p className="font-mono-sr text-sm font-semibold text-navy">{formatTaka(app.amount)}</p>
+                    <p className="tabular-nums text-sm font-semibold text-navy">{formatTaka(app.amount)}</p>
                   </div>
                 </div>
 
@@ -136,7 +136,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs text-stone-500">{selected.provider}</p>
-                  <p className="text-sm font-mono-sr text-stone-400">{selected.id}</p>
+                  <p className="text-sm tabular-nums text-stone-400">{selected.id}</p>
                 </div>
                 <AppStatusBadge status={selected.status} />
               </div>

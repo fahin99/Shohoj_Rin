@@ -122,15 +122,15 @@ export default function LoanDetails({ onNavigate }: Props) {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div className="min-w-0">
                     <p className="text-xs text-stone-500">Interest rate</p>
-                    <p className="font-mono-sr text-base font-semibold text-navy mt-0.5">{formatPercent(loan.interestRate)}</p>
+                    <p className="tabular-nums text-base font-semibold text-navy mt-0.5">{formatPercent(loan.interestRate)}</p>
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-stone-500">Loan range</p>
-                    <p className="font-mono-sr text-base font-semibold text-navy mt-0.5">{formatTaka(loan.minAmount)}–{formatTaka(loan.maxAmount)}</p>
+                    <p className="tabular-nums text-base font-semibold text-navy mt-0.5">{formatTaka(loan.minAmount)}–{formatTaka(loan.maxAmount)}</p>
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-stone-500">Tenure</p>
-                    <p className="font-mono-sr text-base font-semibold text-navy mt-0.5">Up to {loan.durationMonths} months</p>
+                    <p className="tabular-nums text-base font-semibold text-navy mt-0.5">Up to {loan.durationMonths} months</p>
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-stone-500">Provider</p>

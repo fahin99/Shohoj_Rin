@@ -71,7 +71,7 @@ export function DataRow({
         {hint && <span className="mt-0.5 block text-xs text-stone-400">{hint}</span>}
       </span>
       <span
-        className={`font-mono-sr shrink-0 text-right ${
+        className={`tabular-nums shrink-0 text-right ${
           emphasis ? 'text-base font-semibold text-navy' : 'text-sm font-medium text-navy'
         }`}
       >

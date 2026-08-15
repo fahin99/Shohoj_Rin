@@ -60,7 +60,7 @@ export default function AdminDashboard({ onNavigate }: Props) {
   };
 
   const columns: Column<PendingApplication>[] = [
-    { key: 'id', header: 'ID', render: (r) => <span className="font-mono-sr text-xs text-stone-500">{r.id}</span> },
+    { key: 'id', header: 'ID', render: (r) => <span className="tabular-nums text-xs text-stone-500">{r.id}</span> },
     { key: 'applicant', header: 'Applicant', render: (r) => <span className="font-medium">{r.applicant}</span> },
     { key: 'product', header: 'Product', hideBelow: 'md', render: (r) => <span className="text-stone-500">{r.product}</span> },
     { key: 'amount', header: 'Amount', numeric: true, render: (r) => formatTaka(r.amount) },

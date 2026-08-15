@@ -43,7 +43,7 @@ export function ProgressBar({
         <div className="flex items-center justify-between">
           {label && <span className="text-xs font-medium text-stone-600">{label}</span>}
           {showValue && (
-            <span className="text-xs font-mono-sr font-medium text-navy">
+            <span className="text-xs tabular-nums font-medium text-navy">
               {Math.round(pct)}%
             </span>
           )}

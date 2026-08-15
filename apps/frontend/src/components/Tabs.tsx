@@ -41,7 +41,7 @@ export function Tabs({ tabs, activeTab, onChange, variant = 'underline', classNa
             {tab.icon && <span className="text-xs">{tab.icon}</span>}
             {tab.label}
             {tab.count !== undefined && (
-              <span className={`text-xs px-1.5 py-0.5 rounded-full font-mono-sr ${
+              <span className={`text-xs px-1.5 py-0.5 rounded-full tabular-nums ${
                 active === tab.id ? 'bg-teal-light text-teal' : 'bg-stone-200 text-stone-500'
               }`}>
                 {tab.count}
@@ -70,7 +70,7 @@ export function Tabs({ tabs, activeTab, onChange, variant = 'underline', classNa
             {tab.icon && <span>{tab.icon}</span>}
             {tab.label}
             {tab.count !== undefined && (
-              <span className={`text-xs font-mono-sr ${active === tab.id ? 'text-teal' : 'text-stone-400'}`}>
+              <span className={`text-xs tabular-nums ${active === tab.id ? 'text-teal' : 'text-stone-400'}`}>
                 {tab.count}
               </span>
             )}
@@ -97,7 +97,7 @@ export function Tabs({ tabs, activeTab, onChange, variant = 'underline', classNa
           {tab.icon && <span>{tab.icon}</span>}
           {tab.label}
           {tab.count !== undefined && (
-            <span className={`text-xs px-1.5 py-0.5 rounded-full font-mono-sr ${
+            <span className={`text-xs px-1.5 py-0.5 rounded-full tabular-nums ${
               active === tab.id ? 'bg-teal-light text-teal' : 'bg-stone-100 text-stone-500'
             }`}>
               {tab.count}

@@ -55,7 +55,7 @@ export function DataTable<T>({ caption, columns, rows, rowKey, empty }: DataTabl
                 <td
                   key={c.key}
                   className={`px-4 py-3 align-middle text-sm text-navy ${
-                    c.numeric ? 'font-mono-sr text-right' : ''
+                    c.numeric ? 'tabular-nums text-right' : ''
                   } ${c.hideBelow ? hideClass[c.hideBelow] : ''}`}
                 >
                   {c.render(row)}

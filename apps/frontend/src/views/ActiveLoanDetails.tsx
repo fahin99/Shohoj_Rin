@@ -73,13 +73,13 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
           <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between sm:items-center mb-4">
             <h2 className="text-base font-semibold text-navy">Repayment progress</h2>
             <p className="text-sm text-stone-500 shrink-0">
-              <span className="font-mono-sr font-medium text-navy">{activeLoan.paidMonths}</span> / {activeLoan.durationMonths} months paid
+              <span className="tabular-nums font-medium text-navy">{activeLoan.paidMonths}</span> / {activeLoan.durationMonths} months paid
             </p>
           </div>
           <ProgressBar value={activeLoan.paidMonths} max={activeLoan.durationMonths} showValue size="lg" color="teal" />
           <div className="flex flex-wrap items-center justify-between gap-2 mt-4 pt-4 border-t border-stone-100">
             <p className="text-sm text-stone-500">
-              Next due date: <span className="font-mono-sr text-navy font-medium">{formatDate(activeLoan.nextPaymentDate)}</span> · {remaining} months remaining
+              Next due date: <span className="tabular-nums text-navy font-medium">{formatDate(activeLoan.nextPaymentDate)}</span> · {remaining} months remaining
             </p>
             <Button variant="primary" size="sm" onClick={() => onNavigate('repayment')}>Make a payment</Button>
           </div>

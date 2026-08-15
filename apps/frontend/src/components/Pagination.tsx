@@ -38,7 +38,7 @@ export function Pagination({
   return (
     <div className={`flex items-center justify-between gap-4 ${className}`}>
       {totalItems && start && end ? (
-        <p className="text-xs text-stone-500 font-mono-sr">
+        <p className="text-xs text-stone-500 tabular-nums">
           {start}–{end} of {totalItems}
         </p>
       ) : (

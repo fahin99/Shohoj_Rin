@@ -110,7 +110,7 @@ export default function SystemStates({ onNavigate }: Props) {
               <Badge variant="neutral" size="sm" dot>No connection</Badge>
             </div>
             <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5 flex flex-col items-center text-center">
-              <p className="font-mono-sr text-3xl font-semibold text-stone-300 mb-2">404</p>
+              <p className="tabular-nums text-3xl font-semibold text-stone-300 mb-2">404</p>
               <h3 className="font-semibold text-navy text-sm mb-1">Page not found</h3>
               <p className="text-xs text-stone-500 mb-3">The page you're looking for doesn't exist.</p>
               <Button variant="tertiary" size="xs" onClick={() => onNavigate('landing')}>Back to home</Button>

@@ -90,7 +90,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
               <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between sm:items-start">
                 <div className="min-w-0">
                   <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Amount due</p>
-                  <p className="font-mono-sr text-3xl font-semibold text-navy mt-1">{formatTaka(activeLoan.monthlyPayment)}</p>
+                  <p className="font-display tabular-nums text-3xl font-semibold text-navy mt-1">{formatTaka(activeLoan.monthlyPayment)}</p>
                   <p className="text-sm text-stone-500 mt-1">Due {formatDate(activeLoan.nextPaymentDate)}</p>
                 </div>
                 <Badge variant="warning" dot className="shrink-0">Due</Badge>
@@ -215,7 +215,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
         >
           <div className="flex flex-col gap-1">
             <p className="text-sm text-stone-600 leading-relaxed mb-2">
-              You are about to pay <span className="font-mono-sr font-semibold text-navy">{formatTaka(totalCharged)}</span> via {methodInfo[method].label} for loan {activeLoan.id}.
+              You are about to pay <span className="tabular-nums font-semibold text-navy">{formatTaka(totalCharged)}</span> via {methodInfo[method].label} for loan {activeLoan.id}.
             </p>
             <DataRow label="Instalment" value={formatTaka(instalmentAmount)} />
             <DataRow label="Processing fee" value={formatTaka(fee)} />

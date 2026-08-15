@@ -78,7 +78,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {/* Step 0: Personal info */}
           {step === 0 && (
             <div>
-              <h2 className="font-display text-2xl text-navy mb-1">Personal information</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">Personal information</h2>
               <p className="text-sm text-stone-500 mb-6">This information helps us verify your identity and personalize your experience.</p>
               <div className="grid grid-cols-1 gap-5">
                 <TextInput label="Full name" placeholder="Rahim Uddin Ahmed" required value={data.fullName} onChange={e => update('fullName', e.target.value)} hint="As it appears on your NID" />
@@ -115,7 +115,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {/* Step 1: Financial profile */}
           {step === 1 && (
             <div>
-              <h2 className="font-display text-2xl text-navy mb-1">Financial profile</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">Financial profile</h2>
               <p className="text-sm text-stone-500 mb-6">This helps us match you to loans you are likely to qualify for. It does not affect your credit score.</p>
               <div className="grid grid-cols-1 gap-5">
                 <TextInput label="Monthly income (approx.)" type="number" placeholder="25000" value={data.monthlyIncome} onChange={e => update('monthlyIncome', e.target.value)} prefix="৳" hint="After tax, in BDT" />
@@ -138,7 +138,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {/* Step 2: Employment */}
           {step === 2 && (
             <div>
-              <h2 className="font-display text-2xl text-navy mb-1">Employment & income</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">Employment & income</h2>
               <p className="text-sm text-stone-500 mb-6">Tell us about your current work or study status.</p>
               <div className="grid grid-cols-1 gap-5">
                 <Select
@@ -183,7 +183,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {/* Step 3: Financial goals */}
           {step === 3 && (
             <div>
-              <h2 className="font-display text-2xl text-navy mb-1">Your financial goals</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">Your financial goals</h2>
               <p className="text-sm text-stone-500 mb-6">What are you hoping to use a loan for? Select all that apply. This helps us show you the most relevant products.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {goalOptions.map((g) => (
@@ -210,7 +210,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {/* Step 4: Preferences */}
           {step === 4 && (
             <div>
-              <h2 className="font-display text-2xl text-navy mb-1">Your preferences</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">Your preferences</h2>
               <p className="text-sm text-stone-500 mb-6">Almost done — just a few last preferences to personalise your experience.</p>
               <div className="flex flex-col gap-5">
                 <div>
@@ -244,7 +244,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
             ← Back
           </Button>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-stone-400 font-mono-sr">{step + 1}/{steps.length}</span>
+            <span className="text-xs text-stone-400 tabular-nums">{step + 1}/{steps.length}</span>
             <Button variant="primary" size="md" onClick={next}>
               {step === steps.length - 1 ? 'Finish Setup →' : 'Continue →'}
             </Button>

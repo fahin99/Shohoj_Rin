@@ -109,7 +109,7 @@ export default function FinancialEducation({ onNavigate }: Props) {
               Featured
             </span>
             <div className="min-w-0">
-              <h2 className="font-display text-2xl text-white mb-2">{featured.title}</h2>
+              <h2 className="text-2xl font-semibold text-white mb-2">{featured.title}</h2>
               <p className="text-teal-light/90 leading-relaxed mb-4 max-w-xl">{featured.desc}</p>
               <div className="flex items-center gap-3">
                 <Button variant="secondary" size="sm" onClick={() => onNavigate('loan-marketplace')}>
@@ -169,7 +169,7 @@ export default function FinancialEducation({ onNavigate }: Props) {
                 value={amount}
                 onChange={(e) => setAmount(Number(e.target.value) || 0)}
                 prefix="৳"
-                className="font-mono-sr"
+                className="tabular-nums"
               />
               <TextInput
                 label="Interest rate (% p.a.)"
@@ -178,7 +178,7 @@ export default function FinancialEducation({ onNavigate }: Props) {
                 step={0.25}
                 value={rate}
                 onChange={(e) => setRate(Number(e.target.value) || 0)}
-                className="font-mono-sr"
+                className="tabular-nums"
               />
               <TextInput
                 label="Tenure (months)"
@@ -187,26 +187,26 @@ export default function FinancialEducation({ onNavigate }: Props) {
                 step={1}
                 value={months}
                 onChange={(e) => setMonths(Number(e.target.value) || 1)}
-                className="font-mono-sr"
+                className="tabular-nums"
               />
             </div>
             <div className="flex flex-col gap-3 min-w-0">
               <div className="bg-white border-[1.5px] border-teal rounded-[6px] p-4">
                 <p className="text-xs text-stone-500 font-medium uppercase tracking-wide">Monthly instalment (EMI)</p>
-                <p className="font-mono-sr text-2xl font-semibold text-teal mt-1">
+                <p className="font-display tabular-nums text-2xl font-semibold text-teal mt-1">
                   {formatTaka(Math.round(emi))}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-white border border-stone-200 rounded-[6px] p-4">
                   <p className="text-xs text-stone-500 font-medium">Total interest</p>
-                  <p className="font-mono-sr text-lg font-semibold text-navy mt-1">
+                  <p className="tabular-nums text-lg font-semibold text-navy mt-1">
                     {formatTaka(Math.round(totalInterest))}
                   </p>
                 </div>
                 <div className="bg-white border border-stone-200 rounded-[6px] p-4">
                   <p className="text-xs text-stone-500 font-medium">Total repayment</p>
-                  <p className="font-mono-sr text-lg font-semibold text-navy mt-1">
+                  <p className="tabular-nums text-lg font-semibold text-navy mt-1">
                     {formatTaka(Math.round(totalRepayment))}
                   </p>
                 </div>

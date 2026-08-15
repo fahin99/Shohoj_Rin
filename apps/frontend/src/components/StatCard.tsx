@@ -32,7 +32,7 @@ export function StatCard({ label, value, hint, tone = 'default', icon, raised = 
         {icon && <span className="shrink-0 text-stone-400">{icon}</span>}
         <p className="min-w-0 text-xs font-medium uppercase tracking-wide text-stone-500">{label}</p>
       </div>
-      <p className={`font-mono-sr text-xl font-semibold leading-tight sm:text-2xl ${t.value}`}>{value}</p>
+      <p className={`font-display tabular-nums text-xl font-semibold leading-tight sm:text-2xl ${t.value}`}>{value}</p>
       {hint && <p className="text-xs leading-snug text-stone-500">{hint}</p>}
     </div>
   );

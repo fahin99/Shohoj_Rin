@@ -81,7 +81,7 @@ export function CurrencyInput({ label, error, hint, required, className = '', ..
       type="number"
       min={0}
       step={100}
-      className={`font-mono-sr ${className}`}
+      className={`tabular-nums ${className}`}
       {...props}
     />
   );

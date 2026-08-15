@@ -113,7 +113,7 @@ export default function LenderDashboard({ onNavigate }: Props) {
             <div className="flex items-end gap-3 sm:gap-4 h-40 px-1">
               {monthlyPerformance.map((m) => (
                 <div key={m.month} className="flex-1 min-w-0 flex flex-col items-center justify-end gap-2 h-full">
-                  <span className="text-[10px] font-mono-sr text-stone-500 whitespace-nowrap">
+                  <span className="text-[10px] tabular-nums text-stone-500 whitespace-nowrap">
                     {formatTaka(m.deployed)}
                   </span>
                   <div
@@ -161,15 +161,15 @@ export default function LenderDashboard({ onNavigate }: Props) {
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div>
                       <p className="text-stone-400">Amount</p>
-                      <p className="font-mono-sr font-medium text-navy">{formatTaka(op.amount)}</p>
+                      <p className="tabular-nums font-medium text-navy">{formatTaka(op.amount)}</p>
                     </div>
                     <div>
                       <p className="text-stone-400">Rate</p>
-                      <p className="font-mono-sr font-medium text-navy">{formatPercent(op.rate)}</p>
+                      <p className="tabular-nums font-medium text-navy">{formatPercent(op.rate)}</p>
                     </div>
                     <div>
                       <p className="text-stone-400">Tenure</p>
-                      <p className="font-mono-sr font-medium text-navy">{op.tenure} mo</p>
+                      <p className="tabular-nums font-medium text-navy">{op.tenure} mo</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-auto pt-2 border-t border-stone-100">

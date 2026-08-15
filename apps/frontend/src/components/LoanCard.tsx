@@ -50,15 +50,15 @@ export function LoanCard({ loan, onView, onApply }: LoanCardProps) {
         <dl className="mt-auto grid grid-cols-2 gap-3 border-t border-stone-200 pt-3 sm:grid-cols-3">
           <div className="min-w-0">
             <dt className="text-xs text-stone-500">Interest</dt>
-            <dd className="font-mono-sr text-sm font-semibold text-navy">{formatPercent(loan.interestRate)}</dd>
+            <dd className="tabular-nums text-sm font-semibold text-navy">{formatPercent(loan.interestRate)}</dd>
           </div>
           <div className="min-w-0">
             <dt className="text-xs text-stone-500">Up to</dt>
-            <dd className="font-mono-sr text-sm font-semibold text-navy">{formatTaka(loan.maxAmount)}</dd>
+            <dd className="font-display tabular-nums text-sm font-semibold text-navy">{formatTaka(loan.maxAmount)}</dd>
           </div>
           <div className="min-w-0">
             <dt className="text-xs text-stone-500">Tenure</dt>
-            <dd className="font-mono-sr text-sm font-semibold text-navy">{loan.durationMonths} mo</dd>
+            <dd className="tabular-nums text-sm font-semibold text-navy">{loan.durationMonths} mo</dd>
           </div>
         </dl>
       </div>
