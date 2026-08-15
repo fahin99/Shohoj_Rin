@@ -41,9 +41,8 @@
   --color-stone-600: #5d534a;
   --color-stone-700: #43392f;
 
-  --font-display: var(--font-space-grotesk), "Space Grotesk", sans-serif;
+  --font-display: "Stack Sans Notch", sans-serif;
   --font-sans: var(--font-space-grotesk), "Space Grotesk", sans-serif;
-  --font-mono: var(--font-space-mono), "Space Mono", ui-monospace, monospace;
 }
 
 /*
@@ -250,12 +249,7 @@
   letter-spacing: -0.025em;
 }
 
-/* Financial figures: tabular, legible, never decorative. */
-@utility font-mono-sr {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-}
+
 
 /* Hard-offset neubrutalist shadows — used selectively, not everywhere. */
 @utility shadow-nb-xs {
