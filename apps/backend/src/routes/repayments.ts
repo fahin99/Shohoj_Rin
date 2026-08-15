@@ -3,7 +3,11 @@ import { z } from "zod";
 
 import { pool } from "../lib/db.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
-import { createRepaymentSchema, getRepaymentSchedulesForLoan, recordRepayment } from "../services/repayment.service.js";
+import {
+  createRepaymentSchema,
+  getRepaymentSchedulesForLoan,
+  recordRepayment,
+} from "../services/repayment.service.js";
 
 const router = Router();
 
@@ -37,7 +41,7 @@ router.get("/loans/:loanId/schedules", async (req: RequestWithAuth, res) => {
       const statusCode = Number((error as { statusCode?: number }).statusCode) || 500;
       return res.status(statusCode).json({
         success: false,
-        error: { message: (error as Error).message },
+        error: { message: (error as unknown as Error).message },
       });
     }
 
@@ -72,7 +76,7 @@ router.post("/payments", async (req: RequestWithAuth, res) => {
       const statusCode = Number((error as { statusCode?: number }).statusCode) || 500;
       return res.status(statusCode).json({
         success: false,
-        error: { message: (error as Error).message },
+        error: { message: (error as unknown as Error).message },
       });
     }
 

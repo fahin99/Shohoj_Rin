@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LearnPageClient from "./page.client";
+import { getCurrentUser } from "../../lib/auth.server";
 
 export const metadata: Metadata = {
   title: "Financial education — learn before you borrow",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Page() {
-  return <LearnPageClient />;
+export default async function Page() {
+  const user = await getCurrentUser();
+  return <LearnPageClient user={user} />;
 }

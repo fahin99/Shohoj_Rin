@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import RepaymentPageClient from "./page.client";
+import { requireAuthenticatedUser } from "../../lib/auth.server";
 
 export const metadata: Metadata = {
   title: "Make a repayment — Shohoj Rin",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Page() {
+export default async function Page() {
+  await requireAuthenticatedUser();
   return <RepaymentPageClient />;
 }

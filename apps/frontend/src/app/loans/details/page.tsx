@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LoanDetailsPageClient from "./page.client";
+import { requireAuthenticatedUser } from "../../../lib/auth.server";
 
 export const metadata: Metadata = {
   title: "Loan details and repayment estimate",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Page() {
+export default async function Page() {
+  await requireAuthenticatedUser();
   return <LoanDetailsPageClient />;
 }

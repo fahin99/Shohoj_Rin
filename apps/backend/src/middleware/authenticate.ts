@@ -54,16 +54,16 @@ export async function requireAuth(req: RequestWithAuth, res: Response, next: Nex
 
     const userResult = await pool.query(
       `SELECT
-        u.user_id,
+        u.user_id AS "userId",
         u.email,
         u.phone,
         u.role,
-        u.account_status,
-        u.email_verified,
-        u.created_at,
-        u.updated_at,
-        p.full_name,
-        p.date_of_birth,
+        u.account_status AS "accountStatus",
+        u.email_verified AS "emailVerified",
+        u.created_at AS "createdAt",
+        u.updated_at AS "updatedAt",
+        p.full_name AS "fullName",
+        p.date_of_birth AS "dateOfBirth",
         p.gender,
         p.city,
         p.district,

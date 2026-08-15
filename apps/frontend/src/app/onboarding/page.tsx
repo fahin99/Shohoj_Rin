@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import OnboardingPageClient from "./page.client";
+import { requireAuthenticatedUser } from "../../lib/auth.server";
 
 export const metadata: Metadata = {
   title: "Set up your Shohoj Rin profile",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Page() {
+export default async function Page() {
+  await requireAuthenticatedUser();
   return <OnboardingPageClient />;
 }

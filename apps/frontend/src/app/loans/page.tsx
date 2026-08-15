@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LoansPageClient from "./page.client";
+import { requireAuthenticatedUser } from "../../lib/auth.server";
 
 export const metadata: Metadata = {
   title: "Loan marketplace — compare loans clearly",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Page() {
+export default async function Page() {
+  await requireAuthenticatedUser();
   return <LoansPageClient />;
 }

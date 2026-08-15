@@ -1,40 +1,66 @@
-import { useMemo, useState } from 'react';
-import { Navbar } from '../components/Navbar';
-import { Footer } from '../components/Footer';
-import { Button } from '../components/Button';
-import { Tabs } from '../components/Tabs';
-import { SearchInput, TextInput } from '../components/Input';
-import { EmptyState, EmptyIcons } from '../components/EmptyState';
-import { formatTaka } from '../lib/format';
-import { educationArticles } from '../lib/mock-data';
-import type { PageName } from '../types';
+import { useMemo, useState } from "react";
+import { Navbar } from "../components/Navbar";
+import { Footer } from "../components/Footer";
+import { Button } from "../components/Button";
+import { Tabs } from "../components/Tabs";
+import { SearchInput, TextInput } from "../components/Input";
+import { EmptyState, EmptyIcons } from "../components/EmptyState";
+import { formatTaka } from "../lib/format";
+import { educationArticles } from "../lib/mock-data";
+import type { PageName } from "../types";
+import type { StoredUserProfile } from "../lib/session";
 
 interface Props {
   onNavigate: (page: PageName) => void;
+  user: StoredUserProfile | null;
 }
 
-const categories = ['All', 'Basics', 'Repayment', 'Credit', 'Planning', 'Support'];
+const categories = ["All", "Basics", "Repayment", "Credit", "Planning", "Support"];
 
 const glossary = [
-  { term: 'EMI', def: 'Equated Monthly Instalment — the fixed amount you pay each month, covering part principal and part interest.' },
-  { term: 'APR', def: 'Annual Percentage Rate — the yearly cost of a loan including interest, expressed as a percentage.' },
-  { term: 'Principal', def: 'The original amount borrowed, before interest is added.' },
-  { term: 'Tenure', def: 'The total duration of the loan, usually stated in months.' },
-  { term: 'Collateral', def: 'An asset pledged as security for a loan, which the lender can claim if you default.' },
-  { term: 'Default', def: 'Failing to repay a loan according to the agreed terms.' },
-  { term: 'Grace period', def: 'A set window after disbursement or a missed payment during which no penalty is charged.' },
+  {
+    term: "EMI",
+    def: "Equated Monthly Instalment — the fixed amount you pay each month, covering part principal and part interest.",
+  },
+  {
+    term: "APR",
+    def: "Annual Percentage Rate — the yearly cost of a loan including interest, expressed as a percentage.",
+  },
+  { term: "Principal", def: "The original amount borrowed, before interest is added." },
+  { term: "Tenure", def: "The total duration of the loan, usually stated in months." },
+  {
+    term: "Collateral",
+    def: "An asset pledged as security for a loan, which the lender can claim if you default.",
+  },
+  { term: "Default", def: "Failing to repay a loan according to the agreed terms." },
+  {
+    term: "Grace period",
+    def: "A set window after disbursement or a missed payment during which no penalty is charged.",
+  },
 ];
 
 const faqs = [
-  { q: 'How is my interest rate decided?', a: 'Your rate depends on the loan product, requested amount, tenure, and your credit history. Shorter tenures and smaller amounts often carry lower rates.' },
-  { q: 'Can I repay my loan early?', a: 'Most Shohoj Rin partner products allow early repayment. Check the specific loan\u2019s terms for any prepayment charges before applying.' },
-  { q: 'What happens if I miss a payment?', a: 'A short grace period usually applies before a late fee. Contact your lender early — many offer restructuring options rather than default.' },
-  { q: 'Do I need collateral for every loan?', a: 'No. Many personal, education, and emergency loans on Shohoj Rin are collateral-free, though larger business loans may require security.' },
+  {
+    q: "How is my interest rate decided?",
+    a: "Your rate depends on the loan product, requested amount, tenure, and your credit history. Shorter tenures and smaller amounts often carry lower rates.",
+  },
+  {
+    q: "Can I repay my loan early?",
+    a: "Most Shohoj Rin partner products allow early repayment. Check the specific loan\u2019s terms for any prepayment charges before applying.",
+  },
+  {
+    q: "What happens if I miss a payment?",
+    a: "A short grace period usually applies before a late fee. Contact your lender early — many offer restructuring options rather than default.",
+  },
+  {
+    q: "Do I need collateral for every loan?",
+    a: "No. Many personal, education, and emergency loans on Shohoj Rin are collateral-free, though larger business loans may require security.",
+  },
 ];
 
-export default function FinancialEducation({ onNavigate }: Props) {
-  const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('All');
+export default function FinancialEducation({ onNavigate, user }: Props) {
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("All");
 
   const [amount, setAmount] = useState(150000);
   const [rate, setRate] = useState(10);
@@ -42,9 +68,9 @@ export default function FinancialEducation({ onNavigate }: Props) {
 
   const filtered = useMemo(() => {
     return educationArticles.filter((a) => {
-      const matchesCat = category === 'All' || a.tag === category;
+      const matchesCat = category === "All" || a.tag === category;
       const matchesQuery =
-        query.trim() === '' ||
+        query.trim() === "" ||
         a.title.toLowerCase().includes(query.toLowerCase()) ||
         a.desc.toLowerCase().includes(query.toLowerCase());
       return matchesCat && matchesQuery;
@@ -58,24 +84,29 @@ export default function FinancialEducation({ onNavigate }: Props) {
   const emi =
     monthlyRate === 0
       ? amount / Math.max(months, 1)
-      : (amount * monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
+      : (amount * monthlyRate * Math.pow(1 + monthlyRate, months)) /
+        (Math.pow(1 + monthlyRate, months) - 1);
   const totalRepayment = emi * months;
   const totalInterest = totalRepayment - amount;
 
   return (
     <div className="bg-offwhite min-h-screen">
-      <Navbar onNavigate={onNavigate} />
+      <Navbar onNavigate={onNavigate} user={user} />
 
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-4 md:px-6 pt-14 pb-12">
         <div className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">Financial education</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
+            Financial education
+          </p>
           <h1 className="font-display text-4xl md:text-5xl text-navy leading-[1.1] mb-4">
-            Understand money<br /><em className="not-italic text-teal">before you borrow it.</em>
+            Understand money
+            <br />
+            <em className="not-italic text-teal">before you borrow it.</em>
           </h1>
           <p className="text-stone-500 leading-relaxed">
-            Clear, jargon-free guides on interest, repayment, credit, and planning — written for first-time
-            borrowers across Bangladesh.
+            Clear, jargon-free guides on interest, repayment, credit, and planning — written for
+            first-time borrowers across Bangladesh.
           </p>
         </div>
       </section>
@@ -88,7 +119,7 @@ export default function FinancialEducation({ onNavigate }: Props) {
               placeholder="Search articles..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onClear={() => setQuery('')}
+              onClear={() => setQuery("")}
               aria-label="Search articles"
             />
           </div>
@@ -102,7 +133,7 @@ export default function FinancialEducation({ onNavigate }: Props) {
       </section>
 
       {/* Featured article */}
-      {category === 'All' && query.trim() === '' && (
+      {category === "All" && query.trim() === "" && (
         <section className="max-w-6xl mx-auto px-4 md:px-6 pb-10">
           <div className="bg-teal border-[1.5px] border-navy rounded-[8px] shadow-nb-lg p-6 md:p-8 grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-start">
             <span className="inline-flex px-2.5 py-1 rounded-[4px] bg-white text-teal text-xs font-semibold uppercase tracking-wide w-fit">
@@ -112,7 +143,11 @@ export default function FinancialEducation({ onNavigate }: Props) {
               <h2 className="text-2xl font-semibold text-white mb-2">{featured.title}</h2>
               <p className="text-teal-light/90 leading-relaxed mb-4 max-w-xl">{featured.desc}</p>
               <div className="flex items-center gap-3">
-                <Button variant="secondary" size="sm" onClick={() => onNavigate('loan-marketplace')}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onNavigate("loan-marketplace")}
+                >
                   Read guide
                 </Button>
                 <span className="text-xs text-white/80">{featured.read}</span>
@@ -155,9 +190,15 @@ export default function FinancialEducation({ onNavigate }: Props) {
       <section className="bg-white border-y border-stone-200">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-16">
           <div className="mb-10 max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">Try it yourself</p>
-            <h2 className="font-display text-3xl md:text-4xl text-navy mb-2">Loan cost calculator</h2>
-            <p className="text-stone-500">See how amount, rate, and tenure change your monthly instalment.</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
+              Try it yourself
+            </p>
+            <h2 className="font-display text-3xl md:text-4xl text-navy mb-2">
+              Loan cost calculator
+            </h2>
+            <p className="text-stone-500">
+              See how amount, rate, and tenure change your monthly instalment.
+            </p>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-8 bg-offwhite border-[1.5px] border-navy rounded-[8px] shadow-nb p-6">
             <div className="flex flex-col gap-5 min-w-0">
@@ -192,7 +233,9 @@ export default function FinancialEducation({ onNavigate }: Props) {
             </div>
             <div className="flex flex-col gap-3 min-w-0">
               <div className="bg-white border-[1.5px] border-teal rounded-[6px] p-4">
-                <p className="text-xs text-stone-500 font-medium uppercase tracking-wide">Monthly instalment (EMI)</p>
+                <p className="text-xs text-stone-500 font-medium uppercase tracking-wide">
+                  Monthly instalment (EMI)
+                </p>
                 <p className="font-display tabular-nums text-2xl font-semibold text-teal mt-1">
                   {formatTaka(Math.round(emi))}
                 </p>
@@ -222,7 +265,9 @@ export default function FinancialEducation({ onNavigate }: Props) {
       {/* Glossary */}
       <section className="max-w-6xl mx-auto px-4 md:px-6 py-16">
         <div className="mb-10 max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">Key terms</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
+            Key terms
+          </p>
           <h2 className="font-display text-3xl md:text-4xl text-navy">Glossary</h2>
         </div>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
@@ -239,7 +284,9 @@ export default function FinancialEducation({ onNavigate }: Props) {
       <section className="bg-teal-light border-y border-teal/20">
         <div className="max-w-3xl mx-auto px-4 md:px-6 py-16">
           <div className="mb-10">
-            <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">Common questions</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
+              Common questions
+            </p>
             <h2 className="font-display text-3xl md:text-4xl text-navy">FAQ</h2>
           </div>
           <div className="flex flex-col gap-3">
@@ -250,7 +297,9 @@ export default function FinancialEducation({ onNavigate }: Props) {
               >
                 <summary className="flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer list-none">
                   <span className="text-sm font-medium text-navy min-w-0">{f.q}</span>
-                  <span className="shrink-0 text-teal text-lg group-open:rotate-45 transition-transform">+</span>
+                  <span className="shrink-0 text-teal text-lg group-open:rotate-45 transition-transform">
+                    +
+                  </span>
                 </summary>
                 <p className="px-4 pb-4 text-sm text-stone-500 leading-relaxed">{f.a}</p>
               </details>
@@ -263,12 +312,19 @@ export default function FinancialEducation({ onNavigate }: Props) {
       <section className="bg-navy">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-16 flex flex-col md:flex-row items-center justify-between gap-8">
           <div>
-            <h2 className="font-display text-3xl md:text-4xl text-white mb-3">Ready to put this into practice?</h2>
+            <h2 className="font-display text-3xl md:text-4xl text-white mb-3">
+              Ready to put this into practice?
+            </h2>
             <p className="text-stone-400 max-w-md leading-relaxed">
               Explore real loan products with transparent terms matched to your needs.
             </p>
           </div>
-          <Button variant="primary" size="lg" className="shrink-0" onClick={() => onNavigate('loan-marketplace')}>
+          <Button
+            variant="primary"
+            size="lg"
+            className="shrink-0"
+            onClick={() => onNavigate("loan-marketplace")}
+          >
             Explore loans
           </Button>
         </div>

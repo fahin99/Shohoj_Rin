@@ -2,7 +2,6 @@ import { Router } from "express";
 import { z } from "zod";
 import type { PoolClient } from "pg";
 
-import { config } from "../config/index.js";
 import { pool } from "../lib/db.js";
 import {
   clearAuthCookies,
@@ -28,22 +27,21 @@ const registerSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
-const loginSchema = z.object({
-  email: z.string().trim().email().optional(),
-  phone: z.string().trim().min(5).optional(),
-  identifier: z.string().trim().min(3).optional(),
-  password: z.string().min(1, "Password is required"),
-}).refine((value) => Boolean(value.email || value.phone || value.identifier), {
-  message: "Email or phone is required",
-  path: ["identifier"],
-});
+const loginSchema = z
+  .object({
+    email: z.string().trim().email().optional(),
+    phone: z.string().trim().min(5).optional(),
+    identifier: z.string().trim().min(3).optional(),
+    password: z.string().min(1, "Password is required"),
+  })
+  .refine((value) => Boolean(value.email || value.phone || value.identifier), {
+    message: "Email or phone is required",
+    path: ["identifier"],
+  });
 
 const refreshSchema = z.object({
   refreshToken: z.string().optional(),
 });
-
-const ADMIN_IDENTIFIER = "admin";
-const ADMIN_PASSWORD = "admin";
 
 type UserQueryRow = {
   user_id: string;
@@ -70,11 +68,21 @@ function serializeUser(row: UserQueryRow) {
     role: row.role,
     accountStatus: row.account_status,
     emailVerified: row.email_verified,
-    createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : new Date(row.created_at).toISOString(),
-    updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : new Date(row.updated_at).toISOString(),
+    createdAt:
+      row.created_at instanceof Date
+        ? row.created_at.toISOString()
+        : new Date(row.created_at).toISOString(),
+    updatedAt:
+      row.updated_at instanceof Date
+        ? row.updated_at.toISOString()
+        : new Date(row.updated_at).toISOString(),
     profile: {
       fullName: row.full_name,
-      dateOfBirth: row.date_of_birth ? (row.date_of_birth instanceof Date ? row.date_of_birth.toISOString().slice(0, 10) : String(row.date_of_birth).slice(0, 10)) : null,
+      dateOfBirth: row.date_of_birth
+        ? row.date_of_birth instanceof Date
+          ? row.date_of_birth.toISOString().slice(0, 10)
+          : String(row.date_of_birth).slice(0, 10)
+        : null,
       gender: row.gender,
       city: row.city,
       district: row.district,
@@ -110,7 +118,12 @@ async function fetchUserById(userId: string) {
   return result.rows[0] ?? null;
 }
 
-async function createSession(db: Pick<PoolClient, "query">, userId: string, role: string, sessionId: string) {
+async function createSession(
+  db: Pick<PoolClient, "query">,
+  userId: string,
+  role: string,
+  sessionId: string,
+) {
   const accessToken = createAccessToken(userId, sessionId, role);
   const refreshToken = createRefreshToken(userId, sessionId);
   const refreshTokenHash = hashToken(refreshToken);
@@ -123,61 +136,6 @@ async function createSession(db: Pick<PoolClient, "query">, userId: string, role
   );
 
   return { accessToken, refreshToken, expiresAt };
-}
-
-async function ensureAdminAccount(client: PoolClient) {
-  const passwordHash = await hashPassword(ADMIN_PASSWORD);
-  const existing = await client.query<{ user_id: string }>(
-    `SELECT user_id
-     FROM users
-     WHERE email = $1
-     LIMIT 1`,
-    [ADMIN_IDENTIFIER],
-  );
-
-  if (existing.rowCount && existing.rowCount > 0) {
-    const adminUserId = existing.rows[0].user_id;
-
-    await client.query(
-      `UPDATE users
-       SET password_hash = $1,
-           role = 'admin',
-           account_status = 'active',
-           email_verified = TRUE,
-           updated_at = NOW()
-       WHERE user_id = $2`,
-      [passwordHash, adminUserId],
-    );
-
-    await client.query(
-      `INSERT INTO user_profiles (user_id, full_name)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE
-       SET full_name = EXCLUDED.full_name,
-           updated_at = NOW()` ,
-      [adminUserId, 'Admin'],
-    );
-
-    return {
-      user_id: adminUserId,
-      role: 'admin',
-    };
-  }
-
-  const userResult = await client.query<{ user_id: string; role: string }>(
-    `INSERT INTO users (email, phone, password_hash, role, account_status, email_verified)
-     VALUES ($1, NULL, $2, 'admin', 'active', TRUE)
-     RETURNING user_id, role`,
-    [ADMIN_IDENTIFIER, passwordHash],
-  );
-
-  await client.query(
-    `INSERT INTO user_profiles (user_id, full_name)
-     VALUES ($1, 'Admin')`,
-    [userResult.rows[0].user_id],
-  );
-
-  return userResult.rows[0];
 }
 
 router.post("/register", async (req, res) => {
@@ -244,14 +202,16 @@ router.post("/register", async (req, res) => {
       success: true,
       data: {
         user: profile ? serializeUser(profile) : null,
-        accessToken: session.accessToken,
-        refreshToken: session.refreshToken,
-        expiresIn: config.jwt.accessExpiresIn,
       },
     });
   } catch (error) {
     await client.query("ROLLBACK");
-    if (typeof error === "object" && error && "code" in error && (error as { code?: string }).code === "23505") {
+    if (
+      typeof error === "object" &&
+      error &&
+      "code" in error &&
+      (error as { code?: string }).code === "23505"
+    ) {
       return res.status(409).json({
         success: false,
         error: { message: "An account with this email or phone already exists" },
@@ -286,24 +246,6 @@ router.post("/login", async (req, res) => {
   const client = await pool.connect();
 
   try {
-    if (identifier?.toLowerCase() === ADMIN_IDENTIFIER && parsed.data.password === ADMIN_PASSWORD) {
-      const adminUser = await ensureAdminAccount(client);
-      const sessionId = generateSessionId();
-      const session = await createSession(client, adminUser.user_id, adminUser.role, sessionId);
-      setAuthCookies(res, session.accessToken, session.refreshToken);
-
-      const profile = await fetchUserById(adminUser.user_id);
-      return res.status(200).json({
-        success: true,
-        data: {
-          user: profile ? serializeUser(profile) : null,
-          accessToken: session.accessToken,
-          refreshToken: session.refreshToken,
-          expiresIn: config.jwt.accessExpiresIn,
-        },
-      });
-    }
-
     const userResult = await client.query<{
       user_id: string;
       email: string;
@@ -353,9 +295,6 @@ router.post("/login", async (req, res) => {
       success: true,
       data: {
         user: profile ? serializeUser(profile) : null,
-        accessToken: session.accessToken,
-        refreshToken: session.refreshToken,
-        expiresIn: config.jwt.accessExpiresIn,
       },
     });
   } catch (error) {
@@ -378,7 +317,11 @@ router.post("/refresh", async (req, res) => {
     });
   }
 
-  const refreshToken = parsed.data.refreshToken ?? (typeof req.cookies?.shohojrin_refresh_token === "string" ? req.cookies.shohojrin_refresh_token : null);
+  const refreshToken =
+    parsed.data.refreshToken ??
+    (typeof req.cookies?.shohojrin_refresh_token === "string"
+      ? req.cookies.shohojrin_refresh_token
+      : null);
   if (!refreshToken) {
     return res.status(401).json({
       success: false,
@@ -426,7 +369,8 @@ router.post("/refresh", async (req, res) => {
     }
 
     const tokenMatches = hashToken(refreshToken) === session.refresh_token_hash;
-    const expiresAt = session.expires_at instanceof Date ? session.expires_at : new Date(session.expires_at);
+    const expiresAt =
+      session.expires_at instanceof Date ? session.expires_at : new Date(session.expires_at);
     if (!tokenMatches || expiresAt.getTime() < Date.now()) {
       return res.status(401).json({
         success: false,
@@ -454,9 +398,6 @@ router.post("/refresh", async (req, res) => {
       success: true,
       data: {
         user: profile ? serializeUser(profile) : null,
-        accessToken,
-        refreshToken: nextRefreshToken,
-        expiresIn: config.jwt.accessExpiresIn,
       },
     });
   } catch {
@@ -468,11 +409,12 @@ router.post("/refresh", async (req, res) => {
 });
 
 router.post("/logout", async (req, res) => {
-  const refreshToken = typeof req.cookies?.shohojrin_refresh_token === "string"
-    ? req.cookies.shohojrin_refresh_token
-    : typeof req.body?.refreshToken === "string"
-      ? req.body.refreshToken
-      : null;
+  const refreshToken =
+    typeof req.cookies?.shohojrin_refresh_token === "string"
+      ? req.cookies.shohojrin_refresh_token
+      : typeof req.body?.refreshToken === "string"
+        ? req.body.refreshToken
+        : null;
 
   if (refreshToken) {
     try {

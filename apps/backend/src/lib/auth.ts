@@ -23,7 +23,9 @@ function getCookieOptions(maxAgeMs: number): CookieOptions {
   return {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
+    // The frontend proxies API calls through its own origin, so Lax gives us
+    // CSRF protection without sacrificing the cookie-based session flow.
+    sameSite: "lax",
     path: "/",
     maxAge: maxAgeMs,
   };
@@ -59,27 +61,19 @@ export function generateSessionId() {
 }
 
 export function createAccessToken(userId: string, sessionId: string, role: string) {
-  return jwt.sign(
-    { tokenType: "access", role },
-    config.jwt.accessSecret,
-    {
-      subject: userId,
-      jwtid: sessionId,
-      expiresIn: config.jwt.accessExpiresIn,
-    },
-  );
+  return jwt.sign({ tokenType: "access", role }, config.jwt.accessSecret, {
+    subject: userId,
+    jwtid: sessionId,
+    expiresIn: config.jwt.accessExpiresIn,
+  });
 }
 
 export function createRefreshToken(userId: string, sessionId: string) {
-  return jwt.sign(
-    { tokenType: "refresh" },
-    config.jwt.refreshSecret,
-    {
-      subject: userId,
-      jwtid: sessionId,
-      expiresIn: config.jwt.refreshExpiresIn,
-    },
-  );
+  return jwt.sign({ tokenType: "refresh" }, config.jwt.refreshSecret, {
+    subject: userId,
+    jwtid: sessionId,
+    expiresIn: config.jwt.refreshExpiresIn,
+  });
 }
 
 export function verifyAccessToken(token: string) {
