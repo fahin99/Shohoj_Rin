@@ -28,7 +28,7 @@ export type VerificationStatus = "pending" | "approved" | "rejected";
 
 export type VerificationType = "identity" | "student" | "document" | "guarantor";
 
-export type TrustBand = "A" | "B" | "C" | "D" | "F";
+export type TrustBand = "very_low_risk" | "low_risk" | "moderate_risk" | "high_risk" | "very_high_risk";
 
 export type FraudSeverity = "low" | "medium" | "high" | "critical";
 

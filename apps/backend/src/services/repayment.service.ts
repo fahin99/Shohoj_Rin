@@ -2,7 +2,7 @@ import type { PoolClient } from "pg";
 import { z } from "zod";
 
 import { calculateLateFee } from "./interest.service.js";
-import { calculateTrustScore } from "./trust.service.js";
+import { recalculateAndPersistTrustScore } from "./trust-persistence.service.js";
 
 const repaymentMethodSchema = z.enum(["bank_transfer", "mobile_money", "cash", "other"]);
 
@@ -140,55 +140,6 @@ function summarizeSchedule(
   };
 }
 
-async function recalculateTrustScore(client: Pick<PoolClient, "query">, userId: string, repaymentCount: number, onTimeRatio: number) {
-  const factorScore = Math.min(35, repaymentCount * 2.5) + Math.min(25, Math.max(0, onTimeRatio * 25));
-  const result = calculateTrustScore([
-    {
-      factorName: "Repayment history",
-      factorValue: Math.round(Math.min(35, repaymentCount * 2.5) * 100) / 100,
-      description: "Reward consistent repayment activity",
-    },
-    {
-      factorName: "On-time performance",
-      factorValue: Math.round(Math.min(25, Math.max(0, onTimeRatio * 25)) * 100) / 100,
-      description: "Reward schedules paid without delay",
-    },
-    {
-      factorName: "Repayment engagement",
-      factorValue: Math.round(Math.min(20, factorScore / 2) * 100) / 100,
-      description: "Reward active loan repayment participation",
-    },
-  ]);
-
-  const currentScores = await client.query<TrustScoreRow>(
-    `SELECT score_id, score, trust_band
-     FROM trust_scores
-     WHERE user_id = $1 AND is_current = TRUE`,
-    [userId],
-  );
-
-  if (currentScores.rowCount) {
-    await client.query(
-      `UPDATE trust_scores
-       SET is_current = FALSE
-       WHERE score_id = $1`,
-      [currentScores.rows[0].score_id],
-    );
-  }
-
-  const inserted = await client.query<TrustScoreRow>(
-    `INSERT INTO trust_scores (user_id, score, trust_band, trigger_event, is_current)
-     VALUES ($1, $2, $3, $4, TRUE)
-     RETURNING score_id, score, trust_band`,
-    [userId, result.score, result.band, "repayment_received"],
-  );
-
-  return {
-    score: toNumber(inserted.rows[0].score),
-    band: inserted.rows[0].trust_band,
-  };
-}
-
 export async function getRepaymentSchedulesForLoan(client: Pick<PoolClient, "query">, loanId: string) {
   const schedules = await client.query<RepaymentScheduleRow>(
     `SELECT schedule_id, loan_id, installment_number, due_date, expected_amount, status, created_at
@@ -312,11 +263,10 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
       [schedule.loan_id, loanStatus],
     );
 
-    const trustScore = await recalculateTrustScore(
-      client,
+    const trustScore = await recalculateAndPersistTrustScore(
       loanRow.user_id,
-      allRepayments.rowCount ?? 0,
-      totalPaid > 0 ? Math.min(1, totalPaid / Math.max(1, expectedAmount)) : 0,
+      "repayment_received",
+      client
     );
 
     await client.query("COMMIT");

@@ -3,6 +3,7 @@ import { Logo } from '../components/Logo';
 import { Button } from '../components/Button';
 import { TextInput, Select, Radio, Checkbox } from '../components/Input';
 import { Stepper } from '../components/Progress';
+import InstitutionCombobox from '../components/InstitutionCombobox';
 import type { PageName } from '../types';
 
 interface OnboardingPageProps {
@@ -34,6 +35,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     fullName: '', dob: '', gender: '', nid: '', address: '', city: '',
     monthlyIncome: '', savingsAmount: '', existingLoans: 'no',
     employment: '', employer: '', jobTitle: '', incomeType: '',
+    institutionId: null as string | null, institutionName: '', studentId: '',
     goals: [] as string[],
     notifEmail: true, notifSms: true, language: 'en',
   });
@@ -156,6 +158,27 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   placeholder="Select status"
                   required
                 />
+                {data.employment === 'student' && (
+                  <>
+                    <InstitutionCombobox
+                      label="Institution"
+                      value={data.institutionName}
+                      institutionId={data.institutionId}
+                      onChange={({ id, name }) => {
+                        update('institutionId', id || '');
+                        update('institutionName', name);
+                      }}
+                      required
+                      hint="Search for your college or university"
+                    />
+                    <TextInput
+                      label="Student ID"
+                      placeholder="e.g., 2021-1-60-001"
+                      value={data.studentId}
+                      onChange={e => update('studentId', e.target.value)}
+                    />
+                  </>
+                )}
                 {data.employment && data.employment !== 'student' && data.employment !== 'unemployed' && (
                   <>
                     <TextInput label="Employer / Business name" placeholder="XYZ Company Ltd." value={data.employer} onChange={e => update('employer', e.target.value)} />
