@@ -4,7 +4,6 @@ import { Logo } from './Logo';
 import { Badge } from './Badge';
 import { IconButton } from './Button';
 import type { PageName } from '../types';
-
 interface AppLayoutProps {
   children: ReactNode;
   onNavigate: (page: PageName) => void;
@@ -12,7 +11,6 @@ interface AppLayoutProps {
   userType?: 'borrower' | 'lender' | 'admin';
   userName?: string;
 }
-
 interface SidebarItem {
   label: string;
   page: PageName;
@@ -20,7 +18,6 @@ interface SidebarItem {
   badge?: number;
   section?: string;
 }
-
 const borrowerNav: SidebarItem[] = [
   {
     label: 'Dashboard', page: 'borrower-dashboard',
@@ -48,17 +45,14 @@ const borrowerNav: SidebarItem[] = [
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 4l7-3 7 3-7 3-7-3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M15 4v5M4 6.5v4a7 7 0 008 0v-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
   },
 ];
-
 const lenderNav: SidebarItem[] = [
   { label: 'Portfolio', page: 'lender-dashboard', icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/></svg> },
   { label: 'Opportunities', page: 'loan-marketplace', icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.5"/><path d="M11 11L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
 ];
-
 const adminNav: SidebarItem[] = [
   { label: 'Admin Overview', page: 'admin', icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/></svg> },
   { label: 'Applications', page: 'application-status', icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>, badge: 14 },
 ];
-
 function NavItem({ item, active, onClick }: { item: SidebarItem; active: boolean; onClick: () => void }) {
   return (
     <button
@@ -78,13 +72,10 @@ function NavItem({ item, active, onClick }: { item: SidebarItem; active: boolean
     </button>
   );
 }
-
 export function AppLayout({ children, onNavigate, currentPage, userType = 'borrower', userName = 'Riya Ahmed' }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-
   const navItems = userType === 'admin' ? adminNav : userType === 'lender' ? lenderNav : borrowerNav;
-
   const sidebar = (
     <aside className="w-56 shrink-0 flex flex-col border-r border-stone-200 bg-offwhite h-full">
       <div className="px-4 py-4 border-b border-stone-200">
@@ -113,12 +104,10 @@ export function AppLayout({ children, onNavigate, currentPage, userType = 'borro
       </div>
     </aside>
   );
-
   return (
     <div className="flex h-dvh overflow-hidden bg-offwhite">
       {/* Desktop sidebar */}
       <div className="hidden md:flex h-full">{sidebar}</div>
-
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
@@ -138,7 +127,6 @@ export function AppLayout({ children, onNavigate, currentPage, userType = 'borro
           </div>
         </div>
       )}
-
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
@@ -153,11 +141,9 @@ export function AppLayout({ children, onNavigate, currentPage, userType = 'borro
               <path d="M1.5 4h13M1.5 8h13M1.5 12h13" stroke="#0D1B2A" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </button>
-
           <p className="min-w-0 flex-1 truncate text-sm font-medium text-stone-500">
             {navItems.find((i) => i.page === currentPage)?.label ?? 'Shohoj Rin'}
           </p>
-
           <div className="relative">
             <IconButton
               label="Notifications"
@@ -170,7 +156,6 @@ export function AppLayout({ children, onNavigate, currentPage, userType = 'borro
               </svg>
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-coral rounded-full border border-white" />
             </IconButton>
-
             {notifOpen && (
               <div className="absolute right-0 top-full mt-2 w-72 bg-white border-[1.5px] border-navy shadow-nb rounded-[8px] overflow-hidden z-10">
                 <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between">
@@ -198,7 +183,6 @@ export function AppLayout({ children, onNavigate, currentPage, userType = 'borro
               </div>
             )}
           </div>
-
           <button
             type="button"
             aria-label={`Account menu for ${userName}`}
@@ -211,8 +195,7 @@ export function AppLayout({ children, onNavigate, currentPage, userType = 'borro
               .slice(0, 2)}
           </button>
         </header>
-
-        {/* Page content */}
+        {}
         <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">{children}</div>
       </div>
     </div>

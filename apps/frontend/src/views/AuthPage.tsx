@@ -5,20 +5,16 @@ import { TextInput, PasswordInput, Checkbox } from "../components/Input";
 import { Alert } from "../components/Alert";
 import type { PageName } from "../types";
 import { apiRequest } from "../lib/api";
-
 type AuthMode = "login" | "register" | "forgot";
-
 interface AuthPageProps {
   onNavigate: (page: PageName) => void;
 }
-
 export default function AuthPage({ onNavigate }: AuthPageProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
-
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -27,9 +23,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
     confirm: "",
     remember: false,
   });
-
   const update = (k: string, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
-
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
@@ -44,16 +38,13 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
     }
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
-
     setLoading(true);
     setApiError("");
-
     try {
       if (mode === "forgot") {
         setSuccess(true);
         return;
       }
-
       const payload =
         mode === "register"
           ? {
@@ -66,12 +57,10 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
               identifier: form.email.trim(),
               password: form.password,
             };
-
       await apiRequest<{ user: unknown }>(mode === "register" ? "/auth/register" : "/auth/login", {
         method: "POST",
         body: JSON.stringify(payload),
       });
-
       onNavigate(mode === "register" ? "onboarding" : "borrower-dashboard");
     } catch (error) {
       setApiError(error instanceof Error ? error.message : "Authentication failed");
@@ -79,10 +68,9 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
       setLoading(false);
     }
   };
-
   return (
     <div className="min-h-screen bg-offwhite flex">
-      {/* Left: branding panel */}
+      {}
       <div className="hidden lg:flex lg:w-[45%] bg-navy flex-col justify-between p-10">
         <Logo variant="white" size="lg" onClick={() => onNavigate("landing")} />
         <div>
@@ -120,15 +108,13 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
           © 2025 Shohoj Rin Technologies Ltd. BFIU Registered.
         </p>
       </div>
-
-      {/* Right: form panel */}
+      {}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
           <div className="lg:hidden mb-8">
             <Logo onClick={() => onNavigate("landing")} />
           </div>
-
-          {/* Mode switcher (login/register only) */}
+          {}
           {mode !== "forgot" && (
             <div className="flex gap-0 mb-7 bg-stone-100 border border-stone-200 rounded-[6px] p-1">
               {(["login", "register"] as const).map((m) => (
@@ -151,7 +137,6 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
               ))}
             </div>
           )}
-
           <div className="mb-6">
             <h1 className="text-2xl font-semibold text-navy">
               {mode === "login"
@@ -168,19 +153,16 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
                   : "Enter your email and we will send a reset link."}
             </p>
           </div>
-
           {success && mode === "forgot" && (
             <Alert variant="success" title="Reset link sent" dismissible>
               Check your inbox — we sent a password reset link to your email address.
             </Alert>
           )}
-
           {apiError && (
             <Alert variant="error" title="Authentication failed" dismissible>
               {apiError}
             </Alert>
           )}
-
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {mode === "register" && (
               <TextInput
@@ -193,7 +175,6 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
                 autoComplete="name"
               />
             )}
-
             <TextInput
               label={mode === "login" ? "Email, phone, or admin ID" : "Email address"}
               type={mode === "login" ? "text" : "email"}
@@ -204,7 +185,6 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
               required
               autoComplete={mode === "login" ? "username" : "email"}
             />
-
             {mode === "register" && (
               <TextInput
                 label="Phone number"
@@ -215,7 +195,6 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
                 hint="We will send verification codes to this number."
               />
             )}
-
             {mode !== "forgot" && (
               <PasswordInput
                 label="Password"
@@ -227,7 +206,6 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
                 autoComplete={mode === "register" ? "new-password" : "current-password"}
               />
             )}
-
             {mode === "register" && (
               <PasswordInput
                 label="Confirm password"
@@ -239,7 +217,6 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
                 autoComplete="new-password"
               />
             )}
-
             {mode === "login" && (
               <div className="flex items-center justify-between">
                 <Checkbox
@@ -260,7 +237,6 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
                 </button>
               </div>
             )}
-
             {mode === "register" && (
               <Checkbox
                 label={
@@ -279,7 +255,6 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
                 onChange={(v) => update("remember", v)}
               />
             )}
-
             <Button type="submit" variant="primary" size="lg" fullWidth loading={loading}>
               {mode === "login"
                 ? "Log in"
@@ -287,7 +262,6 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
                   ? "Create account"
                   : "Send reset link"}
             </Button>
-
             {mode !== "forgot" && (
               <>
                 <div className="flex items-center gap-3 my-1">
@@ -319,7 +293,6 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
               </>
             )}
           </form>
-
           {mode === "forgot" && (
             <button
               type="button"

@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-
 interface Tab {
   id: string;
   label: string;
   count?: number;
   icon?: ReactNode;
 }
-
 interface TabsProps {
   tabs: Tab[];
   activeTab?: string;
@@ -15,7 +13,6 @@ interface TabsProps {
   variant?: 'underline' | 'pill' | 'card';
   className?: string;
 }
-
 export function Tabs({ tabs, activeTab, onChange, variant = 'underline', className = '' }: TabsProps) {
   const [internal, setInternal] = useState(tabs[0]?.id ?? '');
   const active = activeTab ?? internal;
@@ -23,7 +20,6 @@ export function Tabs({ tabs, activeTab, onChange, variant = 'underline', classNa
     setInternal(id);
     onChange?.(id);
   };
-
   if (variant === 'pill') {
     return (
       <div className={`flex gap-1 p-1 bg-stone-100 rounded-[6px] border border-stone-200 w-fit ${className}`}>
@@ -52,7 +48,6 @@ export function Tabs({ tabs, activeTab, onChange, variant = 'underline', classNa
       </div>
     );
   }
-
   if (variant === 'card') {
     return (
       <div className={`flex gap-2 ${className}`}>
@@ -79,8 +74,6 @@ export function Tabs({ tabs, activeTab, onChange, variant = 'underline', classNa
       </div>
     );
   }
-
-  // underline (default)
   return (
     <div className={`flex border-b border-stone-200 gap-0 ${className}`}>
       {tabs.map((tab) => (
@@ -108,18 +101,15 @@ export function Tabs({ tabs, activeTab, onChange, variant = 'underline', classNa
     </div>
   );
 }
-
 interface TabPanelProps {
   id: string;
   activeTab: string;
   children: ReactNode;
 }
-
 export function TabPanel({ id, activeTab, children }: TabPanelProps) {
   if (id !== activeTab) return null;
   return <div role="tabpanel">{children}</div>;
 }
-
 export function useTabs(defaultTab: string) {
   const [active, setActive] = useState(defaultTab);
   return { active, setActive };

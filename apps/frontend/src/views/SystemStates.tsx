@@ -8,11 +8,9 @@ import { Button, IconButton } from '../components/Button';
 import { Badge, LoanStatusBadge, AppStatusBadge } from '../components/Badge';
 import { TextInput, CurrencyInput } from '../components/Input';
 import type { PageName, LoanStatus, AppStatus } from '../types';
-
 interface Props {
   onNavigate: (page: PageName) => void;
 }
-
 function Section({ title, caption, children }: { title: string; caption?: string; children: React.ReactNode }) {
   return (
     <section className="mb-10">
@@ -24,13 +22,10 @@ function Section({ title, caption, children }: { title: string; caption?: string
     </section>
   );
 }
-
 const loanStatuses: LoanStatus[] = ['active', 'pending', 'approved', 'rejected', 'disbursed', 'closed', 'overdue'];
 const appStatuses: AppStatus[] = ['submitted', 'under-review', 'info-required', 'approved', 'rejected', 'disbursed'];
-
 export default function SystemStates({ onNavigate }: Props) {
   const [retryCount, setRetryCount] = useState(0);
-
   return (
     <AppLayout onNavigate={onNavigate} currentPage="system-states">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
@@ -39,8 +34,7 @@ export default function SystemStates({ onNavigate }: Props) {
           title="System states reference"
           description="A gallery of loading, empty, error, success, and component states used across Shohoj Rin."
         />
-
-        {/* Loading states */}
+        {}
         <Section title="Loading states" caption="Skeletons communicate structure while data loads. Never use spinners alone for content-heavy areas.">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5">
@@ -66,8 +60,7 @@ export default function SystemStates({ onNavigate }: Props) {
             </div>
           </div>
         </Section>
-
-        {/* Empty state */}
+        {}
         <Section title="Empty state" caption="Used when a list or search has no results, with a clear next action.">
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px]">
             <EmptyState
@@ -79,8 +72,7 @@ export default function SystemStates({ onNavigate }: Props) {
             />
           </div>
         </Section>
-
-        {/* Error states */}
+        {}
         <Section title="Error states" caption="Alerts communicate status without relying on colour alone — each carries an icon and label.">
           <div className="flex flex-col gap-3 mb-5">
             <Alert variant="info" title="Heads up">Your document verification is in progress and may take up to 24 hours.</Alert>
@@ -99,8 +91,7 @@ export default function SystemStates({ onNavigate }: Props) {
             <Button variant="secondary" size="sm" onClick={() => setRetryCount((c) => c + 1)}>Retry</Button>
           </div>
         </Section>
-
-        {/* Offline / 404 / permission */}
+        {}
         <Section title="Other page states" caption="Full-page states for connectivity, missing routes, and access control.">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5 flex flex-col items-center text-center">
@@ -123,8 +114,7 @@ export default function SystemStates({ onNavigate }: Props) {
             </div>
           </div>
         </Section>
-
-        {/* Component states gallery */}
+        {}
         <Section title="Buttons" caption="All variants, sizes, and interactive states.">
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5 flex flex-col gap-5">
             <div className="flex flex-wrap items-center gap-3">
@@ -150,7 +140,6 @@ export default function SystemStates({ onNavigate }: Props) {
             </div>
           </div>
         </Section>
-
         <Section title="Inputs" caption="Default, focus (try clicking), error, and disabled states.">
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
             <TextInput label="Default input" placeholder="Enter your name" />
@@ -159,7 +148,6 @@ export default function SystemStates({ onNavigate }: Props) {
             <TextInput label="Disabled input" placeholder="Not editable" disabled />
           </div>
         </Section>
-
         <Section title="Badges" caption="Status is always shown with a label and dot indicator, never colour alone.">
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5 flex flex-col gap-5">
             <div className="flex flex-wrap items-center gap-2">

@@ -9,12 +9,10 @@ import { ProgressBar } from "../components/Progress";
 import { formatTaka, formatPercent } from "../lib/format";
 import type { PageName, LoanStatus } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
-
 interface Props {
   onNavigate: (page: PageName) => void;
   user: StoredUserProfile;
 }
-
 interface FundedLoan {
   id: string;
   borrowerAlias: string;
@@ -25,7 +23,6 @@ interface FundedLoan {
   repaidPct: number;
   status: LoanStatus;
 }
-
 const fundedLoans: FundedLoan[] = [
   {
     id: "SR-2026-004812",
@@ -78,7 +75,6 @@ const fundedLoans: FundedLoan[] = [
     status: "active",
   },
 ];
-
 interface Opportunity {
   id: string;
   product: string;
@@ -88,7 +84,6 @@ interface Opportunity {
   tenure: number;
   risk: "Low" | "Medium" | "High";
 }
-
 const opportunities: Opportunity[] = [
   {
     id: "op-1",
@@ -118,7 +113,6 @@ const opportunities: Opportunity[] = [
     risk: "Medium",
   },
 ];
-
 const monthlyPerformance = [
   { month: "Feb", deployed: 320000 },
   { month: "Mar", deployed: 410000 },
@@ -127,18 +121,15 @@ const monthlyPerformance = [
   { month: "Jun", deployed: 610000 },
   { month: "Jul", deployed: 700000 },
 ];
-
 const riskBreakdown = [
   { label: "Low risk", value: 58, color: "emerald" as const },
   { label: "Medium risk", value: 32, color: "yellow" as const },
   { label: "High risk", value: 10, color: "coral" as const },
 ];
-
 export default function LenderDashboard({ onNavigate, user }: Props) {
   const [funded, setFunded] = useState<Set<string>>(new Set());
   const userName = getDisplayName(user, "Tanvir Hossain");
   const firstName = userName.split(" ")[0] ?? userName;
-
   const columns: Column<FundedLoan>[] = [
     {
       key: "borrower",
@@ -169,9 +160,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
     { key: "repaid", header: "Repaid", numeric: true, render: (r) => `${r.repaidPct}%` },
     { key: "status", header: "Status", render: (r) => <LoanStatusBadge status={r.status} /> },
   ];
-
   const maxDeployed = Math.max(...monthlyPerformance.map((m) => m.deployed));
-
   return (
     <AppLayout
       onNavigate={onNavigate}
@@ -190,8 +179,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
             </Button>
           }
         />
-
-        {/* Stat cards */}
+        {}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           <StatCard
             label="Total deployed"
@@ -208,9 +196,8 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
             hint="1 overdue loan"
           />
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
-          {/* Performance visual */}
+          {}
           <div className="lg:col-span-2 bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5 min-w-0">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between items-start mb-5">
               <div className="min-w-0">
@@ -238,8 +225,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
               ))}
             </div>
           </div>
-
-          {/* Risk distribution */}
+          {}
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5 min-w-0">
             <h2 className="text-sm font-semibold text-navy mb-4">Risk distribution</h2>
             <div className="flex flex-col gap-4">
@@ -255,8 +241,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
             </div>
           </div>
         </div>
-
-        {/* Funded loans table */}
+        {}
         <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] mb-6">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between items-center px-5 py-4 border-b border-stone-200">
             <h2 className="text-sm font-semibold text-navy min-w-0">Funded loans</h2>
@@ -269,8 +254,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
             rowKey={(r) => r.id}
           />
         </div>
-
-        {/* New funding opportunities */}
+        {}
         <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5">
           <h2 className="text-sm font-semibold text-navy mb-4">New funding opportunities</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

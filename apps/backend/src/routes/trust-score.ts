@@ -2,11 +2,8 @@ import { Router } from "express";
 import { pool } from "../lib/db.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
 import { recalculateAndPersistTrustScore } from "../services/trust-persistence.service.js";
-
 const router = Router();
 router.use(requireAuth);
-
-// GET / - get current trust score
 router.get("/", async (req: RequestWithAuth, res) => {
   try {
     const scoreRes = await pool.query(
@@ -15,20 +12,16 @@ router.get("/", async (req: RequestWithAuth, res) => {
        WHERE user_id = $1 AND is_current = TRUE`,
       [req.user!.userId]
     );
-
     if (scoreRes.rowCount === 0) {
       return res.status(200).json({ success: true, data: null });
     }
-
     const scoreRow = scoreRes.rows[0];
-
     const factorsRes = await pool.query(
       `SELECT factor_name as name, factor_value as score, factor_weight as weight, description 
        FROM trust_score_factors 
        WHERE score_id = $1`,
       [scoreRow.score_id]
     );
-
     return res.status(200).json({
       success: true,
       data: {
@@ -49,32 +42,25 @@ router.get("/", async (req: RequestWithAuth, res) => {
     return res.status(500).json({ success: false, error: { message: "Internal server error" } });
   }
 });
-
-// POST /recalculate
 router.post("/recalculate", async (req: RequestWithAuth, res) => {
   try {
     await recalculateAndPersistTrustScore(req.user!.userId, 'manual_recalculation');
-    
     const scoreRes = await pool.query(
       `SELECT score_id, score, trust_band, confidence_score, calculated_at 
        FROM trust_scores 
        WHERE user_id = $1 AND is_current = TRUE`,
       [req.user!.userId]
     );
-    
     if (scoreRes.rowCount === 0) {
       return res.status(404).json({ success: false, error: { message: "Score could not be calculated" } });
     }
-    
     const scoreRow = scoreRes.rows[0];
-    
     const factorsRes = await pool.query(
       `SELECT factor_name as name, factor_value as score, factor_weight as weight, description 
        FROM trust_score_factors 
        WHERE score_id = $1`,
       [scoreRow.score_id]
     );
-
     return res.status(200).json({
       success: true,
       data: {
@@ -95,5 +81,4 @@ router.post("/recalculate", async (req: RequestWithAuth, res) => {
     return res.status(500).json({ success: false, error: { message: "Internal server error" } });
   }
 });
-
 export default router;

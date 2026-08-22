@@ -5,16 +5,12 @@ import "@fontsource/stack-sans-notch/600.css";
 import "@fontsource/stack-sans-notch/700.css";
 import { Providers } from "./providers";
 import "../styles.css";
-
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-space-grotesk",
   display: "swap",
 });
-
-
-
 export const metadata: Metadata = {
   title: "Shohoj Rin — Simple, transparent borrowing",
   description:
@@ -33,7 +29,6 @@ export const metadata: Metadata = {
     icon: "/icon.svg",
   },
 };
-
 export default function RootLayout({
   children,
 }: {

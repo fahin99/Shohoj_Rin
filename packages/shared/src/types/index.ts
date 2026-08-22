@@ -1,4 +1,3 @@
-// Domain enums & types shared between Express API and TanStack frontend
 
 export type UserRole = "borrower" | "lender" | "admin" | "reviewer";
 export type AccountStatus = "active" | "suspended" | "deactivated";
@@ -12,7 +11,6 @@ export type LoanStatus =
   | "overdue"
   | "defaulted"
   | "delinquent";
-
 export type ApplicationStatus =
   | "draft"
   | "submitted"
@@ -21,21 +19,12 @@ export type ApplicationStatus =
   | "approved"
   | "rejected"
   | "disbursed";
-
 export type TransactionType = "payment" | "repayment" | "disbursement" | "fee" | "refund";
-
 export type VerificationStatus = "pending" | "approved" | "rejected";
-
 export type VerificationType = "identity" | "student" | "document" | "guarantor";
-
 export type TrustBand = "very_low_risk" | "low_risk" | "moderate_risk" | "high_risk" | "very_high_risk";
-
 export type FraudSeverity = "low" | "medium" | "high" | "critical";
-
 export type NotificationChannel = "email" | "sms" | "in_app";
-
-// Frontend-specific types (also shared so the API can return these shapes)
-
 export type PageName =
   | "landing"
   | "auth"
@@ -51,7 +40,6 @@ export type PageName =
   | "lender-dashboard"
   | "admin"
   | "system-states";
-
 export interface LoanProduct {
   id: string;
   name: string;
@@ -65,7 +53,6 @@ export interface LoanProduct {
   eligibility: string[];
   tags: string[];
 }
-
 export interface Transaction {
   id: string;
   date: string;
@@ -74,7 +61,6 @@ export interface Transaction {
   type: TransactionType;
   status: "completed" | "pending" | "failed";
 }
-
 export interface RepaymentScheduleRow {
   month: number;
   dueDate: string;
@@ -83,16 +69,12 @@ export interface RepaymentScheduleRow {
   total: number;
   status: "paid" | "due" | "upcoming" | "overdue";
 }
-
 export interface NavItem {
   label: string;
   page?: PageName;
   icon?: string;
   badge?: number;
 }
-
-// API response wrappers
-
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

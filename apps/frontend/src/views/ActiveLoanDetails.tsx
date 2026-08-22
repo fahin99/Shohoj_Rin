@@ -11,25 +11,21 @@ import { DataTable } from '../components/DataTable';
 import { activeLoan, repaymentSchedule, transactions } from '../lib/mock-data';
 import { formatTaka, formatPercent, formatDate } from '../lib/format';
 import type { PageName, RepaymentScheduleRow, Transaction } from '../types';
-
 interface Props {
   onNavigate: (page: PageName) => void;
 }
-
 const scheduleStatusVariant: Record<RepaymentScheduleRow['status'], 'success' | 'warning' | 'error' | 'neutral'> = {
   paid: 'success',
   due: 'warning',
   upcoming: 'neutral',
   overdue: 'error',
 };
-
 const scheduleStatusLabel: Record<RepaymentScheduleRow['status'], string> = {
   paid: 'Paid',
   due: 'Due',
   upcoming: 'Upcoming',
   overdue: 'Overdue',
 };
-
 const txTypeLabel: Record<Transaction['type'], string> = {
   repayment: 'Repayment',
   disbursement: 'Disbursement',
@@ -37,17 +33,14 @@ const txTypeLabel: Record<Transaction['type'], string> = {
   payment: 'Payment',
   refund: 'Refund',
 };
-
 const txStatusVariant: Record<Transaction['status'], 'success' | 'warning' | 'error'> = {
   completed: 'success',
   pending: 'warning',
   failed: 'error',
 };
-
 export default function ActiveLoanDetails({ onNavigate }: Props) {
   const [tab, setTab] = useState<'schedule' | 'transactions'>('schedule');
   const remaining = activeLoan.durationMonths - activeLoan.paidMonths;
-
   return (
     <AppLayout onNavigate={onNavigate} currentPage="active-loan">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
@@ -61,14 +54,12 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
             <LoanStatusBadge status="active" />
           </div>
         </div>
-
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard label="Principal" value={formatTaka(activeLoan.principal)} hint="Original amount borrowed" />
           <StatCard label="Repaid" value={formatTaka(activeLoan.amountRepaid)} tone="positive" hint={`${activeLoan.paidMonths} of ${activeLoan.durationMonths} instalments`} />
           <StatCard label="Remaining balance" value={formatTaka(activeLoan.remainingBalance)} tone="attention" />
           <StatCard label="Next payment" value={formatTaka(activeLoan.monthlyPayment)} tone="info" hint={`Due ${formatDate(activeLoan.nextPaymentDate)}`} />
         </div>
-
         <Card variant="raised" className="p-5 mb-6">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between sm:items-center mb-4">
             <h2 className="text-base font-semibold text-navy">Repayment progress</h2>
@@ -84,7 +75,6 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
             <Button variant="primary" size="sm" onClick={() => onNavigate('repayment')}>Make a payment</Button>
           </div>
         </Card>
-
         <Card variant="plain" className="mb-6">
           <CardHeader title="Cost breakdown" description="How your total repayment is made up" />
           <CardBody>
@@ -97,7 +87,6 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
             <DataRow label="Remaining balance" value={formatTaka(activeLoan.remainingBalance)} emphasis />
           </CardBody>
         </Card>
-
         <Card variant="plain" className="mb-6">
           <div className="px-4 sm:px-5 pt-4">
             <Tabs
@@ -159,7 +148,6 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
             />
           </TabPanel>
         </Card>
-
         <Card variant="plain" className="p-5">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between sm:items-center">
             <div className="min-w-0">

@@ -1,5 +1,4 @@
 import { pool } from "../lib/db.js";
-
 async function main() {
   try {
     const tables = await pool.query(
@@ -8,13 +7,11 @@ async function main() {
     console.log("=== TABLES FOUND IN DATABASE ===");
     const tableNames = tables.rows.map((r: { table_name: string }) => r.table_name);
     console.log(tableNames);
-
     console.log("\n=== TABLE ROW COUNTS ===");
     for (const name of tableNames) {
       const res = await pool.query(`SELECT count(*) FROM "${name}"`);
       console.log(`- ${name.padEnd(25)}: ${res.rows[0].count} row(s)`);
     }
-
     const fks = await pool.query(`
       SELECT
         tc.table_name,
@@ -31,7 +28,6 @@ async function main() {
     `);
     console.log(`\n=== FOREIGN KEY CONSTRAINTS (${fks.rows.length} total) ===`);
     console.table(fks.rows);
-
   } catch (error) {
     console.error("Database connection/query failed:", error);
     process.exitCode = 1;
@@ -39,5 +35,4 @@ async function main() {
     await pool.end();
   }
 }
-
 void main();

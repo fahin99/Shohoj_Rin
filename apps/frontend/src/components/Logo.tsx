@@ -3,18 +3,15 @@ interface LogoProps {
   variant?: 'default' | 'white' | 'teal';
   onClick?: () => void;
 }
-
 export function Logo({ size = 'md', variant = 'default', onClick }: LogoProps) {
   const sizes = {
     sm: { mark: 22, text: 'text-base' },
     md: { mark: 28, text: 'text-lg' },
     lg: { mark: 36, text: 'text-2xl' },
   };
-
   const textColor = variant === 'white' ? '#FAFAF8' : '#0D1B2A';
   const accentColor = variant === 'white' ? '#1BB8A3' : '#0D7377';
   const s = sizes[size];
-
   return (
     <button
       onClick={onClick}

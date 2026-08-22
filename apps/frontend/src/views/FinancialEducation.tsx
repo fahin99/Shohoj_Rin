@@ -9,14 +9,11 @@ import { formatTaka } from "../lib/format";
 import { educationArticles } from "../lib/mock-data";
 import type { PageName } from "../types";
 import type { StoredUserProfile } from "../lib/session";
-
 interface Props {
   onNavigate: (page: PageName) => void;
   user: StoredUserProfile | null;
 }
-
 const categories = ["All", "Basics", "Repayment", "Credit", "Planning", "Support"];
-
 const glossary = [
   {
     term: "EMI",
@@ -38,7 +35,6 @@ const glossary = [
     def: "A set window after disbursement or a missed payment during which no penalty is charged.",
   },
 ];
-
 const faqs = [
   {
     q: "How is my interest rate decided?",
@@ -57,15 +53,12 @@ const faqs = [
     a: "No. Many personal, education, and emergency loans on Shohoj Rin are collateral-free, though larger business loans may require security.",
   },
 ];
-
 export default function FinancialEducation({ onNavigate, user }: Props) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
-
   const [amount, setAmount] = useState(150000);
   const [rate, setRate] = useState(10);
   const [months, setMonths] = useState(24);
-
   const filtered = useMemo(() => {
     return educationArticles.filter((a) => {
       const matchesCat = category === "All" || a.tag === category;
@@ -76,10 +69,8 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
       return matchesCat && matchesQuery;
     });
   }, [query, category]);
-
   const featured = educationArticles[0];
   const rest = filtered.filter((a) => a.id !== featured.id);
-
   const monthlyRate = rate / 12 / 100;
   const emi =
     monthlyRate === 0
@@ -88,12 +79,10 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
         (Math.pow(1 + monthlyRate, months) - 1);
   const totalRepayment = emi * months;
   const totalInterest = totalRepayment - amount;
-
   return (
     <div className="bg-offwhite min-h-screen">
       <Navbar onNavigate={onNavigate} user={user} />
-
-      {/* Hero */}
+      {}
       <section className="max-w-6xl mx-auto px-4 md:px-6 pt-14 pb-12">
         <div className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
@@ -110,8 +99,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
           </p>
         </div>
       </section>
-
-      {/* Search + filter */}
+      {}
       <section className="max-w-6xl mx-auto px-4 md:px-6 pb-6">
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mb-5">
           <div className="w-full sm:max-w-xs">
@@ -131,8 +119,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
           onChange={setCategory}
         />
       </section>
-
-      {/* Featured article */}
+      {}
       {category === "All" && query.trim() === "" && (
         <section className="max-w-6xl mx-auto px-4 md:px-6 pb-10">
           <div className="bg-teal border-[1.5px] border-navy rounded-[8px] shadow-nb-lg p-6 md:p-8 grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-start">
@@ -156,8 +143,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
           </div>
         </section>
       )}
-
-      {/* Article grid */}
+      {}
       <section className="max-w-6xl mx-auto px-4 md:px-6 pb-16">
         {rest.length === 0 ? (
           <EmptyState
@@ -185,8 +171,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
           </div>
         )}
       </section>
-
-      {/* Loan cost calculator */}
+      {}
       <section className="bg-white border-y border-stone-200">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-16">
           <div className="mb-10 max-w-2xl">
@@ -261,8 +246,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
           </div>
         </div>
       </section>
-
-      {/* Glossary */}
+      {}
       <section className="max-w-6xl mx-auto px-4 md:px-6 py-16">
         <div className="mb-10 max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
@@ -279,8 +263,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
           ))}
         </dl>
       </section>
-
-      {/* FAQ */}
+      {}
       <section className="bg-teal-light border-y border-teal/20">
         <div className="max-w-3xl mx-auto px-4 md:px-6 py-16">
           <div className="mb-10">
@@ -307,8 +290,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
           </div>
         </div>
       </section>
-
-      {/* CTA */}
+      {}
       <section className="bg-navy">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-16 flex flex-col md:flex-row items-center justify-between gap-8">
           <div>
@@ -329,7 +311,6 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
           </Button>
         </div>
       </section>
-
       <Footer onNavigate={onNavigate} />
     </div>
   );

@@ -5,11 +5,9 @@ import { TextInput, Select, Radio, Checkbox } from '../components/Input';
 import { Stepper } from '../components/Progress';
 import InstitutionCombobox from '../components/InstitutionCombobox';
 import type { PageName } from '../types';
-
 interface OnboardingPageProps {
   onNavigate: (page: PageName) => void;
 }
-
 const steps = [
   { label: 'Personal', sublabel: 'Info' },
   { label: 'Financial', sublabel: 'Profile' },
@@ -17,7 +15,6 @@ const steps = [
   { label: 'Goals', sublabel: '' },
   { label: 'Preferences', sublabel: '' },
 ];
-
 const goalOptions = [
   'Pay for education or training',
   'Cover a medical emergency',
@@ -26,11 +23,9 @@ const goalOptions = [
   'Personal development',
   'Consolidate existing debt',
 ];
-
 export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
-
   const [data, setData] = useState({
     fullName: '', dob: '', gender: '', nid: '', address: '', city: '',
     monthlyIncome: '', savingsAmount: '', existingLoans: 'no',
@@ -39,45 +34,38 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     goals: [] as string[],
     notifEmail: true, notifSms: true, language: 'en',
   });
-
   const update = (k: string, v: string | boolean | string[]) => setData(d => ({ ...d, [k]: v }));
-
   const toggleGoal = (g: string) => {
     setData(d => ({
       ...d,
       goals: d.goals.includes(g) ? d.goals.filter(x => x !== g) : [...d.goals, g],
     }));
   };
-
   const next = () => { if (step < steps.length - 1) setStep(s => s + 1); else onNavigate('borrower-dashboard'); };
   const back = () => { if (step > 0) setStep(s => s - 1); };
-
   const saveAndContinueLater = () => {
     setSaving(true);
     setTimeout(() => { setSaving(false); onNavigate('landing'); }, 1000);
   };
-
   return (
     <div className="min-h-screen bg-offwhite flex flex-col">
-      {/* Top bar */}
+      {}
       <header className="border-b border-stone-200 bg-white px-6 py-3 flex items-center justify-between">
         <Logo size="sm" onClick={() => onNavigate('landing')} />
         <Button variant="ghost" size="sm" onClick={saveAndContinueLater} loading={saving}>
           Save & continue later
         </Button>
       </header>
-
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-10">
-        {/* Progress stepper */}
+        {}
         <div className="mb-10">
           <p className="text-xs text-stone-500 mb-4 text-center">
             Step {step + 1} of {steps.length} — let us get to know you
           </p>
           <Stepper steps={steps} currentStep={step} />
         </div>
-
         <div className="bg-white border-[1.5px] border-navy rounded-[8px] shadow-nb p-6 md:p-8">
-          {/* Step 0: Personal info */}
+          {}
           {step === 0 && (
             <div>
               <h2 className="text-2xl font-semibold text-navy mb-1">Personal information</h2>
@@ -113,8 +101,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
               </div>
             </div>
           )}
-
-          {/* Step 1: Financial profile */}
+          {}
           {step === 1 && (
             <div>
               <h2 className="text-2xl font-semibold text-navy mb-1">Financial profile</h2>
@@ -136,8 +123,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
               </div>
             </div>
           )}
-
-          {/* Step 2: Employment */}
+          {}
           {step === 2 && (
             <div>
               <h2 className="text-2xl font-semibold text-navy mb-1">Employment & income</h2>
@@ -202,8 +188,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
               </div>
             </div>
           )}
-
-          {/* Step 3: Financial goals */}
+          {}
           {step === 3 && (
             <div>
               <h2 className="text-2xl font-semibold text-navy mb-1">Your financial goals</h2>
@@ -229,7 +214,6 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
               )}
             </div>
           )}
-
           {/* Step 4: Preferences */}
           {step === 4 && (
             <div>
@@ -260,8 +244,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
             </div>
           )}
         </div>
-
-        {/* Navigation buttons */}
+        {}
         <div className="flex items-center justify-between mt-6">
           <Button variant="ghost" size="md" onClick={back} disabled={step === 0}>
             ← Back

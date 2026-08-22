@@ -12,22 +12,17 @@ import { Stepper } from '../components/Progress';
 import { applications } from '../lib/mock-data';
 import { formatTaka, formatDate } from '../lib/format';
 import type { PageName, AppStatus } from '../types';
-
 interface Props {
   onNavigate: (page: PageName) => void;
 }
-
 type FilterId = 'all' | 'in-progress' | 'approved' | 'rejected';
-
 const stageLabels = ['Submitted', 'Under review', 'Decision', 'Disbursed'];
-
 function matchesFilter(status: AppStatus, filter: FilterId) {
   if (filter === 'all') return true;
   if (filter === 'approved') return status === 'approved' || status === 'disbursed';
   if (filter === 'rejected') return status === 'rejected';
   return status === 'submitted' || status === 'under-review' || status === 'info-required';
 }
-
 function timelineFor(app: (typeof applications)[number]) {
   const steps = [
     { label: 'Application submitted', date: formatDate(app.submitted), done: true },
@@ -41,14 +36,11 @@ function timelineFor(app: (typeof applications)[number]) {
   ];
   return steps;
 }
-
 export default function ApplicationStatus({ onNavigate }: Props) {
   const [filter, setFilter] = useState<FilterId>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-
   const filtered = applications.filter((a) => matchesFilter(a.status, filter));
   const selected = applications.find((a) => a.id === selectedId) ?? null;
-
   return (
     <AppLayout onNavigate={onNavigate} currentPage="application-status">
       <div className="max-w-4xl mx-auto px-4 md:px-6 py-6">
@@ -57,7 +49,6 @@ export default function ApplicationStatus({ onNavigate }: Props) {
           description="Track every loan application from submission to disbursement."
           actions={<Button variant="primary" size="sm" onClick={() => onNavigate('loan-marketplace')}>+ New application</Button>}
         />
-
         <Tabs
           className="mb-5"
           variant="pill"
@@ -70,7 +61,6 @@ export default function ApplicationStatus({ onNavigate }: Props) {
           activeTab={filter}
           onChange={(id) => setFilter(id as FilterId)}
         />
-
         {filtered.length === 0 ? (
           <Card variant="plain">
             <EmptyState
@@ -95,7 +85,6 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                     <p className="tabular-nums text-sm font-semibold text-navy">{formatTaka(app.amount)}</p>
                   </div>
                 </div>
-
                 {app.status === 'info-required' && (
                   <Alert variant="warning" title="Additional information needed" className="mt-4">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
@@ -106,11 +95,9 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                     </div>
                   </Alert>
                 )}
-
                 <div className="mt-5 overflow-x-auto">
                   <Stepper steps={stageLabels.map((l) => ({ label: l }))} currentStep={app.stage - 1} />
                 </div>
-
                 <div className="mt-4 pt-3 border-t border-stone-100 flex justify-end">
                   <button
                     type="button"
@@ -124,7 +111,6 @@ export default function ApplicationStatus({ onNavigate }: Props) {
             ))}
           </div>
         )}
-
         <Modal
           open={!!selected}
           onClose={() => setSelectedId(null)}

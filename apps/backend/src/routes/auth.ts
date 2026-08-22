@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
 import type { PoolClient } from "pg";
-
 import { pool } from "../lib/db.js";
 import {
   clearAuthCookies,
@@ -17,16 +16,13 @@ import {
   verifyRefreshToken,
 } from "../lib/auth.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
-
 const router = Router();
-
 const registerSchema = z.object({
   fullName: z.string().trim().min(2, "Full name is required"),
   email: z.string().trim().email("A valid email address is required"),
   phone: z.string().trim().min(5).optional().nullable(),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
-
 const loginSchema = z
   .object({
     email: z.string().trim().email().optional(),
@@ -38,11 +34,9 @@ const loginSchema = z
     message: "Email or phone is required",
     path: ["identifier"],
   });
-
 const refreshSchema = z.object({
   refreshToken: z.string().optional(),
 });
-
 type UserQueryRow = {
   user_id: string;
   email: string;
@@ -59,7 +53,6 @@ type UserQueryRow = {
   district: string | null;
   occupation: string | null;
 };
-
 function serializeUser(row: UserQueryRow) {
   return {
     userId: row.user_id,
@@ -90,7 +83,6 @@ function serializeUser(row: UserQueryRow) {
     },
   };
 }
-
 async function fetchUserById(userId: string) {
   const result = await pool.query<UserQueryRow>(
     `SELECT
@@ -114,10 +106,8 @@ async function fetchUserById(userId: string) {
     LIMIT 1`,
     [userId],
   );
-
   return result.rows[0] ?? null;
 }
-
 async function createSession(
   db: Pick<PoolClient, "query">,
   userId: string,
@@ -128,16 +118,13 @@ async function createSession(
   const refreshToken = createRefreshToken(userId, sessionId);
   const refreshTokenHash = hashToken(refreshToken);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
   await db.query(
     `INSERT INTO login_sessions (session_id, user_id, refresh_token_hash, expires_at)
      VALUES ($1, $2, $3, $4)`,
     [sessionId, userId, refreshTokenHash, expiresAt],
   );
-
   return { accessToken, refreshToken, expiresAt };
 }
-
 router.post("/register", async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -149,22 +136,18 @@ router.post("/register", async (req, res) => {
       },
     });
   }
-
   const fullName = parsed.data.fullName.trim();
   const email = normalizeEmail(parsed.data.email);
   const phone = normalizePhone(parsed.data.phone);
   const passwordHash = await hashPassword(parsed.data.password);
   const client = await pool.connect();
   const sessionId = generateSessionId();
-
   try {
     await client.query("BEGIN");
-
     const existingUser = await client.query(
       `SELECT user_id FROM users WHERE email = $1 OR ($2::varchar IS NOT NULL AND phone = $2) LIMIT 1`,
       [email, phone],
     );
-
     if (existingUser.rowCount && existingUser.rowCount > 0) {
       await client.query("ROLLBACK");
       return res.status(409).json({
@@ -172,31 +155,24 @@ router.post("/register", async (req, res) => {
         error: { message: "An account with this email or phone already exists" },
       });
     }
-
     const userResult = await client.query(
       `INSERT INTO users (email, phone, password_hash, role)
        VALUES ($1, $2, $3, 'borrower')
        RETURNING user_id, email, phone, role, account_status, email_verified, created_at, updated_at`,
       [email, phone, passwordHash],
     );
-
     const user = userResult.rows[0] as {
       user_id: string;
       role: string;
     };
-
     await client.query(
       `INSERT INTO user_profiles (user_id, full_name)
        VALUES ($1, $2)`,
       [user.user_id, fullName],
     );
-
     const session = await createSession(client, user.user_id, user.role, sessionId);
-
     await client.query("COMMIT");
-
     setAuthCookies(res, session.accessToken, session.refreshToken);
-
     const profile = await fetchUserById(user.user_id);
     return res.status(201).json({
       success: true,
@@ -217,7 +193,6 @@ router.post("/register", async (req, res) => {
         error: { message: "An account with this email or phone already exists" },
       });
     }
-
     console.error("Registration failed:", error);
     return res.status(500).json({
       success: false,
@@ -227,7 +202,6 @@ router.post("/register", async (req, res) => {
     client.release();
   }
 });
-
 router.post("/login", async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -239,12 +213,10 @@ router.post("/login", async (req, res) => {
       },
     });
   }
-
   const email = parsed.data.email ? normalizeEmail(parsed.data.email) : null;
   const phone = parsed.data.phone ? normalizePhone(parsed.data.phone) : null;
   const identifier = parsed.data.identifier ? parsed.data.identifier.trim() : null;
   const client = await pool.connect();
-
   try {
     const userResult = await client.query<{
       user_id: string;
@@ -262,7 +234,6 @@ router.post("/login", async (req, res) => {
        LIMIT 1`,
       [email, phone, identifier],
     );
-
     const user = userResult.rows[0];
     if (!user) {
       return res.status(401).json({
@@ -270,7 +241,6 @@ router.post("/login", async (req, res) => {
         error: { message: "Invalid email/phone or password" },
       });
     }
-
     const passwordMatches = await comparePassword(parsed.data.password, user.password_hash);
     if (!passwordMatches) {
       return res.status(401).json({
@@ -278,18 +248,15 @@ router.post("/login", async (req, res) => {
         error: { message: "Invalid email/phone or password" },
       });
     }
-
     if (user.account_status !== "active") {
       return res.status(403).json({
         success: false,
         error: { message: "Account is not active" },
       });
     }
-
     const sessionId = generateSessionId();
     const session = await createSession(client, user.user_id, user.role, sessionId);
     setAuthCookies(res, session.accessToken, session.refreshToken);
-
     const profile = await fetchUserById(user.user_id);
     return res.status(200).json({
       success: true,
@@ -307,7 +274,6 @@ router.post("/login", async (req, res) => {
     client.release();
   }
 });
-
 router.post("/refresh", async (req, res) => {
   const parsed = refreshSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -316,7 +282,6 @@ router.post("/refresh", async (req, res) => {
       error: { message: "Invalid refresh request" },
     });
   }
-
   const refreshToken =
     parsed.data.refreshToken ??
     (typeof req.cookies?.shohojrin_refresh_token === "string"
@@ -328,21 +293,18 @@ router.post("/refresh", async (req, res) => {
       error: { message: "Refresh token is required" },
     });
   }
-
   try {
     const claims = verifyRefreshToken(refreshToken) as {
       tokenType?: string;
       sub?: string;
       jti?: string;
     };
-
     if (claims.tokenType !== "refresh" || !claims.sub || !claims.jti) {
       return res.status(401).json({
         success: false,
         error: { message: "Invalid refresh token" },
       });
     }
-
     const sessionResult = await pool.query<{
       session_id: string;
       user_id: string;
@@ -359,7 +321,6 @@ router.post("/refresh", async (req, res) => {
        LIMIT 1`,
       [claims.jti, claims.sub],
     );
-
     const session = sessionResult.rows[0];
     if (!session || session.is_revoked) {
       return res.status(401).json({
@@ -367,7 +328,6 @@ router.post("/refresh", async (req, res) => {
         error: { message: "Session is no longer valid" },
       });
     }
-
     const tokenMatches = hashToken(refreshToken) === session.refresh_token_hash;
     const expiresAt =
       session.expires_at instanceof Date ? session.expires_at : new Date(session.expires_at);
@@ -377,12 +337,10 @@ router.post("/refresh", async (req, res) => {
         error: { message: "Refresh token has expired" },
       });
     }
-
     const accessToken = createAccessToken(session.user_id, session.session_id, session.role);
     const nextRefreshToken = createRefreshToken(session.user_id, session.session_id);
     const nextRefreshHash = hashToken(nextRefreshToken);
     const nextExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
     await pool.query(
       `UPDATE login_sessions
        SET refresh_token_hash = $1,
@@ -390,9 +348,7 @@ router.post("/refresh", async (req, res) => {
        WHERE session_id = $3`,
       [nextRefreshHash, nextExpiresAt, session.session_id],
     );
-
     setAuthCookies(res, accessToken, nextRefreshToken);
-
     const profile = await fetchUserById(session.user_id);
     return res.status(200).json({
       success: true,
@@ -407,7 +363,6 @@ router.post("/refresh", async (req, res) => {
     });
   }
 });
-
 router.post("/logout", async (req, res) => {
   const refreshToken =
     typeof req.cookies?.shohojrin_refresh_token === "string"
@@ -415,7 +370,6 @@ router.post("/logout", async (req, res) => {
       : typeof req.body?.refreshToken === "string"
         ? req.body.refreshToken
         : null;
-
   if (refreshToken) {
     try {
       const claims = verifyRefreshToken(refreshToken) as { jti?: string };
@@ -428,20 +382,16 @@ router.post("/logout", async (req, res) => {
         );
       }
     } catch {
-      // Ignore invalid tokens on logout.
     }
   }
-
   clearAuthCookies(res);
   return res.status(200).json({
     success: true,
     data: { message: "Logged out successfully" },
   });
 });
-
 router.get("/me", requireAuth, (req, res) => {
   const authReq = req as RequestWithAuth;
-
   return res.status(200).json({
     success: true,
     data: {
@@ -450,10 +400,8 @@ router.get("/me", requireAuth, (req, res) => {
     },
   });
 });
-
 router.get("/session", requireAuth, (req, res) => {
   const authReq = req as RequestWithAuth;
-
   return res.status(200).json({
     success: true,
     data: {
@@ -463,5 +411,4 @@ router.get("/session", requireAuth, (req, res) => {
     },
   });
 });
-
 export default router;

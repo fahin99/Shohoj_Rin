@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "./Logo";
@@ -7,38 +6,31 @@ import { Button } from "./Button";
 import type { PageName } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
 import { apiRequest } from "../lib/api";
-
 interface NavbarProps {
   onNavigate: (page: PageName) => void;
   transparent?: boolean;
   user?: StoredUserProfile | null;
 }
-
 const navLinks: { label: string; href?: string; page?: PageName }[] = [
   { label: "Loans", page: "loan-marketplace" },
   { label: "How it works", href: "#how" },
   { label: "Learn", page: "education" },
   { label: "For lenders", page: "lender-dashboard" },
 ];
-
 export function Navbar({ onNavigate, transparent = false, user = null }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
   const isAuthenticated = Boolean(user);
   const userName = getDisplayName(user, "Account");
-
   const handleLogout = async () => {
     try {
       await apiRequest("/auth/logout", { method: "POST" });
     } catch {
-      // The browser must still navigate away when an expired session cannot be
-      // revoked; there is no client-side token or profile state to clear.
     } finally {
       router.replace("/");
       router.refresh();
     }
   };
-
   return (
     <header
       className={`sticky top-0 z-40 w-full border-b transition-colors ${
@@ -49,7 +41,6 @@ export function Navbar({ onNavigate, transparent = false, user = null }: NavbarP
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 md:px-6">
         <Logo onClick={() => onNavigate("landing")} />
-
         <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
           {navLinks.map((link) =>
             link.page ? (
@@ -72,7 +63,6 @@ export function Navbar({ onNavigate, transparent = false, user = null }: NavbarP
             ),
           )}
         </nav>
-
         <div className="hidden md:flex items-center gap-2">
           {isAuthenticated ? (
             <>
@@ -100,7 +90,6 @@ export function Navbar({ onNavigate, transparent = false, user = null }: NavbarP
             </>
           )}
         </div>
-
         <button
           type="button"
           className="grid h-10 w-10 place-items-center rounded-[6px] hover:bg-stone-100 md:hidden"
@@ -129,7 +118,6 @@ export function Navbar({ onNavigate, transparent = false, user = null }: NavbarP
           )}
         </button>
       </div>
-
       {menuOpen && (
         <nav
           aria-label="Mobile"

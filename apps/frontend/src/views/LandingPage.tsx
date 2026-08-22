@@ -3,12 +3,10 @@ import { Footer } from "../components/Footer";
 import { Button } from "../components/Button";
 import type { PageName } from "../types";
 import type { StoredUserProfile } from "../lib/session";
-
 interface LandingPageProps {
   onNavigate: (page: PageName) => void;
   user: StoredUserProfile | null;
 }
-
 const loanCategories = [
   {
     name: "Education",
@@ -47,7 +45,6 @@ const loanCategories = [
     accent: "text-emerald",
   },
 ];
-
 const howItWorks = [
   {
     step: "01",
@@ -70,7 +67,6 @@ const howItWorks = [
     desc: "Track your repayments, get reminders, and access your full loan history from one clear dashboard.",
   },
 ];
-
 const trustPoints = [
   {
     icon: "◉",
@@ -93,7 +89,6 @@ const trustPoints = [
     desc: "What you see is what you pay. Processing fees and costs are declared up front.",
   },
 ];
-
 const literacyCards = [
   {
     title: "Understanding Interest Rates",
@@ -114,13 +109,11 @@ const literacyCards = [
     desc: "Duration, amount, credit history — see which factors influence the rate you receive.",
   },
 ];
-
 export default function LandingPage({ onNavigate, user }: LandingPageProps) {
   return (
     <div className="bg-offwhite min-h-screen">
       <Navbar onNavigate={onNavigate} user={user} />
-
-      {/* Hero */}
+      {}
       <section className="max-w-6xl mx-auto px-4 md:px-6 pt-16 pb-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-teal-light border border-teal/30 rounded-[4px] text-xs font-medium text-teal mb-6">
@@ -157,13 +150,12 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
             ))}
           </div>
         </div>
-
-        {/* Hero visual: floating loan card */}
+        {}
         <div className="relative lg:flex justify-end hidden">
           <div className="relative w-full max-w-sm">
-            {/* Background decorative block */}
+            {}
             <div className="absolute -bottom-4 -right-4 w-full h-full bg-teal-light border-[1.5px] border-teal/30 rounded-[8px]" />
-            {/* Main card */}
+            {}
             <div className="relative bg-white border-[1.5px] border-navy rounded-[8px] shadow-nb-lg p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -203,7 +195,7 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
                 <p className="text-xs text-stone-400 mt-1.5">Next payment: Dec 15, 2025</p>
               </div>
             </div>
-            {/* Small floating secondary card */}
+            {}
             <div className="absolute -top-6 -left-10 bg-white border-[1.5px] border-navy rounded-[6px] shadow-nb p-3 w-40">
               <p className="text-xs text-stone-500">Total repaid</p>
               <p className="font-display tabular-nums text-base font-semibold text-navy">৳63,000</p>
@@ -212,8 +204,7 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
           </div>
         </div>
       </section>
-
-      {/* How it works */}
+      {}
       <section id="how" className="bg-teal-light border-y border-teal/20">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-16">
           <div className="text-center mb-12">
@@ -238,8 +229,7 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
           </div>
         </div>
       </section>
-
-      {/* Loan categories */}
+      {}
       <section className="max-w-6xl mx-auto px-4 md:px-6 py-16">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
@@ -272,8 +262,7 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
           ))}
         </div>
       </section>
-
-      {/* Financial literacy */}
+      {}
       <section id="education" className="bg-white border-y border-stone-200">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-16">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
@@ -311,8 +300,7 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
           </div>
         </div>
       </section>
-
-      {/* Trust section */}
+      {}
       <section className="max-w-6xl mx-auto px-4 md:px-6 py-16">
         <div className="text-center mb-10">
           <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
@@ -341,8 +329,7 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
           ))}
         </div>
       </section>
-
-      {/* CTA section */}
+      {}
       <section className="bg-navy">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-16 flex flex-col md:flex-row items-center justify-between gap-8">
           <div>
@@ -371,7 +358,6 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
           </div>
         </div>
       </section>
-
       <Footer onNavigate={onNavigate} />
     </div>
   );

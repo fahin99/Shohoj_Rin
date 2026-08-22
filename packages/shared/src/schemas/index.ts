@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-// Auth schemas
-
 export const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
@@ -13,16 +11,12 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-// Loan application schemas
-
 export const loanApplicationSchema = z.object({
   requestedAmount: z.number().positive("Amount must be positive"),
   purpose: z.string().min(1, "Purpose is required"),
   purposeDescription: z.string().optional(),
   partnerId: z.string().uuid().optional(),
 });
-
-// Search / filter schemas (for type-safe TanStack Router search params)
 
 export const paginationSchema = z.object({
   page: z.number().int().positive().catch(1),
@@ -41,8 +35,6 @@ export const loanListSearchSchema = z.object({
   search: z.string().optional(),
   sort: z.enum(["interest-asc", "interest-desc", "amount-asc", "amount-desc"]).optional(),
 });
-
-// Type exports from schemas
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

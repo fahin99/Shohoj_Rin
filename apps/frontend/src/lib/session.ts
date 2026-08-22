@@ -14,16 +14,13 @@ export interface StoredUserProfile {
     occupation?: string | null;
   };
 }
-
 export function getDisplayName(user: StoredUserProfile | null, fallback: string) {
   const fullName = user?.profile?.fullName?.trim();
   if (fullName) {
     return fullName;
   }
-
   if (user?.email) {
     return user.email.split("@")[0];
   }
-
   return fallback;
 }

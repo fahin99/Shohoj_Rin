@@ -4,14 +4,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * ── Shohoj Rin brand layer ──────────────────────────────────────────────
- * Trust-first fintech with minimal neubrutalist personality.
- * Typography: Space Grotesk (display, UI + body) /
- * Space Mono (financial figures, tabular numerals).
- * Colour: teal + turquoise primary, warm stone neutrals, semantic accents
- * tuned for WCAG AA on their own tinted surfaces.
- */
 @theme {
   --color-teal: #0d7377;
   --color-teal-dark: #084c4f;
@@ -44,20 +36,6 @@
   --font-display: "Stack Sans Notch", sans-serif;
   --font-sans: var(--font-space-grotesk), "Space Grotesk", sans-serif;
 }
-
-/*
- * Design system definition.
- *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
- */
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -104,23 +82,23 @@
 
 :root {
   --radius: 0.375rem;
-  --background: oklch(0.958 0.012 85.9);
+  --background: oklch(88.67% 0.01812 214.656);
   --foreground: oklch(0.216 0.033 258.4);
-  --card: oklch(1 0 0);
+  --card: oklch(93.265% 0.00648 16.373);
   --card-foreground: oklch(0.216 0.033 258.4);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.216 0.033 258.4);
   --primary: oklch(0.469 0.079 191.5);
-  --primary-foreground: oklch(0.99 0.004 85);
-  --secondary: oklch(0.968 0.007 247.896);
+  --primary-foreground: oklch(95.767% 0.02534 178.626 / 0.881);
+  --secondary: oklch(87.818% 0.03833 265.848);
   --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
+  --muted: oklch(88.506% 0.01236 248.156);
   --muted-foreground: oklch(0.554 0.046 257.417);
   --accent: oklch(0.968 0.007 247.896);
   --accent-foreground: oklch(0.208 0.042 265.755);
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
+  --destructive-foreground: oklch(91.558% 0.01226 248.158);
+  --border: oklch(90.278% 0.02676 257.091);
   --input: oklch(0.929 0.013 255.508);
   --ring: oklch(0.704 0.04 256.788);
   --chart-1: oklch(0.646 0.222 41.116);
@@ -184,7 +162,6 @@
   }
 }
 
-/* ── Shohoj Rin typography scale ───────────────────────────────────────── */
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
@@ -215,7 +192,6 @@
     text-wrap: pretty;
   }
 
-  /* Long unbroken strings (emails, IDs, amounts) must never blow out a card. */
   h1,
   h2,
   h3,
@@ -242,7 +218,6 @@
   }
 }
 
-/* Display face: reserved for hero + major section headings only. */
 @utility font-display {
   font-family: var(--font-display);
   font-weight: 600;
@@ -250,8 +225,6 @@
 }
 
 
-
-/* Hard-offset neubrutalist shadows — used selectively, not everywhere. */
 @utility shadow-nb-xs {
   box-shadow: 1px 1px 0 var(--color-navy);
 }
@@ -271,7 +244,6 @@
   box-shadow: 2px 2px 0 var(--color-teal);
 }
 
-/* Horizontally scrollable data tables on small screens, without page scroll. */
 @utility table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;

@@ -1,11 +1,8 @@
 import type { PoolClient } from "pg";
 import { z } from "zod";
-
 import { calculateLateFee } from "./interest.service.js";
 import { recalculateAndPersistTrustScore } from "./trust-persistence.service.js";
-
 const repaymentMethodSchema = z.enum(["bank_transfer", "mobile_money", "cash", "other"]);
-
 export const createRepaymentSchema = z.object({
   scheduleId: z.string().uuid(),
   amountPaid: z.number().positive(),
@@ -13,9 +10,7 @@ export const createRepaymentSchema = z.object({
   transactionReference: z.string().trim().min(1).max(100).optional(),
   status: z.enum(["completed", "failed", "reversed"]).optional(),
 });
-
 export type CreateRepaymentInput = z.infer<typeof createRepaymentSchema>;
-
 export type RepaymentScheduleRow = {
   schedule_id: string;
   loan_id: string;
@@ -25,7 +20,6 @@ export type RepaymentScheduleRow = {
   status: string;
   created_at: Date | string;
 };
-
 export type RepaymentRow = {
   repayment_id: string;
   schedule_id: string;
@@ -35,7 +29,6 @@ export type RepaymentRow = {
   status: string;
   paid_at: Date | string;
 };
-
 export type RepaymentScheduleSummary = {
   scheduleId: string;
   loanId: string;
@@ -58,7 +51,6 @@ export type RepaymentScheduleSummary = {
     paidAt: string;
   } | null;
 };
-
 export type RepaymentResult = {
   schedule: RepaymentScheduleSummary;
   repayment: {
@@ -81,27 +73,22 @@ export type RepaymentResult = {
     band: string;
   } | null;
 };
-
 type LoanStatusRow = {
   loan_id: string;
   user_id: string;
   status: string;
 };
-
 type TrustScoreRow = {
   score_id: string;
   score: string | number;
   trust_band: string;
 };
-
 function toNumber(value: string | number | null | undefined) {
   return typeof value === "number" ? value : Number(value ?? 0);
 }
-
 function toIsoDate(value: Date | string) {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
-
 function summarizeSchedule(
   schedule: RepaymentScheduleRow,
   repayments: RepaymentRow[],
@@ -113,7 +100,6 @@ function summarizeSchedule(
   const today = new Date();
   const dueDate = new Date(schedule.due_date);
   const daysLate = today > dueDate ? Math.max(0, Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0;
-
   return {
     scheduleId: schedule.schedule_id,
     loanId: schedule.loan_id,
@@ -139,7 +125,6 @@ function summarizeSchedule(
       : null,
   };
 }
-
 export async function getRepaymentSchedulesForLoan(client: Pick<PoolClient, "query">, loanId: string) {
   const schedules = await client.query<RepaymentScheduleRow>(
     `SELECT schedule_id, loan_id, installment_number, due_date, expected_amount, status, created_at
@@ -148,11 +133,9 @@ export async function getRepaymentSchedulesForLoan(client: Pick<PoolClient, "que
      ORDER BY installment_number ASC`,
     [loanId],
   );
-
   if (!schedules.rowCount) {
     return [];
   }
-
   const repayments = await client.query<RepaymentRow>(
     `SELECT repayment_id, schedule_id, amount_paid, payment_method, transaction_reference, status, paid_at
      FROM repayments
@@ -160,23 +143,19 @@ export async function getRepaymentSchedulesForLoan(client: Pick<PoolClient, "que
      ORDER BY paid_at ASC`,
     [schedules.rows.map((schedule) => schedule.schedule_id)],
   );
-
   const repaymentsBySchedule = new Map<string, RepaymentRow[]>();
   for (const repayment of repayments.rows) {
     const list = repaymentsBySchedule.get(repayment.schedule_id) ?? [];
     list.push(repayment);
     repaymentsBySchedule.set(repayment.schedule_id, list);
   }
-
   return schedules.rows.map((schedule) => {
     const scheduleRepayments = repaymentsBySchedule.get(schedule.schedule_id) ?? [];
     return summarizeSchedule(schedule, scheduleRepayments, toNumber(schedule.expected_amount));
   });
 }
-
 export async function recordRepayment(client: PoolClient, input: CreateRepaymentInput): Promise<RepaymentResult> {
   await client.query("BEGIN");
-
   try {
     const scheduleResult = await client.query<RepaymentScheduleRow>(
       `SELECT schedule_id, loan_id, installment_number, due_date, expected_amount, status, created_at
@@ -185,16 +164,13 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
        FOR UPDATE`,
       [input.scheduleId],
     );
-
     if (!scheduleResult.rowCount) {
       await client.query("ROLLBACK");
       throw Object.assign(new Error("Repayment schedule not found"), { statusCode: 404, isOperational: true });
     }
-
     const schedule = scheduleResult.rows[0];
     const repaymentAmount = Math.round(input.amountPaid * 100) / 100;
     const expectedAmount = toNumber(schedule.expected_amount);
-
     const repaymentResult = await client.query<RepaymentRow>(
       `INSERT INTO repayments (schedule_id, amount_paid, payment_method, transaction_reference, status)
        VALUES ($1, $2, $3, $4, $5)
@@ -207,7 +183,6 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
         input.status ?? "completed",
       ],
     );
-
     const allRepayments = await client.query<RepaymentRow>(
       `SELECT repayment_id, schedule_id, amount_paid, payment_method, transaction_reference, status, paid_at
        FROM repayments
@@ -215,22 +190,18 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
        ORDER BY paid_at ASC`,
       [input.scheduleId],
     );
-
     const totalPaid = allRepayments.rows.reduce((sum, repayment) => sum + toNumber(repayment.amount_paid), 0);
     const outstandingAmount = Math.max(0, Math.round((expectedAmount - totalPaid) * 100) / 100);
     const today = new Date();
     const dueDate = new Date(schedule.due_date);
     const daysLate = today > dueDate ? Math.max(0, Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0;
-
     const nextStatus = outstandingAmount <= 0 ? "paid" : totalPaid > 0 ? "partially_paid" : schedule.status;
-
     await client.query(
       `UPDATE repayment_schedules
        SET status = $2
        WHERE schedule_id = $1`,
       [input.scheduleId, nextStatus],
     );
-
     const loanResult = await client.query<LoanStatusRow>(
       `SELECT loan_id, user_id, status
        FROM loans
@@ -238,11 +209,9 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
        FOR UPDATE`,
       [schedule.loan_id],
     );
-
     if (!loanResult.rowCount) {
       throw Object.assign(new Error("Loan not found"), { statusCode: 404, isOperational: true });
     }
-
     const loanRow = loanResult.rows[0];
     const allSchedules = await client.query<{ schedule_id: string; status: string; due_date: Date | string; expected_amount: string | number }>(
       `SELECT schedule_id, status, due_date, expected_amount
@@ -251,10 +220,8 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
        ORDER BY installment_number ASC`,
       [schedule.loan_id],
     );
-
     const nextDueSchedule = allSchedules.rows.find((row) => row.status !== "paid") ?? null;
     const loanStatus = nextDueSchedule ? (nextDueSchedule.status === "overdue" ? "overdue" : loanRow.status) : "closed";
-
     await client.query(
       `UPDATE loans
        SET status = $2,
@@ -262,15 +229,12 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
        WHERE loan_id = $1`,
       [schedule.loan_id, loanStatus],
     );
-
     const trustScore = await recalculateAndPersistTrustScore(
       loanRow.user_id,
       "repayment_received",
       client
     );
-
     await client.query("COMMIT");
-
     return {
       schedule: {
         ...summarizeSchedule(schedule, allRepayments.rows, expectedAmount),

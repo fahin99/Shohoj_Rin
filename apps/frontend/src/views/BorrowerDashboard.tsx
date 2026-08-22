@@ -8,19 +8,16 @@ import { activeLoan, applications, transactions } from "../lib/mock-data";
 import { formatDate, formatPercent, formatTaka } from "../lib/format";
 import type { PageName, Transaction } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
-
 interface BorrowerDashboardProps {
   onNavigate: (page: PageName) => void;
   user: StoredUserProfile;
 }
-
 const quickActions: { label: string; page: PageName; icon: string }[] = [
   { label: "Explore loans", icon: "🔍", page: "loan-marketplace" },
   { label: "Make a payment", icon: "💳", page: "repayment" },
   { label: "Loan details", icon: "📋", page: "active-loan" },
   { label: "Learn finance", icon: "📚", page: "education" },
 ];
-
 const txDirection: Record<Transaction["type"], "in" | "out"> = {
   repayment: "out",
   payment: "out",
@@ -28,7 +25,6 @@ const txDirection: Record<Transaction["type"], "in" | "out"> = {
   disbursement: "in",
   refund: "in",
 };
-
 function TransactionIcon({ type }: { type: Transaction["type"] }) {
   const icons: Record<Transaction["type"], { bg: string; icon: string }> = {
     repayment: { bg: "bg-emerald-light", icon: "↑" },
@@ -47,7 +43,6 @@ function TransactionIcon({ type }: { type: Transaction["type"] }) {
     </span>
   );
 }
-
 export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboardProps) {
   const now = new Date();
   const hour = now.getHours();
@@ -57,7 +52,6 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
   );
   const userName = getDisplayName(user, "Riya Ahmed");
   const firstName = userName.split(" ")[0] ?? userName;
-
   return (
     <AppLayout
       onNavigate={onNavigate}
@@ -84,7 +78,6 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
             Apply for a loan
           </Button>
         </header>
-
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             label="Remaining balance"
@@ -110,10 +103,9 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
             tone="info"
           />
         </div>
-
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <div className="flex min-w-0 flex-col gap-5 lg:col-span-2">
-            {/* Emphasis card: the one neubrutalist moment on this page. */}
+            {}
             <section className="min-w-0 rounded-[8px] border-[1.5px] border-navy bg-white p-4 shadow-nb sm:p-5">
               <div className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                 <div className="min-w-0">
@@ -127,7 +119,6 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                 </div>
                 <LoanStatusBadge status="active" />
               </div>
-
               <dl className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="min-w-0">
                   <dt className="text-xs text-stone-500">Amount borrowed</dt>
@@ -148,7 +139,6 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                   </dd>
                 </div>
               </dl>
-
               <ProgressBar
                 value={activeLoan.paidMonths}
                 max={activeLoan.durationMonths}
@@ -157,7 +147,6 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                 size="lg"
                 color="teal"
               />
-
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-4">
                 <p className="min-w-0 text-xs text-stone-500">
                   Next payment {formatDate(activeLoan.nextPaymentDate)} —{" "}
@@ -170,7 +159,6 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                 </Button>
               </div>
             </section>
-
             <Card>
               <CardHeader
                 title="Recent transactions"
@@ -222,7 +210,6 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
               </ul>
             </Card>
           </div>
-
           <div className="flex min-w-0 flex-col gap-5">
             <Card>
               <CardHeader title="Quick actions" />
@@ -244,7 +231,6 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                 </div>
               </CardBody>
             </Card>
-
             <Card>
               <CardHeader
                 title="Applications"
@@ -298,7 +284,6 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                 ))}
               </CardBody>
             </Card>
-
             <section className="rounded-[8px] border-[1.5px] border-yellow bg-yellow-light p-4">
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-yellow-dark">
                 Upcoming payment

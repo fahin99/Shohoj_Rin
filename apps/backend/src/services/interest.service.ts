@@ -1,7 +1,3 @@
-/**
- * Interest calculation engine for reducing-balance amortization schedules.
- * Core financial math lives here — not in controllers or the frontend.
- */
 
 export interface AmortizationScheduleItem {
   installmentNumber: number;
@@ -12,15 +8,6 @@ export interface AmortizationScheduleItem {
   remainingBalance: number;
 }
 
-/**
- * Generate a reducing-balance EMI amortization schedule.
- *
- * @param principal       - Loan principal in taka
- * @param annualRatePct   - Annual interest rate as a percentage (e.g. 8.5 for 8.5%)
- * @param tenureMonths    - Loan tenure in months
- * @param startDate       - Disbursement / start date
- * @returns               - Array of monthly installment breakdowns
- */
 export function calculateReducingBalanceSchedule(
   principal: number,
   annualRatePct: number,
@@ -29,7 +16,6 @@ export function calculateReducingBalanceSchedule(
 ): AmortizationScheduleItem[] {
   const monthlyRate = annualRatePct / 100 / 12;
 
-  // EMI formula: P * r * (1+r)^n / ((1+r)^n - 1)
   const emi =
     monthlyRate === 0
       ? principal / tenureMonths
@@ -60,16 +46,10 @@ export function calculateReducingBalanceSchedule(
   return schedule;
 }
 
-/**
- * Calculate daily interest accrual on a given balance.
- */
 export function calculateDailyInterest(balance: number, annualRatePct: number): number {
   return Math.round((balance * (annualRatePct / 100) / 365) * 100) / 100;
 }
 
-/**
- * Calculate late fee based on overdue amount and days late.
- */
 export function calculateLateFee(
   overdueAmount: number,
   daysLate: number,

@@ -1,9 +1,5 @@
 import { pool } from "../lib/db.js";
-
-// Static dataset of prominent Bangladesh Universities and Colleges
-// Used as guaranteed reliable static dataset and fallback if external package fetch is unreachable
 const STATIC_BANGLADESH_INSTITUTIONS = [
-  // Public & Private Universities
   { name: "University of Dhaka", type: "university" },
   { name: "Bangladesh University of Engineering and Technology (BUET)", type: "university" },
   { name: "Dhaka University of Engineering and Technology (DUET)", type: "university" },
@@ -41,8 +37,6 @@ const STATIC_BANGLADESH_INSTITUTIONS = [
   { name: "Noakhali Science and Technology University", type: "university" },
   { name: "Jatiya Kabi Kazi Nazrul Islam University", type: "university" },
   { name: "Bangabandhu Sheikh Mujibur Rahman Science and Technology University", type: "university" },
-
-  // Prominent Colleges
   { name: "Dhaka College", type: "college" },
   { name: "Notre Dame College", type: "college" },
   { name: "Holy Cross College", type: "college" },
@@ -65,10 +59,8 @@ const STATIC_BANGLADESH_INSTITUTIONS = [
   { name: "Sir Ashutosh Government College, Chattogram", type: "college" },
   { name: "Ananda Mohan College, Mymensingh", type: "college" },
 ];
-
 async function loadFromPackage(): Promise<{ colleges: any[]; universities: any[] }> {
   try {
-    // Provide a localStorage fallback for Node runtime if the package references browser localStorage
     if (typeof (globalThis as any).localStorage === "undefined") {
       (globalThis as any).localStorage = {
         getItem: () => null,
@@ -76,21 +68,15 @@ async function loadFromPackage(): Promise<{ colleges: any[]; universities: any[]
         removeItem: () => {},
       };
     }
-
-    // Attempt to load from installed packages if available
     let pkg: any = null;
     try {
-      // @ts-ignore
       pkg = await import("bd-instituition-list-by-solutya");
     } catch {
       try {
-        // @ts-ignore
         pkg = await import("bd-all-institutes");
       } catch {
-        // package not loaded
       }
     }
-
     if (pkg) {
       const getInstitutes = pkg.getAllInstituteByType || pkg.default?.getAllInstituteByType;
       if (typeof getInstitutes === "function") {
@@ -104,17 +90,12 @@ async function loadFromPackage(): Promise<{ colleges: any[]; universities: any[]
   }
   return { colleges: [], universities: [] };
 }
-
 async function seedInstitutions() {
   const client = await pool.connect();
   try {
     console.log("Starting institution seeding...");
-
     const { colleges, universities } = await loadFromPackage();
-
     const institutionMap = new Map<string, { name: string; type: string; is_verified: boolean }>();
-
-    // 1. Seed static bundled institutions first
     for (const inst of STATIC_BANGLADESH_INSTITUTIONS) {
       const normName = inst.name.trim();
       institutionMap.set(normName.toLowerCase(), {
@@ -123,8 +104,6 @@ async function seedInstitutions() {
         is_verified: true,
       });
     }
-
-    // 2. Add package colleges (type='college')
     for (const c of colleges) {
       if (c && c.name) {
         const name = c.name.trim();
@@ -137,9 +116,6 @@ async function seedInstitutions() {
         }
       }
     }
-
-    // 3. Add package universities (type='university')
-    // Note: Do NOT treat shortName as EIIN per specification
     for (const u of universities) {
       if (u && u.name) {
         const name = u.name.trim();
@@ -152,25 +128,19 @@ async function seedInstitutions() {
         }
       }
     }
-
     const uniqueInstitutions = Array.from(institutionMap.values());
     console.log(`Prepared ${uniqueInstitutions.length} institutions for bulk upsert.`);
-
     let insertedCount = 0;
     const batchSize = 100;
-
     for (let i = 0; i < uniqueInstitutions.length; i += batchSize) {
       const batch = uniqueInstitutions.slice(i, i + batchSize);
-
       const valueClauses: string[] = [];
       const queryParams: any[] = [];
-
       batch.forEach((inst, index) => {
         const offset = index * 3;
         valueClauses.push(`($${offset + 1}, $${offset + 2}, $${offset + 3})`);
         queryParams.push(inst.name, inst.type, inst.is_verified);
       });
-
       if (valueClauses.length > 0) {
         const query = `
           INSERT INTO institutions (name, type, is_verified)
@@ -181,7 +151,6 @@ async function seedInstitutions() {
         insertedCount += result.rowCount || 0;
       }
     }
-
     console.log(`Institution seeding finished successfully. (${insertedCount} new records inserted)`);
   } catch (error) {
     console.error("Error during institution seeding:", error);
@@ -191,7 +160,6 @@ async function seedInstitutions() {
     await pool.end();
   }
 }
-
 seedInstitutions().catch((err) => {
   console.error("Seed script failed:", err);
   process.exit(1);

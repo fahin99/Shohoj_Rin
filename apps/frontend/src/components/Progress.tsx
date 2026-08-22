@@ -7,7 +7,6 @@ interface ProgressBarProps {
   color?: 'teal' | 'emerald' | 'coral' | 'sky' | 'yellow';
   className?: string;
 }
-
 const barColors = {
   teal: 'bg-teal',
   emerald: 'bg-emerald',
@@ -15,7 +14,6 @@ const barColors = {
   sky: 'bg-sky',
   yellow: 'bg-yellow',
 };
-
 const trackColors = {
   teal: 'bg-teal-light',
   emerald: 'bg-emerald-light',
@@ -23,9 +21,7 @@ const trackColors = {
   sky: 'bg-sky-light',
   yellow: 'bg-yellow-light',
 };
-
 const heights = { sm: 'h-1.5', md: 'h-2.5', lg: 'h-4' };
-
 export function ProgressBar({
   value,
   max = 100,
@@ -36,7 +32,6 @@ export function ProgressBar({
   className = '',
 }: ProgressBarProps) {
   const pct = Math.min(100, Math.max(0, (value / max) * 100));
-
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
       {(label || showValue) && (
@@ -63,25 +58,21 @@ export function ProgressBar({
     </div>
   );
 }
-
 interface StepperStep {
   label: string;
   sublabel?: string;
 }
-
 interface StepperProps {
   steps: StepperStep[];
   currentStep: number;
   className?: string;
 }
-
 export function Stepper({ steps, currentStep, className = '' }: StepperProps) {
   return (
     <div className={`flex items-start gap-0 ${className}`}>
       {steps.map((step, i) => {
         const state = i < currentStep ? 'done' : i === currentStep ? 'active' : 'upcoming';
         const isLast = i === steps.length - 1;
-
         return (
           <div key={i} className={`flex flex-col items-center ${isLast ? '' : 'flex-1'}`}>
             <div className="flex items-center w-full">
@@ -126,13 +117,11 @@ export function Stepper({ steps, currentStep, className = '' }: StepperProps) {
     </div>
   );
 }
-
 interface MiniStepperProps {
   total: number;
   current: number;
   label?: string;
 }
-
 export function MiniStepper({ total, current, label }: MiniStepperProps) {
   return (
     <div className="flex items-center gap-3">

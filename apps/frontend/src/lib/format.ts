@@ -1,4 +1,3 @@
-/** Bangladeshi taka formatting, shared by every financial surface. */
 export function formatTaka(amount: number, opts: { decimals?: boolean } = {}) {
   const value = new Intl.NumberFormat("en-IN", {
     minimumFractionDigits: opts.decimals ? 2 : 0,

@@ -10,12 +10,10 @@ import { Alert } from "../components/Alert";
 import { formatTaka, formatDate } from "../lib/format";
 import type { PageName } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
-
 interface Props {
   onNavigate: (page: PageName) => void;
   user: StoredUserProfile;
 }
-
 interface PendingApplication {
   id: string;
   applicant: string;
@@ -25,7 +23,6 @@ interface PendingApplication {
   riskScore: "Low" | "Medium" | "High";
   status: "pending" | "approved" | "rejected";
 }
-
 const initialQueue: PendingApplication[] = [
   {
     id: "APP-9210",
@@ -73,7 +70,6 @@ const initialQueue: PendingApplication[] = [
     status: "pending",
   },
 ];
-
 const users = [
   {
     id: "U-2201",
@@ -97,7 +93,6 @@ const users = [
     status: "suspended" as const,
   },
 ];
-
 const providers = [
   {
     id: "P-01",
@@ -121,7 +116,6 @@ const providers = [
     status: "under-review" as const,
   },
 ];
-
 export default function AdminDashboard({ onNavigate, user }: Props) {
   const [queue, setQueue] = useState<PendingApplication[]>(initialQueue);
   const [confirmation, setConfirmation] = useState<{
@@ -130,14 +124,12 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
   } | null>(null);
   const [tab, setTab] = useState("applications");
   const userName = getDisplayName(user, "Admin — Nusrat Jahan");
-
   const handleDecision = (id: string, decision: "approved" | "rejected") => {
     const app = queue.find((q) => q.id === id);
     if (!app) return;
     setQueue((prev) => prev.map((q) => (q.id === id ? { ...q, status: decision } : q)));
     setConfirmation({ type: decision, applicant: app.applicant });
   };
-
   const columns: Column<PendingApplication>[] = [
     {
       key: "id",
@@ -197,9 +189,7 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
         ),
     },
   ];
-
   const pendingCount = queue.filter((q) => q.status === "pending").length;
-
   return (
     <AppLayout onNavigate={onNavigate} currentPage="admin" userType="admin" userName={userName}>
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
@@ -208,7 +198,6 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
           title="Admin dashboard"
           description="Monitor applications, users, providers, and platform health."
         />
-
         {confirmation && (
           <div className="mb-5">
             <Alert
@@ -222,7 +211,6 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
             </Alert>
           </div>
         )}
-
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           <StatCard label="Applications today" value="27" hint="+4 vs yesterday" />
           <StatCard label="Pending review" value={String(pendingCount)} tone="attention" />
@@ -230,7 +218,6 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
           <StatCard label="Disbursed this month" value={formatTaka(9400000)} tone="info" />
           <StatCard label="Overdue accounts" value="18" tone="critical" />
         </div>
-
         <Tabs
           variant="card"
           className="mb-5"
@@ -242,7 +229,6 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
           activeTab={tab}
           onChange={setTab}
         />
-
         <TabPanel id="applications" activeTab={tab}>
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] mb-6">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between items-center px-5 py-4 border-b border-stone-200">
@@ -257,7 +243,6 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
             />
           </div>
         </TabPanel>
-
         <TabPanel id="users" activeTab={tab}>
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] mb-6">
             <DataTable
@@ -290,7 +275,6 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
             />
           </div>
         </TabPanel>
-
         <TabPanel id="providers" activeTab={tab}>
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] mb-6">
             <DataTable
@@ -323,8 +307,7 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
             />
           </div>
         </TabPanel>
-
-        {/* System health */}
+        {}
         <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5">
           <h2 className="text-sm font-semibold text-navy mb-4">System health</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

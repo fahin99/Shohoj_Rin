@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { InputHTMLAttributes, TextareaHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
-
 interface InputWrapperProps {
   label?: string;
   error?: string;
@@ -8,7 +7,6 @@ interface InputWrapperProps {
   required?: boolean;
   children: ReactNode;
 }
-
 export function InputWrapper({ label, error, hint, required, children }: InputWrapperProps) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -24,12 +22,9 @@ export function InputWrapper({ label, error, hint, required, children }: InputWr
     </div>
   );
 }
-
 const inputBase =
   'w-full bg-white text-navy text-sm rounded-[6px] border-[1.5px] border-stone-300 px-3 py-2.5 placeholder-stone-400 transition-colors duration-100 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20 disabled:opacity-50 disabled:cursor-not-allowed';
-
 const inputError = 'border-coral focus:border-coral focus:ring-coral/20';
-
 interface TextInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'prefix' | 'suffix'> {
   label?: string;
   error?: string;
@@ -37,7 +32,6 @@ interface TextInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'pr
   prefix?: ReactNode;
   suffix?: ReactNode;
 }
-
 export function TextInput({ label, error, hint, required, prefix, suffix, className = '', ...props }: TextInputProps) {
   if (prefix || suffix) {
     return (
@@ -58,7 +52,6 @@ export function TextInput({ label, error, hint, required, prefix, suffix, classN
       </InputWrapper>
     );
   }
-
   return (
     <InputWrapper label={label} error={error} hint={hint} required={required}>
       <input
@@ -69,7 +62,6 @@ export function TextInput({ label, error, hint, required, prefix, suffix, classN
     </InputWrapper>
   );
 }
-
 export function CurrencyInput({ label, error, hint, required, className = '', ...props }: Omit<TextInputProps, 'prefix'>) {
   return (
     <TextInput
@@ -86,7 +78,6 @@ export function CurrencyInput({ label, error, hint, required, className = '', ..
     />
   );
 }
-
 export function PasswordInput({ label, error, hint, required, className = '', ...props }: Omit<TextInputProps, 'type' | 'suffix' | 'prefix'>) {
   const [show, setShow] = useState(false);
   return (
@@ -110,7 +101,6 @@ export function PasswordInput({ label, error, hint, required, className = '', ..
     </InputWrapper>
   );
 }
-
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
@@ -118,7 +108,6 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   options: { value: string; label: string }[];
   placeholder?: string;
 }
-
 export function Select({ label, error, hint, required, options, placeholder, className = '', ...props }: SelectProps) {
   return (
     <InputWrapper label={label} error={error} hint={hint} required={required}>
@@ -138,13 +127,11 @@ export function Select({ label, error, hint, required, options, placeholder, cla
     </InputWrapper>
   );
 }
-
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   error?: string;
   hint?: string;
 }
-
 export function Textarea({ label, error, hint, required, className = '', ...props }: TextareaProps) {
   return (
     <InputWrapper label={label} error={error} hint={hint} required={required}>
@@ -156,11 +143,9 @@ export function Textarea({ label, error, hint, required, className = '', ...prop
     </InputWrapper>
   );
 }
-
 interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   onClear?: () => void;
 }
-
 export function SearchInput({ className = '', value, onClear, ...props }: SearchInputProps) {
   return (
     <div className="relative flex items-center">
@@ -182,7 +167,6 @@ export function SearchInput({ className = '', value, onClear, ...props }: Search
     </div>
   );
 }
-
 interface CheckboxProps {
   label: ReactNode;
   checked?: boolean;
@@ -192,7 +176,6 @@ interface CheckboxProps {
   hint?: string;
   indeterminate?: boolean;
 }
-
 export function Checkbox({ label, checked, onChange, disabled, error, hint }: CheckboxProps) {
   return (
     <div className="flex flex-col gap-1">
@@ -223,7 +206,6 @@ export function Checkbox({ label, checked, onChange, disabled, error, hint }: Ch
     </div>
   );
 }
-
 interface RadioProps {
   label: string;
   name: string;
@@ -232,7 +214,6 @@ interface RadioProps {
   onChange?: (v: string) => void;
   disabled?: boolean;
 }
-
 export function Radio({ label, name, value, checked, onChange, disabled }: RadioProps) {
   return (
     <label className={`flex items-center gap-2.5 cursor-pointer group ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -256,14 +237,12 @@ export function Radio({ label, name, value, checked, onChange, disabled }: Radio
     </label>
   );
 }
-
 interface ToggleProps {
   label?: string;
   checked?: boolean;
   onChange?: (v: boolean) => void;
   disabled?: boolean;
 }
-
 export function Toggle({ label, checked, onChange, disabled }: ToggleProps) {
   return (
     <label className={`flex items-center gap-2.5 cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -287,7 +266,6 @@ export function Toggle({ label, checked, onChange, disabled }: ToggleProps) {
     </label>
   );
 }
-
 interface FileUploadProps {
   label?: string;
   hint?: string;
@@ -295,16 +273,13 @@ interface FileUploadProps {
   accept?: string;
   onChange?: (files: FileList | null) => void;
 }
-
 export function FileUpload({ label, hint, error, accept, onChange }: FileUploadProps) {
   const [fileName, setFileName] = useState<string | null>(null);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     setFileName(files && files.length > 0 ? files[0].name : null);
     onChange?.(files);
   };
-
   return (
     <InputWrapper label={label} error={error} hint={hint ?? 'PDF, JPG, PNG up to 5MB'}>
       <label

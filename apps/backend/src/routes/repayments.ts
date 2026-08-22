@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { z } from "zod";
-
 import { pool } from "../lib/db.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
 import {
@@ -8,15 +7,11 @@ import {
   getRepaymentSchedulesForLoan,
   recordRepayment,
 } from "../services/repayment.service.js";
-
 const router = Router();
-
 const loanIdParamsSchema = z.object({
   loanId: z.string().uuid(),
 });
-
 router.use(requireAuth);
-
 router.get("/loans/:loanId/schedules", async (req: RequestWithAuth, res) => {
   const parsed = loanIdParamsSchema.safeParse(req.params);
   if (!parsed.success) {
@@ -25,7 +20,6 @@ router.get("/loans/:loanId/schedules", async (req: RequestWithAuth, res) => {
       error: { message: "Invalid loan id", details: parsed.error.flatten() },
     });
   }
-
   const client = await pool.connect();
   try {
     const schedules = await getRepaymentSchedulesForLoan(client, parsed.data.loanId);
@@ -44,7 +38,6 @@ router.get("/loans/:loanId/schedules", async (req: RequestWithAuth, res) => {
         error: { message: (error as unknown as Error).message },
       });
     }
-
     console.error("Failed to load repayment schedules:", error);
     return res.status(500).json({
       success: false,
@@ -54,7 +47,6 @@ router.get("/loans/:loanId/schedules", async (req: RequestWithAuth, res) => {
     client.release();
   }
 });
-
 router.post("/payments", async (req: RequestWithAuth, res) => {
   const parsed = createRepaymentSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -63,7 +55,6 @@ router.post("/payments", async (req: RequestWithAuth, res) => {
       error: { message: "Invalid repayment data", details: parsed.error.flatten() },
     });
   }
-
   const client = await pool.connect();
   try {
     const result = await recordRepayment(client, parsed.data);
@@ -79,7 +70,6 @@ router.post("/payments", async (req: RequestWithAuth, res) => {
         error: { message: (error as unknown as Error).message },
       });
     }
-
     console.error("Failed to record repayment:", error);
     return res.status(500).json({
       success: false,
@@ -89,5 +79,4 @@ router.post("/payments", async (req: RequestWithAuth, res) => {
     client.release();
   }
 });
-
 export default router;

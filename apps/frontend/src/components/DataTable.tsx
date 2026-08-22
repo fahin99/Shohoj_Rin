@@ -1,15 +1,11 @@
 import type { ReactNode } from 'react';
-
 export interface Column<T> {
   key: string;
   header: string;
-  /** Right-align numeric/financial columns. */
   numeric?: boolean;
-  /** Hide on small screens when the value is duplicated elsewhere. */
   hideBelow?: 'sm' | 'md' | 'lg';
   render: (row: T) => ReactNode;
 }
-
 interface DataTableProps<T> {
   caption: string;
   columns: Column<T>[];
@@ -17,18 +13,11 @@ interface DataTableProps<T> {
   rowKey: (row: T) => string;
   empty?: ReactNode;
 }
-
 const hideClass = { sm: 'hidden sm:table-cell', md: 'hidden md:table-cell', lg: 'hidden lg:table-cell' };
-
-/**
- * Calm, scannable financial table. Scrolls horizontally inside its own
- * container on small screens so the page itself never scrolls sideways.
- */
 export function DataTable<T>({ caption, columns, rows, rowKey, empty }: DataTableProps<T>) {
   if (rows.length === 0 && empty) {
     return <div className="p-6">{empty}</div>;
   }
-
   return (
     <div className="table-scroll w-full">
       <table className="w-full min-w-[36rem] border-collapse text-left">

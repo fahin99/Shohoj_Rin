@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
 dotenv.config();
-
 function parseCorsOrigins(rawValue: string | undefined) {
   if (!rawValue) {
     return [
@@ -9,10 +8,8 @@ function parseCorsOrigins(rawValue: string | undefined) {
       "http://localhost:8080",
     ];
   }
-
   return rawValue.split(",").map((origin) => origin.trim()).filter(Boolean);
 }
-
 export const config = {
   port: parseInt(process.env.PORT || "5000", 10),
   nodeEnv: process.env.NODE_ENV || "development",

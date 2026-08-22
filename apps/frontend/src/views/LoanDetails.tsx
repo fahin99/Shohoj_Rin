@@ -8,11 +8,9 @@ import { DataTable } from '../components/DataTable';
 import { formatPercent, formatTaka, formatDate } from '../lib/format';
 import { loanProducts, repaymentSchedule } from '../lib/mock-data';
 import type { PageName, RepaymentScheduleRow } from '../types';
-
 interface Props {
   onNavigate: (page: PageName) => void;
 }
-
 const categoryLabel: Record<string, string> = {
   education: 'Education',
   emergency: 'Emergency',
@@ -20,13 +18,11 @@ const categoryLabel: Record<string, string> = {
   personal: 'Personal',
   development: 'Development',
 };
-
 const fees = [
   { label: 'Processing fee', value: '1% of loan amount (one-time)' },
   { label: 'Late payment fee', value: '৳250 per missed instalment' },
   { label: 'Prepayment fee', value: 'None — repay early at any time' },
 ];
-
 function calculateEmi(principal: number, annualRate: number, months: number) {
   const monthlyRate = annualRate / 12 / 100;
   if (monthlyRate === 0) return principal / months;
@@ -35,17 +31,14 @@ function calculateEmi(principal: number, annualRate: number, months: number) {
     (Math.pow(1 + monthlyRate, months) - 1);
   return emi;
 }
-
 export default function LoanDetails({ onNavigate }: Props) {
   const loan = loanProducts[0];
   const [amount, setAmount] = useState(loan.maxAmount / 2);
   const [duration, setDuration] = useState(String(loan.durationMonths));
-
   const durationOptions = [12, 24, 36, 48].filter((d) => d <= loan.durationMonths).map((d) => ({
     value: String(d),
     label: `${d} months`,
   }));
-
   const { emi, totalRepayment, totalInterest } = useMemo(() => {
     const months = Number(duration) || loan.durationMonths;
     const monthlyEmi = calculateEmi(amount, loan.interestRate, months);
@@ -56,9 +49,7 @@ export default function LoanDetails({ onNavigate }: Props) {
       totalInterest: total - amount,
     };
   }, [amount, duration, loan]);
-
   const previewRows = repaymentSchedule.slice(0, 6);
-
   const columns = [
     { key: 'month', header: 'Month', render: (r: RepaymentScheduleRow) => `#${r.month}` },
     { key: 'dueDate', header: 'Due date', render: (r: RepaymentScheduleRow) => formatDate(r.dueDate) },
@@ -78,7 +69,6 @@ export default function LoanDetails({ onNavigate }: Props) {
       ),
     },
   ];
-
   return (
     <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
@@ -92,7 +82,6 @@ export default function LoanDetails({ onNavigate }: Props) {
           </svg>
           Back to marketplace
         </button>
-
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -105,9 +94,8 @@ export default function LoanDetails({ onNavigate }: Props) {
             <p className="mt-1 text-sm text-stone-500">{loan.provider}</p>
           </div>
         </div>
-
         <div className="grid lg:grid-cols-[minmax(0,1fr)_20rem] gap-6">
-          {/* Main column */}
+          {}
           <div className="flex flex-col gap-5 min-w-0">
             <Card>
               <CardHeader title="About this loan" />
@@ -115,7 +103,6 @@ export default function LoanDetails({ onNavigate }: Props) {
                 <p className="text-sm leading-relaxed text-stone-600">{loan.description}</p>
               </CardBody>
             </Card>
-
             <Card>
               <CardHeader title="Key facts" />
               <CardBody>
@@ -139,7 +126,6 @@ export default function LoanDetails({ onNavigate }: Props) {
                 </div>
               </CardBody>
             </Card>
-
             <Card>
               <CardHeader title="Eligibility" description="You should meet all of the following before applying." />
               <CardBody>
@@ -157,7 +143,6 @@ export default function LoanDetails({ onNavigate }: Props) {
                 </ul>
               </CardBody>
             </Card>
-
             <Card>
               <CardHeader title="What you'll repay" description="A plain-language breakdown based on your selection." />
               <CardBody>
@@ -170,7 +155,6 @@ export default function LoanDetails({ onNavigate }: Props) {
                 </div>
               </CardBody>
             </Card>
-
             <Card>
               <CardHeader title="Sample repayment schedule" description="First 6 of your monthly instalments." />
               <DataTable
@@ -180,7 +164,6 @@ export default function LoanDetails({ onNavigate }: Props) {
                 rowKey={(r) => String(r.month)}
               />
             </Card>
-
             <Card>
               <CardHeader title="Fees & charges" />
               <CardBody>
@@ -190,8 +173,7 @@ export default function LoanDetails({ onNavigate }: Props) {
               </CardBody>
             </Card>
           </div>
-
-          {/* Sidebar */}
+          {}
           <div className="min-w-0">
             <div className="lg:sticky lg:top-6">
               <Card variant="raised">
@@ -223,13 +205,11 @@ export default function LoanDetails({ onNavigate }: Props) {
                       value={duration}
                       onChange={(e) => setDuration(e.target.value)}
                     />
-
                     <div className="border-t border-stone-200 pt-4 flex flex-col gap-1">
                       <DataRow label="Estimated monthly EMI" value={formatTaka(Math.round(emi))} emphasis />
                       <DataRow label="Total interest" value={formatTaka(Math.round(totalInterest))} />
                       <DataRow label="Total repayment" value={formatTaka(Math.round(totalRepayment))} />
                     </div>
-
                     <Button variant="primary" fullWidth onClick={() => onNavigate('loan-application')}>
                       Apply for this loan
                     </Button>

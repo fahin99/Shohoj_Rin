@@ -1,8 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
-
 import { pool } from "../lib/db.js";
 import { getAuthTokenFromCookiesOrHeaders, verifyAccessToken } from "../lib/auth.js";
-
 export interface RequestWithAuth extends Request {
   auth?: {
     userId: string;
@@ -26,32 +24,27 @@ export interface RequestWithAuth extends Request {
     occupation: string | null;
   };
 }
-
 export async function requireAuth(req: RequestWithAuth, res: Response, next: NextFunction) {
   try {
     const token = getAuthTokenFromCookiesOrHeaders(req.cookies, req.header("authorization"));
-
     if (!token) {
       return res.status(401).json({
         success: false,
         error: { message: "Authentication required" },
       });
     }
-
     const decoded = verifyAccessToken(token) as {
       tokenType?: string;
       role?: string;
       sub?: string;
       jti?: string;
     };
-
     if (decoded.tokenType !== "access" || !decoded.sub || !decoded.jti || !decoded.role) {
       return res.status(401).json({
         success: false,
         error: { message: "Invalid access token" },
       });
     }
-
     const userResult = await pool.query(
       `SELECT
         u.user_id AS "userId",
@@ -74,7 +67,6 @@ export async function requireAuth(req: RequestWithAuth, res: Response, next: Nex
       LIMIT 1`,
       [decoded.sub],
     );
-
     const row = userResult.rows[0] as RequestWithAuth["user"] | undefined;
     if (!row) {
       return res.status(401).json({
@@ -82,14 +74,12 @@ export async function requireAuth(req: RequestWithAuth, res: Response, next: Nex
         error: { message: "User not found" },
       });
     }
-
     req.auth = {
       userId: decoded.sub,
       sessionId: decoded.jti,
       role: decoded.role,
     };
     req.user = row;
-
     return next();
   } catch {
     return res.status(401).json({

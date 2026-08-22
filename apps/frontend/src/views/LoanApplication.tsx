@@ -8,34 +8,28 @@ import { CurrencyInput, TextInput, Select, FileUpload, Textarea } from '../compo
 import { formatTaka } from '../lib/format';
 import { loanProducts } from '../lib/mock-data';
 import type { PageName } from '../types';
-
 interface Props {
   onNavigate: (page: PageName) => void;
 }
-
 const steps = [
   { label: 'Loan details' },
   { label: 'Personal & income' },
   { label: 'Documents' },
   { label: 'Review & submit' },
 ];
-
 const durationOptions = [12, 18, 24, 36, 48].map((d) => ({ value: String(d), label: `${d} months` }));
-
 const employmentOptions = [
   { value: 'salaried', label: 'Salaried' },
   { value: 'self-employed', label: 'Self-employed' },
   { value: 'business-owner', label: 'Business owner' },
   { value: 'student', label: 'Student' },
 ];
-
 function calculateEmi(principal: number, annualRate: number, months: number) {
   const monthlyRate = annualRate / 12 / 100;
   if (!principal || !months) return 0;
   if (monthlyRate === 0) return principal / months;
   return (principal * monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
 }
-
 interface FormState {
   loanId: string;
   amount: number;
@@ -51,13 +45,11 @@ interface FormState {
   incomeProofUploaded: boolean;
   addressProofUploaded: boolean;
 }
-
 export default function LoanApplication({ onNavigate }: Props) {
   const loan = loanProducts[0];
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
   const [form, setForm] = useState<FormState>({
     loanId: loan.id,
     amount: Math.round(loan.maxAmount / 2),
@@ -73,19 +65,15 @@ export default function LoanApplication({ onNavigate }: Props) {
     incomeProofUploaded: false,
     addressProofUploaded: false,
   });
-
   const selectedLoan = loanProducts.find((l) => l.id === form.loanId) ?? loan;
-
   const emi = useMemo(
     () => calculateEmi(form.amount, selectedLoan.interestRate, Number(form.duration)),
     [form.amount, form.duration, selectedLoan]
   );
-
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
     setErrors((e) => ({ ...e, [key]: '' }));
   }
-
   function validateStep(current: number): boolean {
     const next: Record<string, string> = {};
     if (current === 0) {
@@ -110,16 +98,13 @@ export default function LoanApplication({ onNavigate }: Props) {
     setErrors(next);
     return Object.keys(next).length === 0;
   }
-
   function handleNext() {
     if (!validateStep(step)) return;
     setStep((s) => Math.min(steps.length - 1, s + 1));
   }
-
   function handleBack() {
     setStep((s) => Math.max(0, s - 1));
   }
-
   function handleSubmit() {
     if (!validateStep(step)) return;
     setSubmitting(true);
@@ -128,7 +113,6 @@ export default function LoanApplication({ onNavigate }: Props) {
       onNavigate('application-status');
     }, 1400);
   }
-
   const summary = (
     <Card variant="raised">
       <CardHeader title="Application summary" />
@@ -142,7 +126,6 @@ export default function LoanApplication({ onNavigate }: Props) {
       </CardBody>
     </Card>
   );
-
   return (
     <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
@@ -150,14 +133,11 @@ export default function LoanApplication({ onNavigate }: Props) {
           <h1 className="text-2xl font-semibold text-navy sm:text-3xl">Apply for a loan</h1>
           <p className="mt-1.5 text-sm text-stone-500">{selectedLoan.name} — {selectedLoan.provider}</p>
         </div>
-
         <div className="mb-6 overflow-x-auto">
           <Stepper steps={steps} currentStep={step} />
         </div>
-
-        {/* Mobile summary */}
+        {}
         <div className="lg:hidden mb-5">{summary}</div>
-
         <div className="grid lg:grid-cols-[minmax(0,1fr)_18rem] gap-6">
           <div className="min-w-0">
             <Card>
@@ -202,7 +182,6 @@ export default function LoanApplication({ onNavigate }: Props) {
                       />
                     </>
                   )}
-
                   {step === 1 && (
                     <>
                       <TextInput
@@ -255,7 +234,6 @@ export default function LoanApplication({ onNavigate }: Props) {
                       />
                     </>
                   )}
-
                   {step === 2 && (
                     <>
                       <Alert variant="info" title="Accepted formats">
@@ -278,7 +256,6 @@ export default function LoanApplication({ onNavigate }: Props) {
                       />
                     </>
                   )}
-
                   {step === 3 && (
                     <div className="flex flex-col gap-4">
                       <Alert variant="success" title="Ready to submit">
@@ -310,7 +287,6 @@ export default function LoanApplication({ onNavigate }: Props) {
                 </div>
               </CardBody>
             </Card>
-
             <div className="flex flex-wrap items-center justify-between gap-3 mt-5">
               <Button variant="secondary" onClick={handleBack} disabled={step === 0 || submitting}>
                 Back
@@ -326,8 +302,7 @@ export default function LoanApplication({ onNavigate }: Props) {
               )}
             </div>
           </div>
-
-          {/* Desktop summary */}
+          {}
           <div className="hidden lg:block min-w-0">
             <div className="lg:sticky lg:top-6">{summary}</div>
           </div>

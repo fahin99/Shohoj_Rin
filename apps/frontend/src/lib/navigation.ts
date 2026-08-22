@@ -1,11 +1,6 @@
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 import type { PageName } from "../types";
-
-/**
- * Single source of truth mapping the design-system page names (used by every
- * page component's `onNavigate` prop) to real file-based routes.
- */
 export const PAGE_ROUTES: Record<PageName, string> = {
   landing: "/",
   auth: "/auth",
@@ -22,7 +17,6 @@ export const PAGE_ROUTES: Record<PageName, string> = {
   admin: "/admin",
   "system-states": "/system-states",
 };
-
 export const PAGE_LABELS: Record<PageName, string> = {
   landing: "Home",
   auth: "Log in / Register",
@@ -39,7 +33,6 @@ export const PAGE_LABELS: Record<PageName, string> = {
   admin: "Admin Dashboard",
   "system-states": "System States",
 };
-
 export function useAppNavigate() {
   const router = useRouter();
   return useCallback(
