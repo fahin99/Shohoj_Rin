@@ -37,23 +37,45 @@ export async function recalculateAndPersistTrustScore(
   triggerEvent: string,
   client?: PoolClient,
 ): Promise<{ score: number; band: string }> {
-  const inputs = await buildTrustInputs(userId);
-  const result = calculateTrustScore(inputs);
-  if (client) {
-    const persisted = await persistTrustScore(client, userId, result, triggerEvent);
-    return { score: persisted.score, band: persisted.band };
-  } else {
-    const newClient = await pool.connect();
-    try {
-      await newClient.query('BEGIN');
-      const persisted = await persistTrustScore(newClient, userId, result, triggerEvent);
-      await newClient.query('COMMIT');
-      return { score: persisted.score, band: persisted.band };
-    } catch (error) {
-      await newClient.query('ROLLBACK');
-      throw error;
-    } finally {
-      newClient.release();
+  let retries = 3;
+  while (retries > 0) {
+    const inputs = await buildTrustInputs(userId);
+    const result = calculateTrustScore(inputs);
+    
+    if (client) {
+      try {
+        await client.query('SAVEPOINT recalculate_trust_score');
+        const persisted = await persistTrustScore(client, userId, result, triggerEvent);
+        await client.query('RELEASE SAVEPOINT recalculate_trust_score');
+        return { score: persisted.score, band: persisted.band };
+      } catch (error: any) {
+        await client.query('ROLLBACK TO SAVEPOINT recalculate_trust_score');
+        if (error.code === '23505') {
+          retries--;
+          if (retries === 0) throw error;
+          continue;
+        }
+        throw error;
+      }
+    } else {
+      const newClient = await pool.connect();
+      try {
+        await newClient.query('BEGIN');
+        const persisted = await persistTrustScore(newClient, userId, result, triggerEvent);
+        await newClient.query('COMMIT');
+        return { score: persisted.score, band: persisted.band };
+      } catch (error: any) {
+        await newClient.query('ROLLBACK');
+        if (error.code === '23505') {
+          retries--;
+          if (retries === 0) throw error;
+          continue;
+        }
+        throw error;
+      } finally {
+        newClient.release();
+      }
     }
   }
+  throw new Error("Failed to persist trust score after retries");
 }

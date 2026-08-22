@@ -44,10 +44,6 @@ function toStoredUser(user: BackendUser): StoredUserProfile {
     },
   };
 }
-/**
- * Resolves the existing HttpOnly backend session before rendering. The request
- * cookie is explicitly forwarded because server-side fetches do not inherit it.
- */
 export async function getCurrentUser(): Promise<StoredUserProfile | null> {
   const cookieStore = await cookies();
   if (!cookieStore.has("shohojrin_access_token")) {

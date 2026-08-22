@@ -7,7 +7,7 @@
     "dev": "tsx watch src/app.ts",
     "build": "tsc",
     "db:check": "tsx src/scripts/check-db.ts",
-    "migrate:trust": "tsx src/scripts/migrate-trust-institutions.ts",
+    "migrate": "tsx src/scripts/migrate.ts",
     "seed:institutions": "tsx src/scripts/seed-institutions.ts",
     "test": "vitest run",
     "start": "node dist/app.js"

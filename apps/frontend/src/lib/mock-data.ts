@@ -82,7 +82,7 @@ export const loanProducts: LoanProduct[] = [
   },
 ];
 
-export const transactions: Transaction[] = [
+export const transactions: Transaction[] =[
   { id: "t-1", date: "2026-07-15", description: "EMI payment — Student Tuition Support Loan", amount: 4500, type: "repayment", status: "completed" },
   { id: "t-2", date: "2026-06-15", description: "EMI payment — Student Tuition Support Loan", amount: 4500, type: "repayment", status: "completed" },
   { id: "t-3", date: "2026-06-02", description: "Late payment fee reversal (goodwill adjustment)", amount: 250, type: "refund", status: "completed" },

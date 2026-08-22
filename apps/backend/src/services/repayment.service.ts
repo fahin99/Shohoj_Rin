@@ -8,6 +8,7 @@ export const createRepaymentSchema = z.object({
   amountPaid: z.number().positive(),
   paymentMethod: repaymentMethodSchema.optional(),
   transactionReference: z.string().trim().min(1).max(100).optional(),
+  providerReference: z.string().trim().min(1).max(100).optional(),
   status: z.enum(["completed", "failed", "reversed"]).optional(),
 });
 export type CreateRepaymentInput = z.infer<typeof createRepaymentSchema>;
@@ -94,7 +95,8 @@ function summarizeSchedule(
   repayments: RepaymentRow[],
   expectedAmount: number,
 ) : RepaymentScheduleSummary {
-  const totalPaid = repayments.reduce((sum, payment) => sum + toNumber(payment.amount_paid), 0);
+  const completedRepayments = repayments.filter(p => p.status === 'completed');
+  const totalPaid = completedRepayments.reduce((sum, payment) => sum + toNumber(payment.amount_paid), 0);
   const latestPayment = repayments[repayments.length - 1] ?? null;
   const outstandingAmount = Math.max(0, Math.round((expectedAmount - totalPaid) * 100) / 100);
   const today = new Date();
@@ -172,17 +174,61 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
     const repaymentAmount = Math.round(input.amountPaid * 100) / 100;
     const expectedAmount = toNumber(schedule.expected_amount);
     const repaymentResult = await client.query<RepaymentRow>(
-      `INSERT INTO repayments (schedule_id, amount_paid, payment_method, transaction_reference, status)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO repayments (schedule_id, amount_paid, payment_method, transaction_reference, provider_reference, status)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (provider_reference) WHERE provider_reference IS NOT NULL DO NOTHING
        RETURNING repayment_id, schedule_id, amount_paid, payment_method, transaction_reference, status, paid_at`,
       [
         input.scheduleId,
         repaymentAmount,
         input.paymentMethod ?? null,
         input.transactionReference ?? null,
+        input.providerReference ?? null,
         input.status ?? "completed",
       ],
     );
+
+    if (repaymentResult.rowCount === 0 && input.providerReference) {
+      // Idempotent duplicate: return the original result without re-processing side-effects.
+      const existing = await client.query<RepaymentRow>(
+        `SELECT repayment_id, schedule_id, amount_paid, payment_method, transaction_reference, status, paid_at
+         FROM repayments WHERE provider_reference = $1`,
+        [input.providerReference]
+      );
+      if (existing.rowCount && existing.rowCount > 0) {
+        await client.query("ROLLBACK");
+        const existingRepay = existing.rows[0];
+        const allSched = await getRepaymentSchedulesForLoan(client, schedule.loan_id);
+        const schedSummary = allSched.find(s => s.scheduleId === existingRepay.schedule_id)!;
+        const loanInfoResult = await client.query<LoanStatusRow>(
+          `SELECT loan_id, user_id, status FROM loans WHERE loan_id = $1`,
+          [schedule.loan_id]
+        );
+        const totalExpected = allSched.reduce((sum, row) => sum + row.expectedAmount, 0);
+        const totalPaidAll = allSched.reduce((sum, row) => sum + row.totalPaid, 0);
+        const loanTotalOutstanding = Math.max(0, Math.round((totalExpected - totalPaidAll) * 100) / 100);
+        const nextDue = allSched.find(s => s.status !== "paid");
+        return {
+          schedule: schedSummary,
+          repayment: {
+            repaymentId: existingRepay.repayment_id,
+            scheduleId: existingRepay.schedule_id,
+            amountPaid: toNumber(existingRepay.amount_paid),
+            paymentMethod: existingRepay.payment_method,
+            transactionReference: existingRepay.transaction_reference,
+            status: existingRepay.status,
+            paidAt: toIsoDate(existingRepay.paid_at),
+          },
+          loan: {
+            loanId: schedSummary.loanId,
+            status: loanInfoResult.rows[0]?.status ?? "active",
+            totalOutstanding: loanTotalOutstanding,
+            nextDueDate: nextDue ? nextDue.dueDate : null,
+          },
+          trustScore: null,
+        };
+      }
+    }
     const allRepayments = await client.query<RepaymentRow>(
       `SELECT repayment_id, schedule_id, amount_paid, payment_method, transaction_reference, status, paid_at
        FROM repayments
@@ -190,7 +236,8 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
        ORDER BY paid_at ASC`,
       [input.scheduleId],
     );
-    const totalPaid = allRepayments.rows.reduce((sum, repayment) => sum + toNumber(repayment.amount_paid), 0);
+    const completedRepayments = allRepayments.rows.filter(p => p.status === 'completed');
+    const totalPaid = completedRepayments.reduce((sum, repayment) => sum + toNumber(repayment.amount_paid), 0);
     const outstandingAmount = Math.max(0, Math.round((expectedAmount - totalPaid) * 100) / 100);
     const today = new Date();
     const dueDate = new Date(schedule.due_date);
