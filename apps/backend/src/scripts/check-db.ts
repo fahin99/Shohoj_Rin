@@ -35,4 +35,4 @@ async function main() {
     await pool.end();
   }
 }
-void main();
+void main();

@@ -1,4 +1,5 @@
 import { pool } from "../lib/db.js";
+
 const STATIC_BANGLADESH_INSTITUTIONS = [
   { name: "University of Dhaka", type: "university" },
   { name: "Bangladesh University of Engineering and Technology (BUET)", type: "university" },
@@ -59,43 +60,52 @@ const STATIC_BANGLADESH_INSTITUTIONS = [
   { name: "Sir Ashutosh Government College, Chattogram", type: "college" },
   { name: "Ananda Mohan College, Mymensingh", type: "college" },
 ];
-async function loadFromPackage(): Promise<{ colleges: any[]; universities: any[] }> {
+
+const JSON_DATA_ENDPOINTS = {
+  colleges: "https://bd-institution-data.solutya.com/data/bd_collegeName_data.json",
+  publicUnis: "https://bd-institution-data.solutya.com/data/public_Uni_data.json",
+  privateUnis: "https://bd-institution-data.solutya.com/data/private_Uni_data.json",
+  nuUnis: "https://bd-institution-data.solutya.com/data/nu_Uni_data.json",
+};
+
+async function fetchJsonArray(url: string): Promise<any[]> {
   try {
-    if (typeof (globalThis as any).localStorage === "undefined") {
-      (globalThis as any).localStorage = {
-        getItem: () => null,
-        setItem: () => {},
-        removeItem: () => {},
-      };
-    }
-    let pkg: any = null;
-    try {
-      pkg = await import("bd-instituition-list-by-solutya");
-    } catch {
-      try {
-        pkg = await import("bd-all-institutes");
-      } catch {
-      }
-    }
-    if (pkg) {
-      const getInstitutes = pkg.getAllInstituteByType || pkg.default?.getAllInstituteByType;
-      if (typeof getInstitutes === "function") {
-        const colleges = (await getInstitutes("college")) || [];
-        const universities = (await getInstitutes("university")) || [];
-        return { colleges, universities };
-      }
-    }
-  } catch (err) {
-    console.warn("Notice: Package dataset loader returned an issue, using bundled static dataset:", (err as Error).message);
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
   }
-  return { colleges: [], universities: [] };
 }
+
+async function loadRemoteInstitutions(): Promise<{ colleges: any[]; universities: any[] }> {
+  try {
+    const [colleges, publicUnis, privateUnis, nuUnis] = await Promise.all([
+      fetchJsonArray(JSON_DATA_ENDPOINTS.colleges),
+      fetchJsonArray(JSON_DATA_ENDPOINTS.publicUnis),
+      fetchJsonArray(JSON_DATA_ENDPOINTS.privateUnis),
+      fetchJsonArray(JSON_DATA_ENDPOINTS.nuUnis),
+    ]);
+
+    return {
+      colleges,
+      universities: [...publicUnis, ...privateUnis, ...nuUnis],
+    };
+  } catch (err) {
+    console.warn("Notice: Could not fetch remote JSON datasets, falling back to static list.");
+    return { colleges: [], universities: [] };
+  }
+}
+
 async function seedInstitutions() {
   const client = await pool.connect();
   try {
     console.log("Starting institution seeding...");
-    const { colleges, universities } = await loadFromPackage();
+    const { colleges, universities } = await loadRemoteInstitutions();
     const institutionMap = new Map<string, { name: string; type: string; is_verified: boolean }>();
+
+    // 1. Static Institutions
     for (const inst of STATIC_BANGLADESH_INSTITUTIONS) {
       const normName = inst.name.trim();
       institutionMap.set(normName.toLowerCase(), {
@@ -104,43 +114,47 @@ async function seedInstitutions() {
         is_verified: true,
       });
     }
+
+    // 2. Colleges from JSON
     for (const c of colleges) {
-      if (c && c.name) {
-        const name = c.name.trim();
-        if (name && !institutionMap.has(name.toLowerCase())) {
-          institutionMap.set(name.toLowerCase(), {
-            name,
-            type: "college",
-            is_verified: true,
-          });
-        }
+      const name = (typeof c === "string" ? c : c?.name)?.trim();
+      if (name && !institutionMap.has(name.toLowerCase())) {
+        institutionMap.set(name.toLowerCase(), {
+          name,
+          type: "college",
+          is_verified: true,
+        });
       }
     }
+
+    // 3. Universities from JSON
     for (const u of universities) {
-      if (u && u.name) {
-        const name = u.name.trim();
-        if (name && !institutionMap.has(name.toLowerCase())) {
-          institutionMap.set(name.toLowerCase(), {
-            name,
-            type: "university",
-            is_verified: true,
-          });
-        }
+      const name = (typeof u === "string" ? u : u?.name)?.trim();
+      if (name && !institutionMap.has(name.toLowerCase())) {
+        institutionMap.set(name.toLowerCase(), {
+          name,
+          type: "university",
+          is_verified: true,
+        });
       }
     }
+
     const uniqueInstitutions = Array.from(institutionMap.values());
     console.log(`Prepared ${uniqueInstitutions.length} institutions for bulk upsert.`);
+
     let insertedCount = 0;
     const batchSize = 100;
     for (let i = 0; i < uniqueInstitutions.length; i += batchSize) {
       const batch = uniqueInstitutions.slice(i, i + batchSize);
       const valueClauses: string[] = [];
       const queryParams: any[] = [];
+
       batch.forEach((inst, index) => {
         const offset = index * 3;
         valueClauses.push(`($${offset + 1}, $${offset + 2}, $${offset + 3})`);
         queryParams.push(inst.name, inst.type, inst.is_verified);
       });
+
       if (valueClauses.length > 0) {
         const query = `
           INSERT INTO institutions (name, type, is_verified)
@@ -160,6 +174,7 @@ async function seedInstitutions() {
     await pool.end();
   }
 }
+
 seedInstitutions().catch((err) => {
   console.error("Seed script failed:", err);
   process.exit(1);
