@@ -1,29 +1,22 @@
 import type { ReactNode } from 'react';
-
 export type CardVariant = 'plain' | 'raised' | 'accent' | 'muted';
-
 interface CardProps {
   variant?: CardVariant;
   as?: 'div' | 'article' | 'section' | 'li';
   className?: string;
   children: ReactNode;
 }
-
 const variantClasses: Record<CardVariant, string> = {
-  // Calm default for data-dense financial surfaces.
   plain: 'bg-white border-[1.5px] border-stone-200',
-  // Neubrutalist emphasis — used selectively for key cards.
   raised: 'bg-white border-[1.5px] border-navy shadow-nb',
   accent: 'bg-teal-light border-[1.5px] border-teal/30',
   muted: 'bg-stone-50 border border-stone-200',
 };
-
 export function Card({ variant = 'plain', as: Tag = 'div', className = '', children }: CardProps) {
   return (
     <Tag className={`min-w-0 rounded-[8px] ${variantClasses[variant]} ${className}`}>{children}</Tag>
   );
 }
-
 export function CardHeader({
   title,
   description,
@@ -47,11 +40,9 @@ export function CardHeader({
     </div>
   );
 }
-
 export function CardBody({ className = '', children }: { className?: string; children: ReactNode }) {
   return <div className={`min-w-0 p-4 sm:p-5 ${className}`}>{children}</div>;
 }
-
 /** Label/value row used across every financial breakdown. */
 export function DataRow({
   label,
@@ -71,7 +62,7 @@ export function DataRow({
         {hint && <span className="mt-0.5 block text-xs text-stone-400">{hint}</span>}
       </span>
       <span
-        className={`font-mono-sr shrink-0 text-right ${
+        className={`tabular-nums shrink-0 text-right ${
           emphasis ? 'text-base font-semibold text-navy' : 'text-sm font-medium text-navy'
         }`}
       >

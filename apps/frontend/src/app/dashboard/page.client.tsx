@@ -1,12 +1,8 @@
 "use client";
-
-import { useRequireAuth } from "../../lib/session";
-
 import BorrowerDashboard from "../../views/BorrowerDashboard";
 import { useAppNavigate } from "../../lib/navigation";
-
-export default function DashboardPageClient() {
-  useRequireAuth();
+import type { StoredUserProfile } from "../../lib/session";
+export default function DashboardPageClient({ user }: { user: StoredUserProfile }) {
   const navigate = useAppNavigate();
-  return <BorrowerDashboard onNavigate={navigate} />;
+  return <BorrowerDashboard onNavigate={navigate} user={user} />;
 }

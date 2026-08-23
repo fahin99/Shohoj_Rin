@@ -234,9 +234,10 @@
 |--------|------|-------------|-------------|
 | `score_id` | UUID | **PK** | Unique score snapshot identifier |
 | `user_id` | UUID | **FK → users**, NOT NULL | Borrower this score belongs to |
-| `score` | DECIMAL(5,2) | NOT NULL | Numeric trust score (e.g., 0–100) |
-| `trust_band` | VARCHAR(10) | NOT NULL | `low`, `medium`, `high` |
-| `trigger_event` | VARCHAR(100) | NOT NULL | What triggered this recalculation (e.g., `verification_approved`, `repayment_completed`, `fraud_flagged`) |
+| `score` | DECIMAL(5,2) | NOT NULL | Numeric trust score (0–100) |
+| `trust_band` | VARCHAR(20) | NOT NULL | `very_low_risk` (80-100), `low_risk` (65-79.99), `moderate_risk` (50-64.99), `high_risk` (35-49.99), `very_high_risk` (0-34.99) |
+| `confidence_score` | DECIMAL(5,2) | | Evidence confidence score (0–100) |
+| `trigger_event` | VARCHAR(100) | NOT NULL | What triggered this recalculation (e.g., `verification_approved`, `repayment_received`, `loan_disbursed`, `manual_recalculation`) |
 | `is_current` | BOOLEAN | NOT NULL, DEFAULT TRUE | Whether this is the latest score |
 | `calculated_at` | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | Calculation timestamp |
 
@@ -252,14 +253,15 @@
 
 ### 4.2 `trust_score_factors`
 
-**Purpose** — Explains *why* a particular trust score was assigned. Each factor is a positive or negative signal with a point contribution.
+**Purpose** — Explains the 5 component scores contributing to the composite trust score.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `factor_id` | UUID | **PK** | Unique factor identifier |
 | `score_id` | UUID | **FK → trust_scores**, NOT NULL | Parent score snapshot |
-| `factor_name` | VARCHAR(100) | NOT NULL | Human-readable factor (e.g., `identity_verified`, `previous_repayment`, `duplicate_identity`) |
-| `factor_value` | DECIMAL(6,2) | NOT NULL | Point contribution (+20, -50, etc.) |
+| `factor_name` | VARCHAR(100) | NOT NULL | Component name (`repayment_history`, `financial_capacity`, `financial_behavior`, `identity_verification`, `credit_behavior`) |
+| `factor_value` | DECIMAL(6,2) | NOT NULL | Component score (0–100) |
+| `factor_weight` | DECIMAL(3,2) | | Component weight (0.35, 0.25, 0.15, 0.15, 0.10) |
 | `description` | TEXT | | Detailed explanation |
 
 **Primary Key:** `factor_id`

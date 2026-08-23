@@ -1,9 +1,8 @@
 "use client";
-
 import LandingPage from "../views/LandingPage";
 import { useAppNavigate } from "../lib/navigation";
-
-export default function LandingPageClient() {
+import type { StoredUserProfile } from "../lib/session";
+export default function LandingPageClient({ user }: { user: StoredUserProfile | null }) {
   const navigate = useAppNavigate();
-  return <LandingPage onNavigate={navigate} />;
+  return <LandingPage onNavigate={navigate} user={user} />;
 }

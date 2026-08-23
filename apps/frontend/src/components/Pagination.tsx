@@ -1,5 +1,4 @@
 import { IconButton } from './Button';
-
 interface PaginationProps {
   page: number;
   totalPages: number;
@@ -8,7 +7,6 @@ interface PaginationProps {
   pageSize?: number;
   className?: string;
 }
-
 export function Pagination({
   page,
   totalPages,
@@ -18,7 +16,6 @@ export function Pagination({
   className = '',
 }: PaginationProps) {
   if (totalPages <= 1) return null;
-
   const pages: (number | '...')[] = [];
   if (totalPages <= 7) {
     for (let i = 1; i <= totalPages; i++) pages.push(i);
@@ -31,14 +28,12 @@ export function Pagination({
     if (page < totalPages - 2) pages.push('...');
     pages.push(totalPages);
   }
-
   const start = totalItems && pageSize ? (page - 1) * pageSize + 1 : null;
   const end = totalItems && pageSize ? Math.min(page * pageSize, totalItems) : null;
-
   return (
     <div className={`flex items-center justify-between gap-4 ${className}`}>
       {totalItems && start && end ? (
-        <p className="text-xs text-stone-500 font-mono-sr">
+        <p className="text-xs text-stone-500 tabular-nums">
           {start}–{end} of {totalItems}
         </p>
       ) : (

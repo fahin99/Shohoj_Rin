@@ -11,45 +11,35 @@ import { DataTable } from '../components/DataTable';
 import { activeLoan, transactions } from '../lib/mock-data';
 import { formatTaka, formatDate } from '../lib/format';
 import type { PageName, Transaction } from '../types';
-
 interface Props {
   onNavigate: (page: PageName) => void;
 }
-
 type AmountOption = 'full' | 'custom' | 'payoff';
 type PaymentMethod = 'bkash' | 'nagad' | 'bank' | 'card';
-
 const methodInfo: Record<PaymentMethod, { label: string; fee: (amt: number) => number; hint: string }> = {
   bkash: { label: 'bKash', fee: (amt) => Math.round(amt * 0.015), hint: '1.5% bKash processing fee' },
   nagad: { label: 'Nagad', fee: (amt) => Math.round(amt * 0.012), hint: '1.2% Nagad processing fee' },
   bank: { label: 'Bank transfer', fee: () => 0, hint: 'No fee — funds may take 1 business day' },
   card: { label: 'Debit/credit card', fee: (amt) => Math.round(amt * 0.02) + 10, hint: '2% + ৳10 card processing fee' },
 };
-
 const recentPayments: Transaction[] = transactions.filter((t) => t.type === 'repayment' || t.type === 'fee');
-
 export default function RepaymentPage({ onNavigate }: Props) {
   const [amountOption, setAmountOption] = useState<AmountOption>('full');
   const [customAmount, setCustomAmount] = useState<string>(String(activeLoan.monthlyPayment));
   const [method, setMethod] = useState<PaymentMethod>('bkash');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [success, setSuccess] = useState(false);
-
-  const isOverdue = false; // schedule shows an overdue month, but current instalment is due, not overdue
-
+  const isOverdue = false; 
   const instalmentAmount =
     amountOption === 'full'
       ? activeLoan.monthlyPayment
       : amountOption === 'payoff'
       ? activeLoan.remainingBalance
       : Math.max(0, Number(customAmount) || 0);
-
   const fee = methodInfo[method].fee(instalmentAmount);
   const totalCharged = instalmentAmount + fee;
   const remainingAfter = Math.max(0, activeLoan.remainingBalance - instalmentAmount);
-
   const receiptId = useMemo(() => `RCPT-${Math.floor(100000 + Math.random() * 900000)}`, [success]);
-
   if (success) {
     return (
       <AppLayout onNavigate={onNavigate} currentPage="repayment">
@@ -75,7 +65,6 @@ export default function RepaymentPage({ onNavigate }: Props) {
       </AppLayout>
     );
   }
-
   return (
     <AppLayout onNavigate={onNavigate} currentPage="repayment">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
@@ -83,14 +72,13 @@ export default function RepaymentPage({ onNavigate }: Props) {
           title="Make a payment"
           description={`Loan ${activeLoan.id} — ${activeLoan.name}`}
         />
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 flex flex-col gap-5 min-w-0">
             <Card variant="raised" className="p-5">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between sm:items-start">
                 <div className="min-w-0">
                   <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Amount due</p>
-                  <p className="font-mono-sr text-3xl font-semibold text-navy mt-1">{formatTaka(activeLoan.monthlyPayment)}</p>
+                  <p className="font-display tabular-nums text-3xl font-semibold text-navy mt-1">{formatTaka(activeLoan.monthlyPayment)}</p>
                   <p className="text-sm text-stone-500 mt-1">Due {formatDate(activeLoan.nextPaymentDate)}</p>
                 </div>
                 <Badge variant="warning" dot className="shrink-0">Due</Badge>
@@ -101,7 +89,6 @@ export default function RepaymentPage({ onNavigate }: Props) {
                 </Alert>
               )}
             </Card>
-
             <Card variant="plain">
               <CardHeader title="Choose amount" description="Pay your regular instalment, a custom amount, or clear the loan early." />
               <CardBody className="flex flex-col gap-4">
@@ -139,7 +126,6 @@ export default function RepaymentPage({ onNavigate }: Props) {
                 />
               </CardBody>
             </Card>
-
             <Card variant="plain">
               <CardHeader title="Payment method" description="A small processing fee may apply depending on your method." />
               <CardBody className="flex flex-col gap-4">
@@ -157,12 +143,10 @@ export default function RepaymentPage({ onNavigate }: Props) {
                 ))}
               </CardBody>
             </Card>
-
             <Button variant="primary" size="lg" fullWidth onClick={() => setConfirmOpen(true)} disabled={instalmentAmount <= 0}>
               Confirm and pay {formatTaka(totalCharged)}
             </Button>
           </div>
-
           <div className="flex flex-col gap-5 min-w-0 lg:sticky lg:top-6 lg:self-start">
             <Card variant="plain">
               <CardHeader title="Payment summary" />
@@ -177,7 +161,6 @@ export default function RepaymentPage({ onNavigate }: Props) {
             </Card>
           </div>
         </div>
-
         <Card variant="plain" className="mt-6">
           <CardHeader title="Recent payments" />
           <DataTable
@@ -192,7 +175,6 @@ export default function RepaymentPage({ onNavigate }: Props) {
             ]}
           />
         </Card>
-
         <Modal
           open={confirmOpen}
           onClose={() => setConfirmOpen(false)}
@@ -215,7 +197,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
         >
           <div className="flex flex-col gap-1">
             <p className="text-sm text-stone-600 leading-relaxed mb-2">
-              You are about to pay <span className="font-mono-sr font-semibold text-navy">{formatTaka(totalCharged)}</span> via {methodInfo[method].label} for loan {activeLoan.id}.
+              You are about to pay <span className="tabular-nums font-semibold text-navy">{formatTaka(totalCharged)}</span> via {methodInfo[method].label} for loan {activeLoan.id}.
             </p>
             <DataRow label="Instalment" value={formatTaka(instalmentAmount)} />
             <DataRow label="Processing fee" value={formatTaka(fee)} />

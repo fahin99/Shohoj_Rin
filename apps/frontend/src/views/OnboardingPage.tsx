@@ -3,12 +3,11 @@ import { Logo } from '../components/Logo';
 import { Button } from '../components/Button';
 import { TextInput, Select, Radio, Checkbox } from '../components/Input';
 import { Stepper } from '../components/Progress';
+import InstitutionCombobox from '../components/InstitutionCombobox';
 import type { PageName } from '../types';
-
 interface OnboardingPageProps {
   onNavigate: (page: PageName) => void;
 }
-
 const steps = [
   { label: 'Personal', sublabel: 'Info' },
   { label: 'Financial', sublabel: 'Profile' },
@@ -16,7 +15,6 @@ const steps = [
   { label: 'Goals', sublabel: '' },
   { label: 'Preferences', sublabel: '' },
 ];
-
 const goalOptions = [
   'Pay for education or training',
   'Cover a medical emergency',
@@ -25,60 +23,52 @@ const goalOptions = [
   'Personal development',
   'Consolidate existing debt',
 ];
-
 export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
-
   const [data, setData] = useState({
     fullName: '', dob: '', gender: '', nid: '', address: '', city: '',
     monthlyIncome: '', savingsAmount: '', existingLoans: 'no',
     employment: '', employer: '', jobTitle: '', incomeType: '',
+    institutionId: null as string | null, institutionName: '', studentId: '',
     goals: [] as string[],
     notifEmail: true, notifSms: true, language: 'en',
   });
-
   const update = (k: string, v: string | boolean | string[]) => setData(d => ({ ...d, [k]: v }));
-
   const toggleGoal = (g: string) => {
     setData(d => ({
       ...d,
       goals: d.goals.includes(g) ? d.goals.filter(x => x !== g) : [...d.goals, g],
     }));
   };
-
   const next = () => { if (step < steps.length - 1) setStep(s => s + 1); else onNavigate('borrower-dashboard'); };
   const back = () => { if (step > 0) setStep(s => s - 1); };
-
   const saveAndContinueLater = () => {
     setSaving(true);
     setTimeout(() => { setSaving(false); onNavigate('landing'); }, 1000);
   };
-
   return (
     <div className="min-h-screen bg-offwhite flex flex-col">
-      {/* Top bar */}
+      {}
       <header className="border-b border-stone-200 bg-white px-6 py-3 flex items-center justify-between">
         <Logo size="sm" onClick={() => onNavigate('landing')} />
         <Button variant="ghost" size="sm" onClick={saveAndContinueLater} loading={saving}>
           Save & continue later
         </Button>
       </header>
-
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-10">
-        {/* Progress stepper */}
+        {}
         <div className="mb-10">
           <p className="text-xs text-stone-500 mb-4 text-center">
             Step {step + 1} of {steps.length} — let us get to know you
           </p>
           <Stepper steps={steps} currentStep={step} />
         </div>
-
         <div className="bg-white border-[1.5px] border-navy rounded-[8px] shadow-nb p-6 md:p-8">
-          {/* Step 0: Personal info */}
+          {}
           {step === 0 && (
             <div>
-              <h2 className="font-display text-2xl text-navy mb-1">Personal information</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">Personal information</h2>
               <p className="text-sm text-stone-500 mb-6">This information helps us verify your identity and personalize your experience.</p>
               <div className="grid grid-cols-1 gap-5">
                 <TextInput label="Full name" placeholder="Rahim Uddin Ahmed" required value={data.fullName} onChange={e => update('fullName', e.target.value)} hint="As it appears on your NID" />
@@ -111,11 +101,10 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
               </div>
             </div>
           )}
-
-          {/* Step 1: Financial profile */}
+          {}
           {step === 1 && (
             <div>
-              <h2 className="font-display text-2xl text-navy mb-1">Financial profile</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">Financial profile</h2>
               <p className="text-sm text-stone-500 mb-6">This helps us match you to loans you are likely to qualify for. It does not affect your credit score.</p>
               <div className="grid grid-cols-1 gap-5">
                 <TextInput label="Monthly income (approx.)" type="number" placeholder="25000" value={data.monthlyIncome} onChange={e => update('monthlyIncome', e.target.value)} prefix="৳" hint="After tax, in BDT" />
@@ -134,11 +123,10 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
               </div>
             </div>
           )}
-
-          {/* Step 2: Employment */}
+          {}
           {step === 2 && (
             <div>
-              <h2 className="font-display text-2xl text-navy mb-1">Employment & income</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">Employment & income</h2>
               <p className="text-sm text-stone-500 mb-6">Tell us about your current work or study status.</p>
               <div className="grid grid-cols-1 gap-5">
                 <Select
@@ -156,6 +144,27 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   placeholder="Select status"
                   required
                 />
+                {data.employment === 'student' && (
+                  <>
+                    <InstitutionCombobox
+                      label="Institution"
+                      value={data.institutionName}
+                      institutionId={data.institutionId}
+                      onChange={({ id, name }) => {
+                        update('institutionId', id || '');
+                        update('institutionName', name);
+                      }}
+                      required
+                      hint="Search for your college or university"
+                    />
+                    <TextInput
+                      label="Student ID"
+                      placeholder="e.g., 2021-1-60-001"
+                      value={data.studentId}
+                      onChange={e => update('studentId', e.target.value)}
+                    />
+                  </>
+                )}
                 {data.employment && data.employment !== 'student' && data.employment !== 'unemployed' && (
                   <>
                     <TextInput label="Employer / Business name" placeholder="XYZ Company Ltd." value={data.employer} onChange={e => update('employer', e.target.value)} />
@@ -179,11 +188,10 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
               </div>
             </div>
           )}
-
-          {/* Step 3: Financial goals */}
+          {}
           {step === 3 && (
             <div>
-              <h2 className="font-display text-2xl text-navy mb-1">Your financial goals</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">Your financial goals</h2>
               <p className="text-sm text-stone-500 mb-6">What are you hoping to use a loan for? Select all that apply. This helps us show you the most relevant products.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {goalOptions.map((g) => (
@@ -206,11 +214,10 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
               )}
             </div>
           )}
-
           {/* Step 4: Preferences */}
           {step === 4 && (
             <div>
-              <h2 className="font-display text-2xl text-navy mb-1">Your preferences</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">Your preferences</h2>
               <p className="text-sm text-stone-500 mb-6">Almost done — just a few last preferences to personalise your experience.</p>
               <div className="flex flex-col gap-5">
                 <div>
@@ -237,14 +244,13 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
             </div>
           )}
         </div>
-
-        {/* Navigation buttons */}
+        {}
         <div className="flex items-center justify-between mt-6">
           <Button variant="ghost" size="md" onClick={back} disabled={step === 0}>
             ← Back
           </Button>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-stone-400 font-mono-sr">{step + 1}/{steps.length}</span>
+            <span className="text-xs text-stone-400 tabular-nums">{step + 1}/{steps.length}</span>
             <Button variant="primary" size="md" onClick={next}>
               {step === steps.length - 1 ? 'Finish Setup →' : 'Continue →'}
             </Button>

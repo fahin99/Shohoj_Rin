@@ -8,11 +8,9 @@ import { SearchInput, Select } from '../components/Input';
 import { Tabs } from '../components/Tabs';
 import { loanProducts } from '../lib/mock-data';
 import type { PageName, LoanProduct } from '../types';
-
 interface Props {
   onNavigate: (page: PageName) => void;
 }
-
 const categories: { id: string; label: string }[] = [
   { id: 'all', label: 'All categories' },
   { id: 'education', label: 'Education' },
@@ -21,14 +19,12 @@ const categories: { id: string; label: string }[] = [
   { id: 'personal', label: 'Personal' },
   { id: 'development', label: 'Development' },
 ];
-
 const sortOptions = [
   { value: 'recommended', label: 'Recommended' },
   { value: 'interest-asc', label: 'Interest rate: low to high' },
   { value: 'amount-desc', label: 'Max amount: high to low' },
   { value: 'tenure-asc', label: 'Tenure: shortest first' },
 ];
-
 function sortLoans(loans: LoanProduct[], sort: string): LoanProduct[] {
   const list = [...loans];
   switch (sort) {
@@ -42,15 +38,12 @@ function sortLoans(loans: LoanProduct[], sort: string): LoanProduct[] {
       return list;
   }
 }
-
 const PAGE_SIZE = 6;
-
 export default function LoanMarketplace({ onNavigate }: Props) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [sort, setSort] = useState('recommended');
   const [page, setPage] = useState(1);
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const byCategoryAndQuery = loanProducts.filter((loan) => {
@@ -64,10 +57,8 @@ export default function LoanMarketplace({ onNavigate }: Props) {
     });
     return sortLoans(byCategoryAndQuery, sort);
   }, [query, category, sort]);
-
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
   return (
     <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
@@ -75,7 +66,6 @@ export default function LoanMarketplace({ onNavigate }: Props) {
           title="Loan marketplace"
           description="Compare loan products from trusted lenders across Bangladesh and apply in minutes."
         />
-
         <div className="flex flex-col gap-4 mb-5">
           <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_14rem] gap-3">
             <SearchInput
@@ -101,11 +91,9 @@ export default function LoanMarketplace({ onNavigate }: Props) {
             />
           </div>
         </div>
-
         <p className="text-sm text-stone-500 mb-4">
           {filtered.length} loan{filtered.length === 1 ? '' : 's'} found
         </p>
-
         {pageItems.length === 0 ? (
           <EmptyState
             icon={EmptyIcons.search}

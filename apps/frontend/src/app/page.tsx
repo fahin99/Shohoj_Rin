@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import LandingPageClient from "./page.client";
-
+import { getCurrentUser } from "../lib/auth.server";
 export const metadata: Metadata = {
   title: "Shohoj Rin — Borrow with clarity, repay with confidence",
   description:
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
       "Compare transparent loan options, see exactly what you will repay, and track every instalment in one place.",
   },
 };
-
-export default function Page() {
-  return <LandingPageClient />;
+export default async function Page() {
+  const user = await getCurrentUser();
+  return <LandingPageClient user={user} />;
 }
