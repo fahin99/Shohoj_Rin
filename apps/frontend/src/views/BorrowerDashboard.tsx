@@ -5,7 +5,7 @@ import { ProgressBar } from "../components/Progress";
 import { StatCard } from "../components/StatCard";
 import { Card, CardBody, CardHeader } from "../components/Card";
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
-import { activeLoan, applications, transactions } from "../lib/mock-data";
+import { useActiveLoan, useApplications, useTransactions } from "../lib/loan-store";
 import { formatDate, formatPercent, formatTaka } from "../lib/format";
 import type { PageName, Transaction } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
@@ -45,11 +45,14 @@ function TransactionIcon({ type }: { type: Transaction["type"] }) {
   );
 }
 export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboardProps) {
+  const activeLoan = useActiveLoan();
+  const applications = useApplications();
+  const transactions = useTransactions();
   const now = new Date();
   const hour = now.getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const openApplications = applications.filter(
-    (a) => a.status === "under-review" || a.status === "info-required",
+    (a) => a.status === "under-review" || a.status === "info-required" || a.status === "submitted",
   );
   const userName = getDisplayName(user, "Riya Ahmed");
   const firstName = userName.split(" ")[0] ?? userName;

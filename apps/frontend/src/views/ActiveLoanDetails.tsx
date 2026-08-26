@@ -9,7 +9,7 @@ import { ProgressBar } from "../components/Progress";
 import { Button } from "../components/Button";
 import { DataTable } from "../components/DataTable";
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
-import { activeLoan, repaymentSchedule, transactions } from "../lib/mock-data";
+import { useActiveLoan, useRepaymentSchedule, useTransactions } from "../lib/loan-store";
 import { formatTaka, formatPercent, formatDate } from "../lib/format";
 import type { PageName, RepaymentScheduleRow, Transaction } from "../types";
 interface Props {
@@ -44,6 +44,9 @@ const txStatusVariant: Record<Transaction["status"], "success" | "warning" | "er
 };
 export default function ActiveLoanDetails({ onNavigate }: Props) {
   const [tab, setTab] = useState<"schedule" | "transactions">("schedule");
+  const activeLoan = useActiveLoan();
+  const repaymentSchedule = useRepaymentSchedule();
+  const transactions = useTransactions();
 
   if (!activeLoan) {
     return (

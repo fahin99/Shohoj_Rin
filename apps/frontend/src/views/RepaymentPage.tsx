@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { PageHeader } from "../components/PageHeader";
 import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
@@ -9,7 +9,7 @@ import { Button } from "../components/Button";
 import { Modal } from "../components/Modal";
 import { DataTable } from "../components/DataTable";
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
-import { activeLoan, transactions } from "../lib/mock-data";
+import { useActiveLoan, useTransactions, recordRepayment } from "../lib/loan-store";
 import { formatTaka, formatDate } from "../lib/format";
 import type { PageName, Transaction } from "../types";
 interface Props {
@@ -38,18 +38,70 @@ const methodInfo: Record<
     hint: "2% + ৳10 card processing fee",
   },
 };
-const recentPayments: Transaction[] = transactions.filter(
-  (t) => t.type === "repayment" || t.type === "fee",
-);
+
 export default function RepaymentPage({ onNavigate }: Props) {
+  const activeLoan = useActiveLoan();
+  const allTransactions = useTransactions();
   const [amountOption, setAmountOption] = useState<AmountOption>("full");
-  const [customAmount, setCustomAmount] = useState<string>(
-    activeLoan ? String(activeLoan.monthlyPayment) : "0",
-  );
+  const [customAmount, setCustomAmount] = useState<string>("");
   const [method, setMethod] = useState<PaymentMethod>("bkash");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [success, setSuccess] = useState(false);
-  const receiptId = useMemo(() => `RCPT-${Math.floor(100000 + Math.random() * 900000)}`, []);
+  const [receiptData, setReceiptData] = useState<{
+    receiptId: string;
+    closed: boolean;
+    loanId: string;
+    amount: number;
+    fee: number;
+    totalCharged: number;
+    remainingAfter: number;
+  } | null>(null);
+
+  const recentPayments: Transaction[] = allTransactions.filter(
+    (t) => t.type === "repayment" || t.type === "fee",
+  );
+
+  if (success && receiptData) {
+    return (
+      <AppLayout onNavigate={onNavigate} currentPage="repayment">
+        <div className="max-w-2xl mx-auto px-4 md:px-6 py-10">
+          <Card variant="raised" className="p-6 text-center">
+            <div className="w-14 h-14 rounded-full bg-emerald-light border-[1.5px] border-emerald flex items-center justify-center text-2xl text-emerald mx-auto mb-4">
+              ✓
+            </div>
+            <h1 className="text-2xl font-semibold text-navy mb-1">
+              {receiptData.closed ? "Loan Fully Repaid! 🎉" : "Payment successful"}
+            </h1>
+            <p className="text-sm text-stone-500 mb-6">
+              {receiptData.closed
+                ? `Congratulations! You have completed all repayments for loan ${receiptData.loanId}.`
+                : `Your payment has been received and applied to loan ${receiptData.loanId}.`}
+            </p>
+            <div className="text-left bg-stone-50 border border-stone-200 rounded-[8px] p-4">
+              <DataRow label="Receipt no." value={receiptData.receiptId} />
+              <DataRow label="Paid via" value={methodInfo[method].label} />
+              <DataRow label="Instalment" value={formatTaka(receiptData.amount)} />
+              <DataRow label="Processing fee" value={formatTaka(receiptData.fee)} />
+              <DataRow
+                label="Total charged"
+                value={formatTaka(receiptData.totalCharged)}
+                emphasis
+              />
+              <DataRow label="Remaining balance" value={formatTaka(receiptData.remainingAfter)} />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 mt-6 justify-center">
+              <Button variant="secondary" onClick={() => onNavigate("active-loan")}>
+                View loan details
+              </Button>
+              <Button variant="primary" onClick={() => onNavigate("borrower-dashboard")}>
+                Back to dashboard
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (!activeLoan) {
     return (
@@ -85,39 +137,6 @@ export default function RepaymentPage({ onNavigate }: Props) {
   const totalCharged = instalmentAmount + fee;
   const remainingAfter = Math.max(0, activeLoan.remainingBalance - instalmentAmount);
 
-  if (success) {
-    return (
-      <AppLayout onNavigate={onNavigate} currentPage="repayment">
-        <div className="max-w-2xl mx-auto px-4 md:px-6 py-10">
-          <Card variant="raised" className="p-6 text-center">
-            <div className="w-14 h-14 rounded-full bg-emerald-light border-[1.5px] border-emerald flex items-center justify-center text-2xl text-emerald mx-auto mb-4">
-              ✓
-            </div>
-            <h1 className="text-2xl font-semibold text-navy mb-1">Payment successful</h1>
-            <p className="text-sm text-stone-500 mb-6">
-              Your payment has been received and applied to loan {activeLoan.id}.
-            </p>
-            <div className="text-left bg-stone-50 border border-stone-200 rounded-[8px] p-4">
-              <DataRow label="Receipt no." value={receiptId} />
-              <DataRow label="Paid via" value={methodInfo[method].label} />
-              <DataRow label="Instalment" value={formatTaka(instalmentAmount)} />
-              <DataRow label="Processing fee" value={formatTaka(fee)} />
-              <DataRow label="Total charged" value={formatTaka(totalCharged)} emphasis />
-              <DataRow label="Remaining balance" value={formatTaka(remainingAfter)} />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 mt-6 justify-center">
-              <Button variant="secondary" onClick={() => onNavigate("active-loan")}>
-                View loan details
-              </Button>
-              <Button variant="primary" onClick={() => onNavigate("borrower-dashboard")}>
-                Back to dashboard
-              </Button>
-            </div>
-          </Card>
-        </div>
-      </AppLayout>
-    );
-  }
   return (
     <AppLayout onNavigate={onNavigate} currentPage="repayment">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
@@ -297,6 +316,16 @@ export default function RepaymentPage({ onNavigate }: Props) {
                 variant="primary"
                 size="sm"
                 onClick={() => {
+                  const result = recordRepayment(instalmentAmount, method);
+                  setReceiptData({
+                    receiptId: result.receiptId,
+                    closed: result.closed,
+                    loanId: activeLoan.id,
+                    amount: instalmentAmount,
+                    fee,
+                    totalCharged,
+                    remainingAfter: result.closed ? 0 : remainingAfter,
+                  });
                   setConfirmOpen(false);
                   setSuccess(true);
                 }}

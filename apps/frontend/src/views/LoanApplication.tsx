@@ -7,6 +7,7 @@ import { Alert } from "../components/Alert";
 import { CurrencyInput, TextInput, Select, FileUpload, Textarea } from "../components/Input";
 import { formatTaka } from "../lib/format";
 import { loanProducts } from "../lib/mock-data";
+import { createApplication } from "../lib/loan-store";
 import type { PageName } from "../types";
 interface Props {
   onNavigate: (page: PageName) => void;
@@ -107,9 +108,18 @@ export default function LoanApplication({ onNavigate }: Props) {
     if (!validateStep(step)) return;
     setSubmitting(true);
     setTimeout(() => {
+      createApplication({
+        loanId: form.loanId,
+        amount: form.amount,
+        duration: form.duration,
+        purpose: form.purpose,
+        phone: form.phone,
+        employment: form.employment,
+        monthlyIncome: form.monthlyIncome,
+      });
       setSubmitting(false);
       onNavigate("application-status");
-    }, 1400);
+    }, 800);
   }
   const summary = (
     <Card variant="raised">
