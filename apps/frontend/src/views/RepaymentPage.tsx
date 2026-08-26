@@ -8,6 +8,7 @@ import { Radio, CurrencyInput } from '../components/Input';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { DataTable } from '../components/DataTable';
+import { EmptyState, EmptyIcons } from '../components/EmptyState';
 import { activeLoan, transactions } from '../lib/mock-data';
 import { formatTaka, formatDate } from '../lib/format';
 import type { PageName, Transaction } from '../types';
@@ -25,10 +26,34 @@ const methodInfo: Record<PaymentMethod, { label: string; fee: (amt: number) => n
 const recentPayments: Transaction[] = transactions.filter((t) => t.type === 'repayment' || t.type === 'fee');
 export default function RepaymentPage({ onNavigate }: Props) {
   const [amountOption, setAmountOption] = useState<AmountOption>('full');
-  const [customAmount, setCustomAmount] = useState<string>(String(activeLoan.monthlyPayment));
+  const [customAmount, setCustomAmount] = useState<string>(activeLoan ? String(activeLoan.monthlyPayment) : '0');
   const [method, setMethod] = useState<PaymentMethod>('bkash');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  if (!activeLoan) {
+    return (
+      <AppLayout onNavigate={onNavigate} currentPage="repayment">
+        <div className="max-w-3xl mx-auto px-4 md:px-6 py-10">
+          <PageHeader
+            eyebrow="Repayment"
+            title="Make a repayment"
+            description="Clear and secure loan repayments with instant receipt generation."
+          />
+          <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px]">
+            <EmptyState
+              icon={EmptyIcons.transactions}
+              title="No payments due"
+              description="You do not currently have any active loans requiring repayment."
+              action={{ label: 'Explore loans', onClick: () => onNavigate('loan-marketplace') }}
+              secondaryAction={{ label: 'Learn more', onClick: () => onNavigate('education') }}
+            />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   const isOverdue = false; 
   const instalmentAmount =
     amountOption === 'full'
@@ -40,6 +65,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
   const totalCharged = instalmentAmount + fee;
   const remainingAfter = Math.max(0, activeLoan.remainingBalance - instalmentAmount);
   const receiptId = useMemo(() => `RCPT-${Math.floor(100000 + Math.random() * 900000)}`, [success]);
+
   if (success) {
     return (
       <AppLayout onNavigate={onNavigate} currentPage="repayment">

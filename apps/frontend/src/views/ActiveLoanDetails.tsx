@@ -8,6 +8,7 @@ import { Tabs, TabPanel } from '../components/Tabs';
 import { ProgressBar } from '../components/Progress';
 import { Button } from '../components/Button';
 import { DataTable } from '../components/DataTable';
+import { EmptyState, EmptyIcons } from '../components/EmptyState';
 import { activeLoan, repaymentSchedule, transactions } from '../lib/mock-data';
 import { formatTaka, formatPercent, formatDate } from '../lib/format';
 import type { PageName, RepaymentScheduleRow, Transaction } from '../types';
@@ -40,6 +41,30 @@ const txStatusVariant: Record<Transaction['status'], 'success' | 'warning' | 'er
 };
 export default function ActiveLoanDetails({ onNavigate }: Props) {
   const [tab, setTab] = useState<'schedule' | 'transactions'>('schedule');
+
+  if (!activeLoan) {
+    return (
+      <AppLayout onNavigate={onNavigate} currentPage="active-loan">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-10">
+          <PageHeader
+            eyebrow="My loans"
+            title="Active loan details"
+            description="View your active loan schedule, interest breakdown, and payment history."
+          />
+          <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px]">
+            <EmptyState
+              icon={EmptyIcons.loans}
+              title="No active loans yet"
+              description="You do not currently have any active loans. Explore loan options and apply online in minutes."
+              action={{ label: 'Explore loans', onClick: () => onNavigate('loan-marketplace') }}
+              secondaryAction={{ label: 'Learn more', onClick: () => onNavigate('education') }}
+            />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   const remaining = activeLoan.durationMonths - activeLoan.paidMonths;
   return (
     <AppLayout onNavigate={onNavigate} currentPage="active-loan">

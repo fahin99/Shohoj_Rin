@@ -50,9 +50,27 @@ export interface RepaymentScheduleRow {
   status: 'paid' | 'due' | 'upcoming' | 'overdue';
 }
 
+export interface ActiveLoan {
+  id: string;
+  name: string;
+  provider: string;
+  principal: number;
+  interestRate: number;
+  durationMonths: number;
+  paidMonths: number;
+  totalRepayable: number;
+  amountRepaid: number;
+  remainingBalance: number;
+  interestPaid: number;
+  feesPaid: number;
+  monthlyPayment: number;
+  nextPaymentDate: string;
+}
+
 export interface NavItem {
   label: string;
   page?: PageName;
   icon?: string;
   badge?: number;
 }
+

@@ -6,7 +6,7 @@ import { Button } from '../components/Button';
 import { CurrencyInput, Select } from '../components/Input';
 import { DataTable } from '../components/DataTable';
 import { formatPercent, formatTaka, formatDate } from '../lib/format';
-import { loanProducts, repaymentSchedule } from '../lib/mock-data';
+import { loanProducts } from '../lib/mock-data';
 import type { PageName, RepaymentScheduleRow } from '../types';
 interface Props {
   onNavigate: (page: PageName) => void;
@@ -49,7 +49,29 @@ export default function LoanDetails({ onNavigate }: Props) {
       totalInterest: total - amount,
     };
   }, [amount, duration, loan]);
-  const previewRows = repaymentSchedule.slice(0, 6);
+  const previewRows: RepaymentScheduleRow[] = useMemo(() => {
+    const count = Math.min(6, Number(duration) || loan.durationMonths);
+    const monthlyRate = loan.interestRate / 12 / 100;
+    let balance = amount;
+    const rows: RepaymentScheduleRow[] = [];
+    const now = new Date();
+    for (let i = 1; i <= count; i++) {
+      const interestPart = Math.round(balance * monthlyRate);
+      const principalPart = Math.round(emi - interestPart);
+      balance = Math.max(0, balance - principalPart);
+      const dueDate = new Date(now.getFullYear(), now.getMonth() + i, 15);
+      rows.push({
+        month: i,
+        dueDate: dueDate.toISOString().slice(0, 10),
+        principal: principalPart,
+        interest: interestPart,
+        total: Math.round(emi),
+        status: i === 1 ? 'due' : 'upcoming',
+      });
+    }
+    return rows;
+  }, [amount, duration, loan, emi]);
+
   const columns = [
     { key: 'month', header: 'Month', render: (r: RepaymentScheduleRow) => `#${r.month}` },
     { key: 'dueDate', header: 'Due date', render: (r: RepaymentScheduleRow) => formatDate(r.dueDate) },

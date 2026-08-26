@@ -1,4 +1,4 @@
-import type { LoanProduct, RepaymentScheduleRow, Transaction } from "../types";
+import type { ActiveLoan, AppStatus, LoanProduct, RepaymentScheduleRow, Transaction } from "../types";
 
 export const loanProducts: LoanProduct[] = [
   {
@@ -82,86 +82,21 @@ export const loanProducts: LoanProduct[] = [
   },
 ];
 
-export const transactions: Transaction[] =[
-  { id: "t-1", date: "2026-07-15", description: "EMI payment — Student Tuition Support Loan", amount: 4500, type: "repayment", status: "completed" },
-  { id: "t-2", date: "2026-06-15", description: "EMI payment — Student Tuition Support Loan", amount: 4500, type: "repayment", status: "completed" },
-  { id: "t-3", date: "2026-06-02", description: "Late payment fee reversal (goodwill adjustment)", amount: 250, type: "refund", status: "completed" },
-  { id: "t-4", date: "2026-05-15", description: "EMI payment — Student Tuition Support Loan", amount: 4500, type: "repayment", status: "completed" },
-  { id: "t-5", date: "2026-05-01", description: "Processing fee — Emergency Medical Assistance application", amount: 750, type: "fee", status: "completed" },
-  { id: "t-6", date: "2026-04-20", description: "Loan disbursement — Emergency Medical Assistance", amount: 60000, type: "disbursement", status: "completed" },
-  { id: "t-7", date: "2026-04-15", description: "EMI payment — Student Tuition Support Loan", amount: 4500, type: "repayment", status: "failed" },
-  { id: "t-8", date: "2026-03-15", description: "EMI payment — Student Tuition Support Loan", amount: 4500, type: "repayment", status: "completed" },
-];
+export const transactions: Transaction[] = [];
 
-export const repaymentSchedule: RepaymentScheduleRow[] = Array.from({ length: 12 }, (_, i) => {
-  const month = i + 1;
-  const status: RepaymentScheduleRow["status"] =
-    month < 8 ? "paid" : month === 8 ? "due" : month === 7 ? "overdue" : "upcoming";
-  return {
-    month,
-    dueDate: `2026-${String(((month + 2) % 12) + 1).padStart(2, "0")}-15`,
-    principal: 3080,
-    interest: 1420,
-    total: 4500,
-    status,
-  };
-});
+export const repaymentSchedule: RepaymentScheduleRow[] = [];
 
-export const activeLoan = {
-  id: "SR-2026-004812",
-  name: "Student Tuition Support Loan",
-  provider: "Bengal Microfinance Bank",
-  principal: 200000,
-  interestRate: 8.5,
-  durationMonths: 48,
-  paidMonths: 14,
-  totalRepayable: 236000,
-  amountRepaid: 63000,
-  remainingBalance: 173000,
-  interestPaid: 19880,
-  feesPaid: 750,
-  monthlyPayment: 4500,
-  nextPaymentDate: "2026-08-15",
-};
+export const activeLoan: ActiveLoan | null = null;
 
-export const applications = [
-  {
-    id: "APP-9021",
-    product: "Emergency Medical Assistance",
-    provider: "Shohoj Care Finance",
-    amount: 60000,
-    submitted: "2026-07-02",
-    status: "under-review" as const,
-    stage: 2,
-  },
-  {
-    id: "APP-8877",
-    product: "Small Business Working Capital Facility",
-    provider: "Dhaka Trade Credit",
-    amount: 450000,
-    submitted: "2026-06-18",
-    status: "info-required" as const,
-    stage: 2,
-  },
-  {
-    id: "APP-8420",
-    product: "Student Tuition Support Loan",
-    provider: "Bengal Microfinance Bank",
-    amount: 200000,
-    submitted: "2025-05-11",
-    status: "disbursed" as const,
-    stage: 4,
-  },
-  {
-    id: "APP-8103",
-    product: "Personal Flexible Loan",
-    provider: "Bengal Microfinance Bank",
-    amount: 120000,
-    submitted: "2025-02-27",
-    status: "rejected" as const,
-    stage: 3,
-  },
-];
+export const applications: Array<{
+  id: string;
+  product: string;
+  provider: string;
+  amount: number;
+  submitted: string;
+  status: AppStatus;
+  stage: number;
+}> = [];
 
 export const educationArticles = [
   { id: "ed-1", title: "Understanding interest rates", tag: "Basics", read: "4 min read", desc: "How simple and compound interest change the total you repay — with worked examples in taka." },
