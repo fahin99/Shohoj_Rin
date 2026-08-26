@@ -29,16 +29,9 @@ export const metadata: Metadata = {
     icon: "/icon.svg",
   },
 };
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${spaceGrotesk.variable}`}
-    >
+    <html lang="en" className={`${spaceGrotesk.variable}`}>
       <body>
         <Providers>
           <a

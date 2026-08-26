@@ -5,7 +5,7 @@ import { requireAuth } from "../middleware/authenticate.js";
 const router = Router();
 const searchSchema = z.object({
   q: z.string().trim().min(1).max(100),
-  type: z.enum(['college', 'university', 'vocational', 'other']).optional(),
+  type: z.enum(["college", "university", "vocational", "other"]).optional(),
   limit: z.coerce.number().min(1).max(50).default(20),
 });
 router.get("/search", async (req, res) => {
@@ -54,7 +54,12 @@ router.get("/search", async (req, res) => {
   }
 });
 const createSchema = z.object({
-  name: z.string().trim().min(2).max(255).transform(s => s.replace(/\s+/g, ' ')),
+  name: z
+    .string()
+    .trim()
+    .min(2)
+    .max(255)
+    .transform((s) => s.replace(/\s+/g, " ")),
 });
 router.post("/", requireAuth, async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
@@ -69,7 +74,7 @@ router.post("/", requireAuth, async (req, res) => {
   try {
     const checkResult = await client.query(
       `SELECT institution_id, name, type, is_verified FROM institutions WHERE LOWER(TRIM(name)) = LOWER($1)`,
-      [name]
+      [name],
     );
     if (checkResult.rows.length > 0) {
       return res.status(200).json({
@@ -81,7 +86,7 @@ router.post("/", requireAuth, async (req, res) => {
       `INSERT INTO institutions (name, type, is_verified)
        VALUES ($1, 'other', false)
        RETURNING institution_id, name, type, is_verified`,
-      [name]
+      [name],
     );
     return res.status(201).json({
       success: true,

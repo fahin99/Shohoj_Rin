@@ -381,8 +381,7 @@ router.post("/logout", async (req, res) => {
           [claims.jti],
         );
       }
-    } catch {
-    }
+    } catch {}
   }
   clearAuthCookies(res);
   return res.status(200).json({

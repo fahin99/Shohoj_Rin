@@ -10,7 +10,7 @@ router.get("/", async (req: RequestWithAuth, res) => {
       `SELECT score_id, score, trust_band, confidence_score, calculated_at 
        FROM trust_scores 
        WHERE user_id = $1 AND is_current = TRUE`,
-      [req.user!.userId]
+      [req.user!.userId],
     );
     if (scoreRes.rowCount === 0) {
       return res.status(200).json({ success: true, data: null });
@@ -20,7 +20,7 @@ router.get("/", async (req: RequestWithAuth, res) => {
       `SELECT factor_name as name, factor_value as score, factor_weight as weight, description 
        FROM trust_score_factors 
        WHERE score_id = $1`,
-      [scoreRow.score_id]
+      [scoreRow.score_id],
     );
     return res.status(200).json({
       success: true,
@@ -29,13 +29,13 @@ router.get("/", async (req: RequestWithAuth, res) => {
         band: scoreRow.trust_band,
         confidenceScore: Number(scoreRow.confidence_score || 0),
         lastUpdated: scoreRow.calculated_at,
-        factors: factorsRes.rows.map(f => ({
+        factors: factorsRes.rows.map((f) => ({
           name: f.name,
           score: Number(f.score),
           weight: Number(f.weight || 0),
-          description: f.description
-        }))
-      }
+          description: f.description,
+        })),
+      },
     });
   } catch (error) {
     console.error("Failed to fetch trust score:", error);
@@ -44,22 +44,24 @@ router.get("/", async (req: RequestWithAuth, res) => {
 });
 router.post("/recalculate", async (req: RequestWithAuth, res) => {
   try {
-    await recalculateAndPersistTrustScore(req.user!.userId, 'manual_recalculation');
+    await recalculateAndPersistTrustScore(req.user!.userId, "manual_recalculation");
     const scoreRes = await pool.query(
       `SELECT score_id, score, trust_band, confidence_score, calculated_at 
        FROM trust_scores 
        WHERE user_id = $1 AND is_current = TRUE`,
-      [req.user!.userId]
+      [req.user!.userId],
     );
     if (scoreRes.rowCount === 0) {
-      return res.status(404).json({ success: false, error: { message: "Score could not be calculated" } });
+      return res
+        .status(404)
+        .json({ success: false, error: { message: "Score could not be calculated" } });
     }
     const scoreRow = scoreRes.rows[0];
     const factorsRes = await pool.query(
       `SELECT factor_name as name, factor_value as score, factor_weight as weight, description 
        FROM trust_score_factors 
        WHERE score_id = $1`,
-      [scoreRow.score_id]
+      [scoreRow.score_id],
     );
     return res.status(200).json({
       success: true,
@@ -68,13 +70,13 @@ router.post("/recalculate", async (req: RequestWithAuth, res) => {
         band: scoreRow.trust_band,
         confidenceScore: Number(scoreRow.confidence_score || 0),
         lastUpdated: scoreRow.calculated_at,
-        factors: factorsRes.rows.map(f => ({
+        factors: factorsRes.rows.map((f) => ({
           name: f.name,
           score: Number(f.score),
           weight: Number(f.weight || 0),
-          description: f.description
-        }))
-      }
+          description: f.description,
+        })),
+      },
     });
   } catch (error) {
     console.error("Failed to recalculate trust score:", error);

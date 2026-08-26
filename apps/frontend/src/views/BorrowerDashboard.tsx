@@ -290,7 +290,9 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                     >
                       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                         <div className="min-w-0">
-                          <p className="text-sm font-medium leading-snug text-navy">{app.product}</p>
+                          <p className="text-sm font-medium leading-snug text-navy">
+                            {app.product}
+                          </p>
                           <p className="mt-0.5 tabular-nums text-xs text-stone-500">{app.id}</p>
                         </div>
                         <Badge

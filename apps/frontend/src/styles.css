@@ -224,7 +224,6 @@
   letter-spacing: -0.025em;
 }
 
-
 @utility shadow-nb-xs {
   box-shadow: 1px 1px 0 var(--color-navy);
 }
