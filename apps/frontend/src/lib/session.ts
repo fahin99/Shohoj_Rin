@@ -5,6 +5,7 @@ export interface StoredUserProfile {
   role?: string;
   accountStatus?: string;
   emailVerified?: boolean;
+  profileCompletionStatus?: string;
   profile?: {
     fullName?: string | null;
     dateOfBirth?: string | null;
@@ -12,6 +13,17 @@ export interface StoredUserProfile {
     city?: string | null;
     district?: string | null;
     occupation?: string | null;
+    nidNumber?: string | null;
+    addressLine?: string | null;
+    postalCode?: string | null;
+    monthlyFamilyIncome?: number | null;
+    employmentType?: string | null;
+    employerName?: string | null;
+    monthlyIncome?: number | null;
+    incomeSource?: string | null;
+    studentId?: string | null;
+    enrollmentYear?: number | null;
+    institutionId?: string | null;
   };
 }
 export function getDisplayName(user: StoredUserProfile | null, fallback: string) {

@@ -16,6 +16,7 @@ export const PAGE_ROUTES: Record<PageName, string> = {
   "lender-dashboard": "/lender",
   admin: "/admin",
   "system-states": "/system-states",
+  "investor-onboarding": "/investor-onboarding",
 };
 export const PAGE_LABELS: Record<PageName, string> = {
   landing: "Home",
@@ -32,6 +33,7 @@ export const PAGE_LABELS: Record<PageName, string> = {
   "lender-dashboard": "Lender Dashboard",
   admin: "Admin Dashboard",
   "system-states": "System States",
+  "investor-onboarding": "Investor Onboarding",
 };
 export function useAppNavigate() {
   const router = useRouter();

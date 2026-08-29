@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "../components/Logo";
 import { Button } from "../components/Button";
 import { TextInput, Select, Radio, Checkbox, FileUpload } from "../components/Input";
 import { Stepper } from "../components/Progress";
 import InstitutionCombobox from "../components/InstitutionCombobox";
+import { profileApi, documentsApi } from "../lib/api/index";
 import type { PageName } from "../types";
 interface OnboardingPageProps {
   onNavigate: (page: PageName) => void;
@@ -50,6 +51,18 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     notifSms: true,
     language: "en",
   });
+  useEffect(() => {
+    async function init() {
+      try {
+        const res = await profileApi.getProfileCompletion();
+        // Here you might set step based on completion status if needed
+        // console.log("Profile completion:", res.status);
+      } catch (e) {
+        console.error("Failed to load profile completion", e);
+      }
+    }
+    init();
+  }, []);
   const update = (k: string, v: string | boolean | string[]) => setData((d) => ({ ...d, [k]: v }));
   const toggleGoal = (g: string) => {
     setData((d) => ({
@@ -57,19 +70,59 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
       goals: d.goals.includes(g) ? d.goals.filter((x) => x !== g) : [...d.goals, g],
     }));
   };
-  const next = () => {
-    if (step < steps.length - 1) setStep((s) => s + 1);
-    else onNavigate("borrower-dashboard");
+  const handleFileUpload = async (type: string, files: FileList | null, key: string) => {
+    if (!files || files.length === 0) {
+      update(key, false);
+      return;
+    }
+    const file = files[0];
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64 = (e.target?.result as string).split(",")[1];
+      try {
+        await documentsApi.uploadDocument({
+          documentType: type,
+          fileName: file.name,
+          mimeType: file.type,
+          fileData: base64,
+        });
+        update(key, true);
+      } catch (err) {
+        console.error("Upload failed", err);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+  const next = async () => {
+    try {
+      await profileApi.updateProfile(data);
+    } catch (e) {
+      console.error("Failed to update profile", e);
+    }
+    if (step < steps.length - 1) {
+      setStep((s) => s + 1);
+    } else {
+      try {
+        await profileApi.submitForVerification();
+      } catch (e) {
+        console.error("Failed to submit verification", e);
+      }
+      onNavigate("borrower-dashboard");
+    }
   };
   const back = () => {
     if (step > 0) setStep((s) => s - 1);
   };
-  const saveAndContinueLater = () => {
+  const saveAndContinueLater = async () => {
     setSaving(true);
-    setTimeout(() => {
+    try {
+      await profileApi.updateProfile(data);
+    } catch (e) {
+      console.error("Failed to save profile", e);
+    } finally {
       setSaving(false);
       onNavigate("landing");
-    }, 1000);
+    }
   };
   return (
     <div className="min-h-screen bg-offwhite flex flex-col">
@@ -174,12 +227,12 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     <FileUpload
                       label="NID Front Photo"
                       hint="Front side with photo and NID no"
-                      onChange={(files) => update("nidFrontUploaded", !!files && files.length > 0)}
+                      onChange={(files) => handleFileUpload("nid-front", files, "nidFrontUploaded")}
                     />
                     <FileUpload
                       label="NID Back Photo"
                       hint="Back side with address"
-                      onChange={(files) => update("nidBackUploaded", !!files && files.length > 0)}
+                      onChange={(files) => handleFileUpload("nid-back", files, "nidBackUploaded")}
                     />
                   </div>
                   <div className="bg-sky-light/60 border border-sky/30 rounded-[6px] p-3 mt-3 flex items-start gap-2.5">

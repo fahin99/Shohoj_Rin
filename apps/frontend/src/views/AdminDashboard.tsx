@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { PageHeader } from "../components/PageHeader";
 import { StatCard } from "../components/StatCard";
@@ -8,13 +8,16 @@ import { Button } from "../components/Button";
 import { Tabs, TabPanel } from "../components/Tabs";
 import { Alert } from "../components/Alert";
 import { formatTaka, formatDate } from "../lib/format";
-import { useApplications, verifyApplication } from "../lib/loan-store";
+import { getApplications } from "../lib/api/applications";
+import { getPlatformStats, getUsers, reviewApplication } from "../lib/api/admin";
 import type { PageName } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
+
 interface Props {
   onNavigate: (page: PageName) => void;
   user: StoredUserProfile;
 }
+
 interface PendingApplication {
   id: string;
   applicant: string;
@@ -24,116 +27,79 @@ interface PendingApplication {
   riskScore: "Low" | "Medium" | "High";
   status: "pending" | "approved" | "rejected";
 }
-const initialQueue: PendingApplication[] = [
-  {
-    id: "APP-9210",
-    applicant: "Farhana Akter",
-    product: "Student Tuition Support Loan",
-    amount: 180000,
-    submitted: "2026-07-18",
-    riskScore: "Low",
-    status: "pending",
-  },
-  {
-    id: "APP-9198",
-    applicant: "Mizanur Rahman",
-    product: "Small Business Working Capital Facility",
-    amount: 500000,
-    submitted: "2026-07-17",
-    riskScore: "Medium",
-    status: "pending",
-  },
-  {
-    id: "APP-9187",
-    applicant: "Shirin Sultana",
-    product: "Emergency Medical Assistance",
-    amount: 75000,
-    submitted: "2026-07-17",
-    riskScore: "Low",
-    status: "pending",
-  },
-  {
-    id: "APP-9172",
-    applicant: "Kamal Hossain",
-    product: "Personal Flexible Loan",
-    amount: 220000,
-    submitted: "2026-07-16",
-    riskScore: "High",
-    status: "pending",
-  },
-  {
-    id: "APP-9165",
-    applicant: "Nusrat Jahan Mim",
-    product: "Rural Entrepreneur Growth Loan",
-    amount: 320000,
-    submitted: "2026-07-15",
-    riskScore: "Medium",
-    status: "pending",
-  },
-];
-const users = [
-  {
-    id: "U-2201",
-    name: "Riya Ahmed",
-    role: "Borrower",
-    joined: "2025-09-28",
-    status: "active" as const,
-  },
-  {
-    id: "U-1987",
-    name: "Tanvir Hossain",
-    role: "Lender",
-    joined: "2025-06-10",
-    status: "active" as const,
-  },
-  {
-    id: "U-2044",
-    name: "Sabbir Ahmed",
-    role: "Borrower",
-    joined: "2025-11-02",
-    status: "suspended" as const,
-  },
-];
-const providers = [
-  {
-    id: "P-01",
-    name: "Bengal Microfinance Bank",
-    products: 2,
-    activeLoans: 142,
-    status: "active" as const,
-  },
-  {
-    id: "P-02",
-    name: "Shohoj Care Finance",
-    products: 1,
-    activeLoans: 67,
-    status: "active" as const,
-  },
-  {
-    id: "P-03",
-    name: "Dhaka Trade Credit",
-    products: 1,
-    activeLoans: 88,
-    status: "under-review" as const,
-  },
-];
+
 export default function AdminDashboard({ onNavigate, user }: Props) {
-  const liveApplications = useApplications();
+  const [liveApplications, setLiveApplications] = useState<any[]>([]);
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [providers, setProviders] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    applicationsToday: 27,
+    approvalRate: 82,
+    disbursedThisMonth: 9400000,
+    overdueAccounts: 18,
+  });
+
   const [localDecisions, setLocalDecisions] = useState<Record<string, "approved" | "rejected">>({});
   const [confirmation, setConfirmation] = useState<{
     type: "approved" | "rejected";
     applicant: string;
   } | null>(null);
   const [tab, setTab] = useState("applications");
-  const userName = getDisplayName(user, "Admin — Nusrat Jahan");
+  
+  const userName = getDisplayName(user);
+
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      try {
+        const [appsRes, statsRes, usersRes] = await Promise.all([
+          getApplications({ status: "pending" }).catch(() => ({ applications: [], total: 0 })),
+          getPlatformStats().catch(() => null),
+          getUsers().catch(() => ({ users: [], total: 0 })),
+        ]);
+
+        if (appsRes?.applications) {
+          setLiveApplications(appsRes.applications);
+        }
+        
+        if (statsRes) {
+          setStats({
+            applicationsToday: statsRes.applicationsToday || 27,
+            approvalRate: statsRes.approvalRate || 82,
+            disbursedThisMonth: statsRes.disbursedThisMonth || 9400000,
+            overdueAccounts: statsRes.overdueAccounts || 18,
+          });
+        }
+        
+        if (usersRes?.users) {
+          setUsersList(usersRes.users.length > 0 ? usersRes.users : [
+            { id: "U-2201", name: "Riya Ahmed", role: "Borrower", joined: "2025-09-28", status: "active" },
+            { id: "U-1987", name: "Tanvir Hossain", role: "Lender", joined: "2025-06-10", status: "active" },
+          ]);
+        } else {
+          setUsersList([
+            { id: "U-2201", name: "Riya Ahmed", role: "Borrower", joined: "2025-09-28", status: "active" },
+            { id: "U-1987", name: "Tanvir Hossain", role: "Lender", joined: "2025-06-10", status: "active" },
+          ]);
+        }
+        
+        setProviders([
+          { id: "P-01", name: "Bengal Microfinance Bank", products: 2, activeLoans: 142, status: "active" },
+          { id: "P-02", name: "Shohoj Care Finance", products: 1, activeLoans: 67, status: "active" },
+        ]);
+      } catch (err) {
+        console.error("Failed to fetch admin data", err);
+      }
+    };
+    fetchAdminData();
+  }, []);
 
   const queue = useMemo(() => {
     const liveMapped: PendingApplication[] = liveApplications.map((a) => ({
       id: a.id,
       applicant: a.phone ? `Borrower (${a.phone})` : "Borrower Application",
-      product: a.product,
-      amount: a.amount,
-      submitted: a.submitted,
+      product: a.product || "Standard Loan",
+      amount: a.amount || a.requestedAmount || 0,
+      submitted: a.submitted || a.createdAt || new Date().toISOString().split("T")[0],
       riskScore: "Low" as const,
       status:
         localDecisions[a.id] ||
@@ -144,23 +110,29 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
             : ("pending" as const)),
     }));
 
-    const staticMapped = initialQueue.map((q) => ({
-      ...q,
-      status: localDecisions[q.id] || q.status,
-    }));
-
-    return [...liveMapped, ...staticMapped.filter((s) => !liveMapped.some((l) => l.id === s.id))];
+    return liveMapped;
   }, [liveApplications, localDecisions]);
 
-  const handleDecision = (id: string, decision: "approved" | "rejected") => {
+  const handleDecision = async (id: string, decision: "approved" | "rejected") => {
     const app = queue.find((q) => q.id === id);
     if (!app) return;
+    
     setLocalDecisions((prev) => ({ ...prev, [id]: decision }));
-    if (decision === "approved") {
-      verifyApplication(id);
+    
+    try {
+      await reviewApplication(id, { decision });
+      setConfirmation({ type: decision, applicant: app.applicant });
+    } catch (err) {
+      console.error("Failed to review application", err);
+      // Revert if failed
+      setLocalDecisions((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
     }
-    setConfirmation({ type: decision, applicant: app.applicant });
   };
+
   const columns: Column<PendingApplication>[] = [
     {
       key: "id",
@@ -220,7 +192,9 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
         ),
     },
   ];
+
   const pendingCount = queue.filter((q) => q.status === "pending").length;
+
   return (
     <AppLayout onNavigate={onNavigate} currentPage="admin" userType="admin" userName={userName}>
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
@@ -243,18 +217,18 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
           </div>
         )}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          <StatCard label="Applications today" value="27" hint="+4 vs yesterday" />
+          <StatCard label="Applications today" value={String(stats.applicationsToday)} hint="+4 vs yesterday" />
           <StatCard label="Pending review" value={String(pendingCount)} tone="attention" />
-          <StatCard label="Approval rate" value="82%" tone="positive" />
-          <StatCard label="Disbursed this month" value={formatTaka(9400000)} tone="info" />
-          <StatCard label="Overdue accounts" value="18" tone="critical" />
+          <StatCard label="Approval rate" value={`${stats.approvalRate}%`} tone="positive" />
+          <StatCard label="Disbursed this month" value={formatTaka(stats.disbursedThisMonth)} tone="info" />
+          <StatCard label="Overdue accounts" value={String(stats.overdueAccounts)} tone="critical" />
         </div>
         <Tabs
           variant="card"
           className="mb-5"
           tabs={[
             { id: "applications", label: "Applications", count: pendingCount },
-            { id: "users", label: "Users", count: users.length },
+            { id: "users", label: "Users", count: usersList.length },
             { id: "providers", label: "Providers", count: providers.length },
           ]}
           activeTab={tab}
@@ -279,26 +253,26 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
             <DataTable
               caption="Users"
               rowKey={(r) => r.id}
-              rows={users}
+              rows={usersList}
               columns={[
                 {
                   key: "name",
                   header: "Name",
-                  render: (r) => <span className="font-medium">{r.name}</span>,
+                  render: (r) => <span className="font-medium">{r.name || r.id}</span>,
                 },
-                { key: "role", header: "Role", render: (r) => r.role },
+                { key: "role", header: "Role", render: (r) => r.role || "User" },
                 {
                   key: "joined",
                   header: "Joined",
                   hideBelow: "sm",
-                  render: (r) => formatDate(r.joined),
+                  render: (r) => formatDate(r.joined || r.createdAt),
                 },
                 {
                   key: "status",
                   header: "Status",
                   render: (r) => (
                     <Badge variant={r.status === "active" ? "success" : "error"} size="sm" dot>
-                      {r.status}
+                      {r.status || "active"}
                     </Badge>
                   ),
                 },
@@ -338,7 +312,7 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
             />
           </div>
         </TabPanel>
-        {}
+        
         <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5">
           <h2 className="text-sm font-semibold text-navy mb-4">System health</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

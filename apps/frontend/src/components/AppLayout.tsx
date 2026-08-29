@@ -187,7 +187,7 @@ export function AppLayout({
   onNavigate,
   currentPage,
   userType = "borrower",
-  userName = "Riya Ahmed",
+  userName = "",
 }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -299,26 +299,7 @@ export function AppLayout({
                   </span>
                 </div>
                 <div className="max-h-72 overflow-y-auto flex flex-col gap-px p-2">
-                  {[
-                    {
-                      title: "Repayment due in 3 days",
-                      msg: "Your EMI of ৳4,500 is due on Dec 15.",
-                      time: "2h ago",
-                      unread: true,
-                    },
-                    {
-                      title: "Application update",
-                      msg: "Your loan application SR-2025-4812 is under review.",
-                      time: "1d ago",
-                      unread: true,
-                    },
-                    {
-                      title: "Payment confirmed",
-                      msg: "Your repayment of ৳4,500 was received successfully.",
-                      time: "3d ago",
-                      unread: false,
-                    },
-                  ].map((n, i) => (
+                  {([] as any[]).map((n, i) => (
                     <div
                       key={i}
                       className={`px-3 py-2.5 rounded-[4px] ${n.unread ? "bg-teal-light" : "hover:bg-stone-50"}`}

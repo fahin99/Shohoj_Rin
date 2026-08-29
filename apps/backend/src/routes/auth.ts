@@ -22,6 +22,7 @@ const registerSchema = z.object({
   email: z.string().trim().email("A valid email address is required"),
   phone: z.string().trim().min(5).optional().nullable(),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  role: z.enum(["borrower", "lender"]).optional().default("borrower"),
 });
 const loginSchema = z
   .object({
@@ -52,6 +53,7 @@ type UserQueryRow = {
   city: string | null;
   district: string | null;
   occupation: string | null;
+  profile_completion_status: string | null;
 };
 function serializeUser(row: UserQueryRow) {
   return {
@@ -61,6 +63,7 @@ function serializeUser(row: UserQueryRow) {
     role: row.role,
     accountStatus: row.account_status,
     emailVerified: row.email_verified,
+    profileCompletionStatus: row.profile_completion_status,
     createdAt:
       row.created_at instanceof Date
         ? row.created_at.toISOString()
@@ -99,7 +102,8 @@ async function fetchUserById(userId: string) {
       p.gender,
       p.city,
       p.district,
-      p.occupation
+      p.occupation,
+      p.profile_completion_status
     FROM users u
     LEFT JOIN user_profiles p ON p.user_id = u.user_id
     WHERE u.user_id = $1
@@ -155,11 +159,12 @@ router.post("/register", async (req, res) => {
         error: { message: "An account with this email or phone already exists" },
       });
     }
+    const role = parsed.data.role || 'borrower';
     const userResult = await client.query(
       `INSERT INTO users (email, phone, password_hash, role)
-       VALUES ($1, $2, $3, 'borrower')
+       VALUES ($1, $2, $3, $4)
        RETURNING user_id, email, phone, role, account_status, email_verified, created_at, updated_at`,
-      [email, phone, passwordHash],
+      [email, phone, passwordHash, role],
     );
     const user = userResult.rows[0] as {
       user_id: string;
@@ -170,6 +175,12 @@ router.post("/register", async (req, res) => {
        VALUES ($1, $2)`,
       [user.user_id, fullName],
     );
+    if (role === 'lender') {
+      await client.query(
+        `INSERT INTO investor_profiles (user_id) VALUES ($1)`,
+        [user.user_id]
+      );
+    }
     const session = await createSession(client, user.user_id, user.role, sessionId);
     await client.query("COMMIT");
     setAuthCookies(res, session.accessToken, session.refreshToken);

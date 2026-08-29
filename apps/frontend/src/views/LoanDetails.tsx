@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
 import { Badge } from "../components/Badge";
@@ -6,10 +6,12 @@ import { Button } from "../components/Button";
 import { CurrencyInput, Select } from "../components/Input";
 import { DataTable } from "../components/DataTable";
 import { formatPercent, formatTaka, formatDate } from "../lib/format";
-import { loanProducts } from "../lib/mock-data";
+import { loansApi } from "../lib/api/index";
 import type { PageName, RepaymentScheduleRow } from "../types";
+import type { LoanProduct } from "@shohojrin/shared";
 interface Props {
   onNavigate: (page: PageName) => void;
+  productId?: string;
 }
 const categoryLabel: Record<string, string> = {
   education: "Education",
@@ -31,10 +33,57 @@ function calculateEmi(principal: number, annualRate: number, months: number) {
     (Math.pow(1 + monthlyRate, months) - 1);
   return emi;
 }
-export default function LoanDetails({ onNavigate }: Props) {
-  const loan = loanProducts[0];
+
+const defaultLoan: LoanProduct = {
+  id: "",
+  name: "Loading...",
+  provider: "",
+  category: "personal",
+  minAmount: 10000,
+  maxAmount: 100000,
+  interestRate: 10,
+  durationMonths: 24,
+  description: "",
+  eligibility: [],
+  tags: [],
+};
+
+export default function LoanDetails({ onNavigate, productId }: Props) {
+  const [loan, setLoan] = useState<LoanProduct>(defaultLoan);
+  const [loadingProduct, setLoadingProduct] = useState(true);
+
+  useEffect(() => {
+    async function fetchProduct() {
+      try {
+        if (productId) {
+          const data = await loansApi.getLoanProduct(productId);
+          setLoan(data);
+        } else {
+          // Fallback: load first product
+          const data = await loansApi.getLoanProducts();
+          if (data.products.length > 0) {
+            setLoan(data.products[0]);
+          }
+        }
+      } catch {
+        // keep default
+      } finally {
+        setLoadingProduct(false);
+      }
+    }
+    fetchProduct();
+  }, [productId]);
+
   const [amount, setAmount] = useState(loan.maxAmount / 2);
   const [duration, setDuration] = useState(String(loan.durationMonths));
+
+  useEffect(() => {
+    if (!loadingProduct) {
+      setAmount(loan.maxAmount / 2);
+      setDuration(String(loan.durationMonths));
+    }
+  }, [loan, loadingProduct]);
+
   const durationOptions = [12, 24, 36, 48]
     .filter((d) => d <= loan.durationMonths)
     .map((d) => ({

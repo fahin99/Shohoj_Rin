@@ -12,7 +12,8 @@ export type PageName =
   | "education"
   | "lender-dashboard"
   | "admin"
-  | "system-states";
+  | "system-states"
+  | "investor-onboarding";
 
 export type LoanStatus =
   "active" | "pending" | "approved" | "rejected" | "disbursed" | "closed" | "overdue";

@@ -15,12 +15,24 @@ type BackendUser = {
   role: string;
   accountStatus: string;
   emailVerified: boolean;
+  profileCompletionStatus?: string;
   fullName: string | null;
   dateOfBirth: string | null;
   gender: string | null;
   city: string | null;
   district: string | null;
   occupation: string | null;
+  nidNumber?: string | null;
+  addressLine?: string | null;
+  postalCode?: string | null;
+  monthlyFamilyIncome?: number | null;
+  employmentType?: string | null;
+  employerName?: string | null;
+  monthlyIncome?: number | null;
+  incomeSource?: string | null;
+  studentId?: string | null;
+  enrollmentYear?: number | null;
+  institutionId?: string | null;
 };
 type MeResponse = {
   success: boolean;
@@ -34,6 +46,7 @@ function toStoredUser(user: BackendUser): StoredUserProfile {
     role: user.role,
     accountStatus: user.accountStatus,
     emailVerified: user.emailVerified,
+    profileCompletionStatus: user.profileCompletionStatus,
     profile: {
       fullName: user.fullName,
       dateOfBirth: user.dateOfBirth,
@@ -41,6 +54,17 @@ function toStoredUser(user: BackendUser): StoredUserProfile {
       city: user.city,
       district: user.district,
       occupation: user.occupation,
+      nidNumber: user.nidNumber,
+      addressLine: user.addressLine,
+      postalCode: user.postalCode,
+      monthlyFamilyIncome: user.monthlyFamilyIncome,
+      employmentType: user.employmentType,
+      employerName: user.employerName,
+      monthlyIncome: user.monthlyIncome,
+      incomeSource: user.incomeSource,
+      studentId: user.studentId,
+      enrollmentYear: user.enrollmentYear,
+      institutionId: user.institutionId,
     },
   };
 }
