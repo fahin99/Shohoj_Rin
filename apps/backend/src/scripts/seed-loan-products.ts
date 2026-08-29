@@ -1,10 +1,4 @@
 import { pool, closePool } from "../lib/db.js";
-
-/**
- * Seeds loan products from the original mock-data.ts into the database.
- * Creates funding partners if they don't exist, then creates products.
- * Idempotent: uses ON CONFLICT to avoid duplicates.
- */
 async function seedLoanProducts() {
   console.log("🌱 Seeding loan products...\n");
 
