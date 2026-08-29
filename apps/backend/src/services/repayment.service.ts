@@ -94,14 +94,20 @@ function summarizeSchedule(
   schedule: RepaymentScheduleRow,
   repayments: RepaymentRow[],
   expectedAmount: number,
-) : RepaymentScheduleSummary {
-  const completedRepayments = repayments.filter(p => p.status === 'completed');
-  const totalPaid = completedRepayments.reduce((sum, payment) => sum + toNumber(payment.amount_paid), 0);
+): RepaymentScheduleSummary {
+  const completedRepayments = repayments.filter((p) => p.status === "completed");
+  const totalPaid = completedRepayments.reduce(
+    (sum, payment) => sum + toNumber(payment.amount_paid),
+    0,
+  );
   const latestPayment = repayments[repayments.length - 1] ?? null;
   const outstandingAmount = Math.max(0, Math.round((expectedAmount - totalPaid) * 100) / 100);
   const today = new Date();
   const dueDate = new Date(schedule.due_date);
-  const daysLate = today > dueDate ? Math.max(0, Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+  const daysLate =
+    today > dueDate
+      ? Math.max(0, Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
+      : 0;
   return {
     scheduleId: schedule.schedule_id,
     loanId: schedule.loan_id,
@@ -127,7 +133,10 @@ function summarizeSchedule(
       : null,
   };
 }
-export async function getRepaymentSchedulesForLoan(client: Pick<PoolClient, "query">, loanId: string) {
+export async function getRepaymentSchedulesForLoan(
+  client: Pick<PoolClient, "query">,
+  loanId: string,
+) {
   const schedules = await client.query<RepaymentScheduleRow>(
     `SELECT schedule_id, loan_id, installment_number, due_date, expected_amount, status, created_at
      FROM repayment_schedules
@@ -156,7 +165,10 @@ export async function getRepaymentSchedulesForLoan(client: Pick<PoolClient, "que
     return summarizeSchedule(schedule, scheduleRepayments, toNumber(schedule.expected_amount));
   });
 }
-export async function recordRepayment(client: PoolClient, input: CreateRepaymentInput): Promise<RepaymentResult> {
+export async function recordRepayment(
+  client: PoolClient,
+  input: CreateRepaymentInput,
+): Promise<RepaymentResult> {
   await client.query("BEGIN");
   try {
     const scheduleResult = await client.query<RepaymentScheduleRow>(
@@ -168,7 +180,10 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
     );
     if (!scheduleResult.rowCount) {
       await client.query("ROLLBACK");
-      throw Object.assign(new Error("Repayment schedule not found"), { statusCode: 404, isOperational: true });
+      throw Object.assign(new Error("Repayment schedule not found"), {
+        statusCode: 404,
+        isOperational: true,
+      });
     }
     const schedule = scheduleResult.rows[0];
     const repaymentAmount = Math.round(input.amountPaid * 100) / 100;
@@ -193,21 +208,24 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
       const existing = await client.query<RepaymentRow>(
         `SELECT repayment_id, schedule_id, amount_paid, payment_method, transaction_reference, status, paid_at
          FROM repayments WHERE provider_reference = $1`,
-        [input.providerReference]
+        [input.providerReference],
       );
       if (existing.rowCount && existing.rowCount > 0) {
         await client.query("ROLLBACK");
         const existingRepay = existing.rows[0];
         const allSched = await getRepaymentSchedulesForLoan(client, schedule.loan_id);
-        const schedSummary = allSched.find(s => s.scheduleId === existingRepay.schedule_id)!;
+        const schedSummary = allSched.find((s) => s.scheduleId === existingRepay.schedule_id)!;
         const loanInfoResult = await client.query<LoanStatusRow>(
           `SELECT loan_id, user_id, status FROM loans WHERE loan_id = $1`,
-          [schedule.loan_id]
+          [schedule.loan_id],
         );
         const totalExpected = allSched.reduce((sum, row) => sum + row.expectedAmount, 0);
         const totalPaidAll = allSched.reduce((sum, row) => sum + row.totalPaid, 0);
-        const loanTotalOutstanding = Math.max(0, Math.round((totalExpected - totalPaidAll) * 100) / 100);
-        const nextDue = allSched.find(s => s.status !== "paid");
+        const loanTotalOutstanding = Math.max(
+          0,
+          Math.round((totalExpected - totalPaidAll) * 100) / 100,
+        );
+        const nextDue = allSched.find((s) => s.status !== "paid");
         return {
           schedule: schedSummary,
           repayment: {
@@ -236,13 +254,20 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
        ORDER BY paid_at ASC`,
       [input.scheduleId],
     );
-    const completedRepayments = allRepayments.rows.filter(p => p.status === 'completed');
-    const totalPaid = completedRepayments.reduce((sum, repayment) => sum + toNumber(repayment.amount_paid), 0);
+    const completedRepayments = allRepayments.rows.filter((p) => p.status === "completed");
+    const totalPaid = completedRepayments.reduce(
+      (sum, repayment) => sum + toNumber(repayment.amount_paid),
+      0,
+    );
     const outstandingAmount = Math.max(0, Math.round((expectedAmount - totalPaid) * 100) / 100);
     const today = new Date();
     const dueDate = new Date(schedule.due_date);
-    const daysLate = today > dueDate ? Math.max(0, Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0;
-    const nextStatus = outstandingAmount <= 0 ? "paid" : totalPaid > 0 ? "partially_paid" : schedule.status;
+    const daysLate =
+      today > dueDate
+        ? Math.max(0, Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
+        : 0;
+    const nextStatus =
+      outstandingAmount <= 0 ? "paid" : totalPaid > 0 ? "partially_paid" : schedule.status;
     await client.query(
       `UPDATE repayment_schedules
        SET status = $2
@@ -260,7 +285,12 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
       throw Object.assign(new Error("Loan not found"), { statusCode: 404, isOperational: true });
     }
     const loanRow = loanResult.rows[0];
-    const allSchedules = await client.query<{ schedule_id: string; status: string; due_date: Date | string; expected_amount: string | number }>(
+    const allSchedules = await client.query<{
+      schedule_id: string;
+      status: string;
+      due_date: Date | string;
+      expected_amount: string | number;
+    }>(
       `SELECT schedule_id, status, due_date, expected_amount
        FROM repayment_schedules
        WHERE loan_id = $1
@@ -268,7 +298,11 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
       [schedule.loan_id],
     );
     const nextDueSchedule = allSchedules.rows.find((row) => row.status !== "paid") ?? null;
-    const loanStatus = nextDueSchedule ? (nextDueSchedule.status === "overdue" ? "overdue" : loanRow.status) : "closed";
+    const loanStatus = nextDueSchedule
+      ? nextDueSchedule.status === "overdue"
+        ? "overdue"
+        : loanRow.status
+      : "closed";
     await client.query(
       `UPDATE loans
        SET status = $2,
@@ -279,7 +313,7 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
     const trustScore = await recalculateAndPersistTrustScore(
       loanRow.user_id,
       "repayment_received",
-      client
+      client,
     );
     await client.query("COMMIT");
     return {
@@ -299,7 +333,14 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
       loan: {
         loanId: schedule.loan_id,
         status: loanStatus,
-        totalOutstanding: Math.max(0, Math.round((allSchedules.rows.reduce((sum, row) => sum + toNumber(row.expected_amount), 0) - totalPaid) * 100) / 100),
+        totalOutstanding: Math.max(
+          0,
+          Math.round(
+            (allSchedules.rows.reduce((sum, row) => sum + toNumber(row.expected_amount), 0) -
+              totalPaid) *
+              100,
+          ) / 100,
+        ),
         nextDueDate: nextDueSchedule ? toIsoDate(nextDueSchedule.due_date) : null,
       },
       trustScore,

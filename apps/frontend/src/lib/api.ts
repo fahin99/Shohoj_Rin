@@ -20,7 +20,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}) {
     data?: T;
     error?: ApiErrorPayload;
   } | null;
-  if (!response.ok){
+  if (!response.ok) {
     if (payload?.error?.message) {
       throw new Error(payload.error.message);
     }

@@ -1,20 +1,23 @@
-import { Badge } from './Badge';
-import { Button } from './Button';
-import { formatPercent, formatTaka } from '../lib/format';
-import type { LoanProduct } from '../types';
-const categoryLabel: Record<LoanProduct['category'], string> = {
-  education: 'Education',
-  emergency: 'Emergency',
-  business: 'Small business',
-  personal: 'Personal',
-  development: 'Development',
+import { Badge } from "./Badge";
+import { Button } from "./Button";
+import { formatPercent, formatTaka } from "../lib/format";
+import type { LoanProduct } from "../types";
+const categoryLabel: Record<LoanProduct["category"], string> = {
+  education: "Education",
+  emergency: "Emergency",
+  business: "Small business",
+  personal: "Personal",
+  development: "Development",
 };
-const categoryTone: Record<LoanProduct['category'], 'info' | 'error' | 'warning' | 'neutral' | 'success'> = {
-  education: 'info',
-  emergency: 'error',
-  business: 'warning',
-  personal: 'neutral',
-  development: 'success',
+const categoryTone: Record<
+  LoanProduct["category"],
+  "info" | "error" | "warning" | "neutral" | "success"
+> = {
+  education: "info",
+  emergency: "error",
+  business: "warning",
+  personal: "neutral",
+  development: "success",
 };
 interface LoanCardProps {
   loan: LoanProduct;
@@ -43,15 +46,21 @@ export function LoanCard({ loan, onView, onApply }: LoanCardProps) {
         <dl className="mt-auto grid grid-cols-2 gap-3 border-t border-stone-200 pt-3 sm:grid-cols-3">
           <div className="min-w-0">
             <dt className="text-xs text-stone-500">Interest</dt>
-            <dd className="tabular-nums text-sm font-semibold text-navy">{formatPercent(loan.interestRate)}</dd>
+            <dd className="tabular-nums text-sm font-semibold text-navy">
+              {formatPercent(loan.interestRate)}
+            </dd>
           </div>
           <div className="min-w-0">
             <dt className="text-xs text-stone-500">Up to</dt>
-            <dd className="font-display tabular-nums text-sm font-semibold text-navy">{formatTaka(loan.maxAmount)}</dd>
+            <dd className="font-display tabular-nums text-sm font-semibold text-navy">
+              {formatTaka(loan.maxAmount)}
+            </dd>
           </div>
           <div className="min-w-0">
             <dt className="text-xs text-stone-500">Tenure</dt>
-            <dd className="tabular-nums text-sm font-semibold text-navy">{loan.durationMonths} mo</dd>
+            <dd className="tabular-nums text-sm font-semibold text-navy">
+              {loan.durationMonths} mo
+            </dd>
           </div>
         </dl>
       </div>

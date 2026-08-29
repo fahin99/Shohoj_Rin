@@ -53,7 +53,10 @@ const STATIC_BANGLADESH_INSTITUTIONS = [
   { name: "Mawlana Bhashani Science and Technology University", type: "university" },
   { name: "Noakhali Science and Technology University", type: "university" },
   { name: "Jatiya Kabi Kazi Nazrul Islam University", type: "university" },
-  { name: "Bangabandhu Sheikh Mujibur Rahman Science and Technology University", type: "university" },
+  {
+    name: "Bangabandhu Sheikh Mujibur Rahman Science and Technology University",
+    type: "university",
+  },
   { name: "Dhaka College", type: "college" },
   { name: "Notre Dame College", type: "college" },
   { name: "Holy Cross College", type: "college" },
@@ -181,7 +184,9 @@ async function seedInstitutions() {
         insertedCount += result.rowCount || 0;
       }
     }
-    console.log(`Institution seeding finished successfully. (${insertedCount} new records inserted)`);
+    console.log(
+      `Institution seeding finished successfully. (${insertedCount} new records inserted)`,
+    );
   } catch (error) {
     console.error("Error during institution seeding:", error);
     throw error;

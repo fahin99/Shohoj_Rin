@@ -31,7 +31,9 @@ export const dashboardSearchSchema = z.object({
 
 export const loanListSearchSchema = z.object({
   page: z.number().catch(1),
-  category: z.enum(["all", "education", "emergency", "business", "personal", "development"]).catch("all"),
+  category: z
+    .enum(["all", "education", "emergency", "business", "personal", "development"])
+    .catch("all"),
   search: z.string().optional(),
   sort: z.enum(["interest-asc", "interest-desc", "amount-asc", "amount-desc"]).optional(),
 });

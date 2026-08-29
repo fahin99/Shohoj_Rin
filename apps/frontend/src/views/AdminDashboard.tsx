@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { PageHeader } from "../components/PageHeader";
 import { StatCard } from "../components/StatCard";
@@ -8,6 +8,7 @@ import { Button } from "../components/Button";
 import { Tabs, TabPanel } from "../components/Tabs";
 import { Alert } from "../components/Alert";
 import { formatTaka, formatDate } from "../lib/format";
+import { useApplications, verifyApplication } from "../lib/loan-store";
 import type { PageName } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
 interface Props {
@@ -98,14 +99,14 @@ const providers = [
     id: "P-01",
     name: "Bengal Microfinance Bank",
     products: 2,
-    activeLoans: 340,
+    activeLoans: 142,
     status: "active" as const,
   },
   {
     id: "P-02",
     name: "Shohoj Care Finance",
     products: 1,
-    activeLoans: 120,
+    activeLoans: 67,
     status: "active" as const,
   },
   {
@@ -117,17 +118,47 @@ const providers = [
   },
 ];
 export default function AdminDashboard({ onNavigate, user }: Props) {
-  const [queue, setQueue] = useState<PendingApplication[]>(initialQueue);
+  const liveApplications = useApplications();
+  const [localDecisions, setLocalDecisions] = useState<Record<string, "approved" | "rejected">>({});
   const [confirmation, setConfirmation] = useState<{
     type: "approved" | "rejected";
     applicant: string;
   } | null>(null);
   const [tab, setTab] = useState("applications");
   const userName = getDisplayName(user, "Admin — Nusrat Jahan");
+
+  const queue = useMemo(() => {
+    const liveMapped: PendingApplication[] = liveApplications.map((a) => ({
+      id: a.id,
+      applicant: a.phone ? `Borrower (${a.phone})` : "Borrower Application",
+      product: a.product,
+      amount: a.amount,
+      submitted: a.submitted,
+      riskScore: "Low" as const,
+      status:
+        localDecisions[a.id] ||
+        (a.status === "disbursed" || a.status === "approved"
+          ? ("approved" as const)
+          : a.status === "rejected"
+            ? ("rejected" as const)
+            : ("pending" as const)),
+    }));
+
+    const staticMapped = initialQueue.map((q) => ({
+      ...q,
+      status: localDecisions[q.id] || q.status,
+    }));
+
+    return [...liveMapped, ...staticMapped.filter((s) => !liveMapped.some((l) => l.id === s.id))];
+  }, [liveApplications, localDecisions]);
+
   const handleDecision = (id: string, decision: "approved" | "rejected") => {
     const app = queue.find((q) => q.id === id);
     if (!app) return;
-    setQueue((prev) => prev.map((q) => (q.id === id ? { ...q, status: decision } : q)));
+    setLocalDecisions((prev) => ({ ...prev, [id]: decision }));
+    if (decision === "approved") {
+      verifyApplication(id);
+    }
     setConfirmation({ type: decision, applicant: app.applicant });
   };
   const columns: Column<PendingApplication>[] = [

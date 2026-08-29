@@ -1,4 +1,3 @@
-
 export type UserRole = "borrower" | "lender" | "admin" | "reviewer";
 export type AccountStatus = "active" | "suspended" | "deactivated";
 export type LoanStatus =
@@ -12,17 +11,12 @@ export type LoanStatus =
   | "defaulted"
   | "delinquent";
 export type ApplicationStatus =
-  | "draft"
-  | "submitted"
-  | "under-review"
-  | "info-required"
-  | "approved"
-  | "rejected"
-  | "disbursed";
+  "draft" | "submitted" | "under-review" | "info-required" | "approved" | "rejected" | "disbursed";
 export type TransactionType = "payment" | "repayment" | "disbursement" | "fee" | "refund";
 export type VerificationStatus = "pending" | "approved" | "rejected";
 export type VerificationType = "identity" | "student" | "document" | "guarantor";
-export type TrustBand = "very_low_risk" | "low_risk" | "moderate_risk" | "high_risk" | "very_high_risk";
+export type TrustBand =
+  "very_low_risk" | "low_risk" | "moderate_risk" | "high_risk" | "very_high_risk";
 export type FraudSeverity = "low" | "medium" | "high" | "critical";
 export type NotificationChannel = "email" | "sms" | "in_app";
 export type PageName =

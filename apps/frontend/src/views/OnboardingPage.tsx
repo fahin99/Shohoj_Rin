@@ -1,57 +1,81 @@
-import { useState } from 'react';
-import { Logo } from '../components/Logo';
-import { Button } from '../components/Button';
-import { TextInput, Select, Radio, Checkbox } from '../components/Input';
-import { Stepper } from '../components/Progress';
-import InstitutionCombobox from '../components/InstitutionCombobox';
-import type { PageName } from '../types';
+import { useState } from "react";
+import { Logo } from "../components/Logo";
+import { Button } from "../components/Button";
+import { TextInput, Select, Radio, Checkbox, FileUpload } from "../components/Input";
+import { Stepper } from "../components/Progress";
+import InstitutionCombobox from "../components/InstitutionCombobox";
+import type { PageName } from "../types";
 interface OnboardingPageProps {
   onNavigate: (page: PageName) => void;
 }
 const steps = [
-  { label: 'Personal', sublabel: 'Info' },
-  { label: 'Financial', sublabel: 'Profile' },
-  { label: 'Employment', sublabel: 'Status' },
-  { label: 'Goals', sublabel: '' },
-  { label: 'Preferences', sublabel: '' },
+  { label: "Personal & ID", sublabel: "Identity" },
+  { label: "Financial", sublabel: "Profile" },
+  { label: "Employment", sublabel: "Status" },
+  { label: "Goals", sublabel: "" },
+  { label: "Preferences", sublabel: "" },
 ];
 const goalOptions = [
-  'Pay for education or training',
-  'Cover a medical emergency',
-  'Start or grow a business',
-  'Home repair or improvement',
-  'Personal development',
-  'Consolidate existing debt',
+  "Pay for education or training",
+  "Cover a medical emergency",
+  "Start or grow a business",
+  "Home repair or improvement",
+  "Personal development",
+  "Consolidate existing debt",
 ];
 export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState({
-    fullName: '', dob: '', gender: '', nid: '', address: '', city: '',
-    monthlyIncome: '', savingsAmount: '', existingLoans: 'no',
-    employment: '', employer: '', jobTitle: '', incomeType: '',
-    institutionId: null as string | null, institutionName: '', studentId: '',
+    fullName: "",
+    dob: "",
+    gender: "",
+    nid: "",
+    address: "",
+    city: "",
+    nidFrontUploaded: false,
+    nidBackUploaded: false,
+    monthlyIncome: "",
+    savingsAmount: "",
+    existingLoans: "no",
+    employment: "",
+    employer: "",
+    jobTitle: "",
+    incomeType: "",
+    institutionId: null as string | null,
+    institutionName: "",
+    studentId: "",
     goals: [] as string[],
-    notifEmail: true, notifSms: true, language: 'en',
+    notifEmail: true,
+    notifSms: true,
+    language: "en",
   });
-  const update = (k: string, v: string | boolean | string[]) => setData(d => ({ ...d, [k]: v }));
+  const update = (k: string, v: string | boolean | string[]) => setData((d) => ({ ...d, [k]: v }));
   const toggleGoal = (g: string) => {
-    setData(d => ({
+    setData((d) => ({
       ...d,
-      goals: d.goals.includes(g) ? d.goals.filter(x => x !== g) : [...d.goals, g],
+      goals: d.goals.includes(g) ? d.goals.filter((x) => x !== g) : [...d.goals, g],
     }));
   };
-  const next = () => { if (step < steps.length - 1) setStep(s => s + 1); else onNavigate('borrower-dashboard'); };
-  const back = () => { if (step > 0) setStep(s => s - 1); };
+  const next = () => {
+    if (step < steps.length - 1) setStep((s) => s + 1);
+    else onNavigate("borrower-dashboard");
+  };
+  const back = () => {
+    if (step > 0) setStep((s) => s - 1);
+  };
   const saveAndContinueLater = () => {
     setSaving(true);
-    setTimeout(() => { setSaving(false); onNavigate('landing'); }, 1000);
+    setTimeout(() => {
+      setSaving(false);
+      onNavigate("landing");
+    }, 1000);
   };
   return (
     <div className="min-h-screen bg-offwhite flex flex-col">
       {}
       <header className="border-b border-stone-200 bg-white px-6 py-3 flex items-center justify-between">
-        <Logo size="sm" onClick={() => onNavigate('landing')} />
+        <Logo size="sm" onClick={() => onNavigate("landing")} />
         <Button variant="ghost" size="sm" onClick={saveAndContinueLater} loading={saving}>
           Save & continue later
         </Button>
@@ -68,36 +92,105 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {}
           {step === 0 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">Personal information</h2>
-              <p className="text-sm text-stone-500 mb-6">This information helps us verify your identity and personalize your experience.</p>
+              <h2 className="text-2xl font-semibold text-navy mb-1">
+                Personal information &amp; Identity
+              </h2>
+              <p className="text-sm text-stone-500 mb-6">
+                This information helps us verify your identity once so you never have to re-enter it
+                during loan applications.
+              </p>
               <div className="grid grid-cols-1 gap-5">
-                <TextInput label="Full name" placeholder="Rahim Uddin Ahmed" required value={data.fullName} onChange={e => update('fullName', e.target.value)} hint="As it appears on your NID" />
+                <TextInput
+                  label="Full name"
+                  placeholder="Rahim Uddin Ahmed"
+                  required
+                  value={data.fullName}
+                  onChange={(e) => update("fullName", e.target.value)}
+                  hint="As it appears on your NID"
+                />
                 <div className="grid grid-cols-2 gap-4">
-                  <TextInput label="Date of birth" type="date" value={data.dob} onChange={e => update('dob', e.target.value)} required />
+                  <TextInput
+                    label="Date of birth"
+                    type="date"
+                    value={data.dob}
+                    onChange={(e) => update("dob", e.target.value)}
+                    required
+                  />
                   <Select
                     label="Gender"
                     value={data.gender}
-                    onChange={e => update('gender', e.target.value)}
-                    options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Prefer not to say' }]}
+                    onChange={(e) => update("gender", e.target.value)}
+                    options={[
+                      { value: "male", label: "Male" },
+                      { value: "female", label: "Female" },
+                      { value: "other", label: "Prefer not to say" },
+                    ]}
                     placeholder="Select"
                   />
                 </div>
-                <TextInput label="National ID Number" placeholder="1234567890" value={data.nid} onChange={e => update('nid', e.target.value)} hint="Your 10 or 17 digit NID number" />
-                <TextInput label="Address" placeholder="House 12, Road 5, Block C" value={data.address} onChange={e => update('address', e.target.value)} required />
+                <TextInput
+                  label="National ID Number"
+                  placeholder="1234567890"
+                  value={data.nid}
+                  onChange={(e) => update("nid", e.target.value)}
+                  hint="Your 10 or 17 digit NID number"
+                />
+                <TextInput
+                  label="Address"
+                  placeholder="House 12, Road 5, Block C"
+                  value={data.address}
+                  onChange={(e) => update("address", e.target.value)}
+                  required
+                />
                 <Select
                   label="City / District"
                   value={data.city}
-                  onChange={e => update('city', e.target.value)}
+                  onChange={(e) => update("city", e.target.value)}
                   options={[
-                    { value: 'dhaka', label: 'Dhaka' },
-                    { value: 'chittagong', label: 'Chittagong' },
-                    { value: 'sylhet', label: 'Sylhet' },
-                    { value: 'rajshahi', label: 'Rajshahi' },
-                    { value: 'khulna', label: 'Khulna' },
-                    { value: 'other', label: 'Other' },
+                    { value: "dhaka", label: "Dhaka" },
+                    { value: "chittagong", label: "Chittagong" },
+                    { value: "sylhet", label: "Sylhet" },
+                    { value: "rajshahi", label: "Rajshahi" },
+                    { value: "khulna", label: "Khulna" },
+                    { value: "other", label: "Other" },
                   ]}
                   placeholder="Select city"
                 />
+
+                <div className="border-t border-stone-200 pt-5 mt-2">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-semibold text-navy">National ID (NID) Photo</p>
+                      <p className="text-xs text-stone-500">
+                        Upload clear photos or scans of your original NID card for one-time
+                        verification.
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-teal-light text-teal border border-teal/30">
+                      One-time KYC
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FileUpload
+                      label="NID Front Photo"
+                      hint="Front side with photo and NID no"
+                      onChange={(files) => update("nidFrontUploaded", !!files && files.length > 0)}
+                    />
+                    <FileUpload
+                      label="NID Back Photo"
+                      hint="Back side with address"
+                      onChange={(files) => update("nidBackUploaded", !!files && files.length > 0)}
+                    />
+                  </div>
+                  <div className="bg-sky-light/60 border border-sky/30 rounded-[6px] p-3 mt-3 flex items-start gap-2.5">
+                    <span className="text-sm text-sky font-bold mt-0.5">ℹ</span>
+                    <p className="text-xs text-stone-600 leading-relaxed">
+                      Your identity verification is saved securely. When applying for loans in the
+                      future, you will not need to provide your NID photo, full name, or address
+                      again.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -105,20 +198,55 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {step === 1 && (
             <div>
               <h2 className="text-2xl font-semibold text-navy mb-1">Financial profile</h2>
-              <p className="text-sm text-stone-500 mb-6">This helps us match you to loans you are likely to qualify for. It does not affect your credit score.</p>
+              <p className="text-sm text-stone-500 mb-6">
+                This helps us match you to loans you are likely to qualify for. It does not affect
+                your credit score.
+              </p>
               <div className="grid grid-cols-1 gap-5">
-                <TextInput label="Monthly income (approx.)" type="number" placeholder="25000" value={data.monthlyIncome} onChange={e => update('monthlyIncome', e.target.value)} prefix="৳" hint="After tax, in BDT" />
-                <TextInput label="Monthly savings (approx.)" type="number" placeholder="5000" value={data.savingsAmount} onChange={e => update('savingsAmount', e.target.value)} prefix="৳" />
+                <TextInput
+                  label="Monthly income (approx.)"
+                  type="number"
+                  placeholder="25000"
+                  value={data.monthlyIncome}
+                  onChange={(e) => update("monthlyIncome", e.target.value)}
+                  prefix="৳"
+                  hint="After tax, in BDT"
+                />
+                <TextInput
+                  label="Monthly savings (approx.)"
+                  type="number"
+                  placeholder="5000"
+                  value={data.savingsAmount}
+                  onChange={(e) => update("savingsAmount", e.target.value)}
+                  prefix="৳"
+                />
                 <div>
-                  <p className="text-sm font-medium text-navy mb-3">Do you have any existing loans?</p>
+                  <p className="text-sm font-medium text-navy mb-3">
+                    Do you have any existing loans?
+                  </p>
                   <div className="flex gap-6">
-                    <Radio label="Yes" name="existing-loans" value="yes" checked={data.existingLoans === 'yes'} onChange={v => update('existingLoans', v)} />
-                    <Radio label="No" name="existing-loans" value="no" checked={data.existingLoans === 'no'} onChange={v => update('existingLoans', v)} />
+                    <Radio
+                      label="Yes"
+                      name="existing-loans"
+                      value="yes"
+                      checked={data.existingLoans === "yes"}
+                      onChange={(v) => update("existingLoans", v)}
+                    />
+                    <Radio
+                      label="No"
+                      name="existing-loans"
+                      value="no"
+                      checked={data.existingLoans === "no"}
+                      onChange={(v) => update("existingLoans", v)}
+                    />
                   </div>
                 </div>
                 <div className="bg-sky-light border border-sky/30 rounded-[6px] p-4">
                   <p className="text-xs font-medium text-sky mb-1">ℹ Why we ask this</p>
-                  <p className="text-xs text-stone-600 leading-relaxed">This financial snapshot helps loan providers assess your application. We never sell your data, and this does not impact your credit report.</p>
+                  <p className="text-xs text-stone-600 leading-relaxed">
+                    This financial snapshot helps loan providers assess your application. We never
+                    sell your data, and this does not impact your credit report.
+                  </p>
                 </div>
               </div>
             </div>
@@ -127,32 +255,34 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {step === 2 && (
             <div>
               <h2 className="text-2xl font-semibold text-navy mb-1">Employment & income</h2>
-              <p className="text-sm text-stone-500 mb-6">Tell us about your current work or study status.</p>
+              <p className="text-sm text-stone-500 mb-6">
+                Tell us about your current work or study status.
+              </p>
               <div className="grid grid-cols-1 gap-5">
                 <Select
                   label="Employment status"
                   value={data.employment}
-                  onChange={e => update('employment', e.target.value)}
+                  onChange={(e) => update("employment", e.target.value)}
                   options={[
-                    { value: 'employed-full', label: 'Employed (Full-time)' },
-                    { value: 'employed-part', label: 'Employed (Part-time)' },
-                    { value: 'self-employed', label: 'Self-employed / Freelancer' },
-                    { value: 'business', label: 'Business owner' },
-                    { value: 'student', label: 'Student' },
-                    { value: 'unemployed', label: 'Currently not working' },
+                    { value: "employed-full", label: "Employed (Full-time)" },
+                    { value: "employed-part", label: "Employed (Part-time)" },
+                    { value: "self-employed", label: "Self-employed / Freelancer" },
+                    { value: "business", label: "Business owner" },
+                    { value: "student", label: "Student" },
+                    { value: "unemployed", label: "Currently not working" },
                   ]}
                   placeholder="Select status"
                   required
                 />
-                {data.employment === 'student' && (
+                {data.employment === "student" && (
                   <>
                     <InstitutionCombobox
                       label="Institution"
                       value={data.institutionName}
                       institutionId={data.institutionId}
                       onChange={({ id, name }) => {
-                        update('institutionId', id || '');
-                        update('institutionName', name);
+                        update("institutionId", id || "");
+                        update("institutionName", name);
                       }}
                       required
                       hint="Search for your college or university"
@@ -161,27 +291,39 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                       label="Student ID"
                       placeholder="e.g., 2021-1-60-001"
                       value={data.studentId}
-                      onChange={e => update('studentId', e.target.value)}
+                      onChange={(e) => update("studentId", e.target.value)}
                     />
                   </>
                 )}
-                {data.employment && data.employment !== 'student' && data.employment !== 'unemployed' && (
-                  <>
-                    <TextInput label="Employer / Business name" placeholder="XYZ Company Ltd." value={data.employer} onChange={e => update('employer', e.target.value)} />
-                    <TextInput label="Job title / Role" placeholder="Software Engineer" value={data.jobTitle} onChange={e => update('jobTitle', e.target.value)} />
-                  </>
-                )}
+                {data.employment &&
+                  data.employment !== "student" &&
+                  data.employment !== "unemployed" && (
+                    <>
+                      <TextInput
+                        label="Employer / Business name"
+                        placeholder="XYZ Company Ltd."
+                        value={data.employer}
+                        onChange={(e) => update("employer", e.target.value)}
+                      />
+                      <TextInput
+                        label="Job title / Role"
+                        placeholder="Software Engineer"
+                        value={data.jobTitle}
+                        onChange={(e) => update("jobTitle", e.target.value)}
+                      />
+                    </>
+                  )}
                 <Select
                   label="Primary income type"
                   value={data.incomeType}
-                  onChange={e => update('incomeType', e.target.value)}
+                  onChange={(e) => update("incomeType", e.target.value)}
                   options={[
-                    { value: 'salary', label: 'Monthly salary' },
-                    { value: 'business', label: 'Business income' },
-                    { value: 'freelance', label: 'Freelance / Contract' },
-                    { value: 'remittance', label: 'Remittance' },
-                    { value: 'parental', label: 'Parental support' },
-                    { value: 'other', label: 'Other' },
+                    { value: "salary", label: "Monthly salary" },
+                    { value: "business", label: "Business income" },
+                    { value: "freelance", label: "Freelance / Contract" },
+                    { value: "remittance", label: "Remittance" },
+                    { value: "parental", label: "Parental support" },
+                    { value: "other", label: "Other" },
                   ]}
                   placeholder="Select income type"
                 />
@@ -192,7 +334,10 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {step === 3 && (
             <div>
               <h2 className="text-2xl font-semibold text-navy mb-1">Your financial goals</h2>
-              <p className="text-sm text-stone-500 mb-6">What are you hoping to use a loan for? Select all that apply. This helps us show you the most relevant products.</p>
+              <p className="text-sm text-stone-500 mb-6">
+                What are you hoping to use a loan for? Select all that apply. This helps us show you
+                the most relevant products.
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {goalOptions.map((g) => (
                   <button
@@ -201,8 +346,8 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     onClick={() => toggleGoal(g)}
                     className={`text-left px-4 py-3 border-[1.5px] rounded-[6px] text-sm font-medium transition-all ${
                       data.goals.includes(g)
-                        ? 'bg-teal-light border-teal text-teal'
-                        : 'bg-white border-stone-200 text-stone-600 hover:border-stone-300 hover:text-navy'
+                        ? "bg-teal-light border-teal text-teal"
+                        : "bg-white border-stone-200 text-stone-600 hover:border-stone-300 hover:text-navy"
                     }`}
                   >
                     {g}
@@ -210,7 +355,9 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                 ))}
               </div>
               {data.goals.length > 0 && (
-                <p className="mt-4 text-xs text-teal">{data.goals.length} goal{data.goals.length !== 1 ? 's' : ''} selected</p>
+                <p className="mt-4 text-xs text-teal">
+                  {data.goals.length} goal{data.goals.length !== 1 ? "s" : ""} selected
+                </p>
               )}
             </div>
           )}
@@ -218,27 +365,40 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {step === 4 && (
             <div>
               <h2 className="text-2xl font-semibold text-navy mb-1">Your preferences</h2>
-              <p className="text-sm text-stone-500 mb-6">Almost done — just a few last preferences to personalise your experience.</p>
+              <p className="text-sm text-stone-500 mb-6">
+                Almost done — just a few last preferences to personalise your experience.
+              </p>
               <div className="flex flex-col gap-5">
                 <div>
                   <p className="text-sm font-medium text-navy mb-3">Notification preferences</p>
                   <div className="flex flex-col gap-3">
-                    <Checkbox label="Email notifications for repayment reminders and updates" checked={data.notifEmail} onChange={v => update('notifEmail', v)} />
-                    <Checkbox label="SMS reminders for upcoming payments" checked={data.notifSms} onChange={v => update('notifSms', v)} />
+                    <Checkbox
+                      label="Email notifications for repayment reminders and updates"
+                      checked={data.notifEmail}
+                      onChange={(v) => update("notifEmail", v)}
+                    />
+                    <Checkbox
+                      label="SMS reminders for upcoming payments"
+                      checked={data.notifSms}
+                      onChange={(v) => update("notifSms", v)}
+                    />
                   </div>
                 </div>
                 <Select
                   label="Preferred language"
                   value={data.language}
-                  onChange={e => update('language', e.target.value)}
+                  onChange={(e) => update("language", e.target.value)}
                   options={[
-                    { value: 'en', label: 'English' },
-                    { value: 'bn', label: 'বাংলা (Bangla)' },
+                    { value: "en", label: "English" },
+                    { value: "bn", label: "বাংলা (Bangla)" },
                   ]}
                 />
                 <div className="bg-emerald-light border border-emerald/30 rounded-[6px] p-4">
                   <p className="text-sm font-semibold text-emerald mb-1">You are almost ready!</p>
-                  <p className="text-xs text-stone-600 leading-relaxed">After completing setup, you will be taken to your personalised dashboard where you can explore loan products matched to your profile.</p>
+                  <p className="text-xs text-stone-600 leading-relaxed">
+                    After completing setup, you will be taken to your personalised dashboard where
+                    you can explore loan products matched to your profile.
+                  </p>
                 </div>
               </div>
             </div>
@@ -250,9 +410,11 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
             ← Back
           </Button>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-stone-400 tabular-nums">{step + 1}/{steps.length}</span>
+            <span className="text-xs text-stone-400 tabular-nums">
+              {step + 1}/{steps.length}
+            </span>
             <Button variant="primary" size="md" onClick={next}>
-              {step === steps.length - 1 ? 'Finish Setup →' : 'Continue →'}
+              {step === steps.length - 1 ? "Finish Setup →" : "Continue →"}
             </Button>
           </div>
         </div>

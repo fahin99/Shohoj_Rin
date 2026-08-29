@@ -1,38 +1,38 @@
-import { useMemo, useState } from 'react';
-import { AppLayout } from '../components/AppLayout';
-import { PageHeader } from '../components/PageHeader';
-import { LoanCard } from '../components/LoanCard';
-import { EmptyState, EmptyIcons } from '../components/EmptyState';
-import { Pagination } from '../components/Pagination';
-import { SearchInput, Select } from '../components/Input';
-import { Tabs } from '../components/Tabs';
-import { loanProducts } from '../lib/mock-data';
-import type { PageName, LoanProduct } from '../types';
+import { useMemo, useState } from "react";
+import { AppLayout } from "../components/AppLayout";
+import { PageHeader } from "../components/PageHeader";
+import { LoanCard } from "../components/LoanCard";
+import { EmptyState, EmptyIcons } from "../components/EmptyState";
+import { Pagination } from "../components/Pagination";
+import { SearchInput, Select } from "../components/Input";
+import { Tabs } from "../components/Tabs";
+import { loanProducts } from "../lib/mock-data";
+import type { PageName, LoanProduct } from "../types";
 interface Props {
   onNavigate: (page: PageName) => void;
 }
 const categories: { id: string; label: string }[] = [
-  { id: 'all', label: 'All categories' },
-  { id: 'education', label: 'Education' },
-  { id: 'emergency', label: 'Emergency' },
-  { id: 'business', label: 'Small business' },
-  { id: 'personal', label: 'Personal' },
-  { id: 'development', label: 'Development' },
+  { id: "all", label: "All categories" },
+  { id: "education", label: "Education" },
+  { id: "emergency", label: "Emergency" },
+  { id: "business", label: "Small business" },
+  { id: "personal", label: "Personal" },
+  { id: "development", label: "Development" },
 ];
 const sortOptions = [
-  { value: 'recommended', label: 'Recommended' },
-  { value: 'interest-asc', label: 'Interest rate: low to high' },
-  { value: 'amount-desc', label: 'Max amount: high to low' },
-  { value: 'tenure-asc', label: 'Tenure: shortest first' },
+  { value: "recommended", label: "Recommended" },
+  { value: "interest-asc", label: "Interest rate: low to high" },
+  { value: "amount-desc", label: "Max amount: high to low" },
+  { value: "tenure-asc", label: "Tenure: shortest first" },
 ];
 function sortLoans(loans: LoanProduct[], sort: string): LoanProduct[] {
   const list = [...loans];
   switch (sort) {
-    case 'interest-asc':
+    case "interest-asc":
       return list.sort((a, b) => a.interestRate - b.interestRate);
-    case 'amount-desc':
+    case "amount-desc":
       return list.sort((a, b) => b.maxAmount - a.maxAmount);
-    case 'tenure-asc':
+    case "tenure-asc":
       return list.sort((a, b) => a.durationMonths - b.durationMonths);
     default:
       return list;
@@ -40,14 +40,14 @@ function sortLoans(loans: LoanProduct[], sort: string): LoanProduct[] {
 }
 const PAGE_SIZE = 6;
 export default function LoanMarketplace({ onNavigate }: Props) {
-  const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('all');
-  const [sort, setSort] = useState('recommended');
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("all");
+  const [sort, setSort] = useState("recommended");
   const [page, setPage] = useState(1);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const byCategoryAndQuery = loanProducts.filter((loan) => {
-      const matchesCategory = category === 'all' || loan.category === category;
+      const matchesCategory = category === "all" || loan.category === category;
       const matchesQuery =
         !q ||
         loan.name.toLowerCase().includes(q) ||
@@ -71,8 +71,14 @@ export default function LoanMarketplace({ onNavigate }: Props) {
             <SearchInput
               placeholder="Search by loan name or provider"
               value={query}
-              onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-              onClear={() => { setQuery(''); setPage(1); }}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+              onClear={() => {
+                setQuery("");
+                setPage(1);
+              }}
               aria-label="Search loan products"
             />
             <Select
@@ -87,19 +93,30 @@ export default function LoanMarketplace({ onNavigate }: Props) {
               variant="pill"
               tabs={categories.map((c) => ({ id: c.id, label: c.label }))}
               activeTab={category}
-              onChange={(id) => { setCategory(id); setPage(1); }}
+              onChange={(id) => {
+                setCategory(id);
+                setPage(1);
+              }}
             />
           </div>
         </div>
         <p className="text-sm text-stone-500 mb-4">
-          {filtered.length} loan{filtered.length === 1 ? '' : 's'} found
+          {filtered.length} loan{filtered.length === 1 ? "" : "s"} found
         </p>
         {pageItems.length === 0 ? (
           <EmptyState
             icon={EmptyIcons.search}
             title="No loans match your filters"
             description="Try a different category or clear your search to see all available loan products."
-            action={{ label: 'Clear filters', onClick: () => { setQuery(''); setCategory('all'); setSort('recommended'); setPage(1); } }}
+            action={{
+              label: "Clear filters",
+              onClick: () => {
+                setQuery("");
+                setCategory("all");
+                setSort("recommended");
+                setPage(1);
+              },
+            }}
           />
         ) : (
           <>
@@ -108,8 +125,8 @@ export default function LoanMarketplace({ onNavigate }: Props) {
                 <LoanCard
                   key={loan.id}
                   loan={loan}
-                  onView={() => onNavigate('loan-details')}
-                  onApply={() => onNavigate('loan-application')}
+                  onView={() => onNavigate("loan-details")}
+                  onApply={() => onNavigate("loan-application")}
                 />
               ))}
             </div>

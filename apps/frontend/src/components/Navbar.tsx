@@ -26,6 +26,7 @@ export function Navbar({ onNavigate, transparent = false, user = null }: NavbarP
     try {
       await apiRequest("/auth/logout", { method: "POST" });
     } catch {
+      // ignore logout failure
     } finally {
       router.replace("/");
       router.refresh();
