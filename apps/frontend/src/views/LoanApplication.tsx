@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
 import { Button } from "../components/Button";
@@ -6,28 +6,32 @@ import { Stepper } from "../components/Progress";
 import { Alert } from "../components/Alert";
 import { CurrencyInput, TextInput, Select, FileUpload, Textarea } from "../components/Input";
 import { formatTaka } from "../lib/format";
-import { loanProducts } from "../lib/mock-data";
-import { createApplication } from "../lib/loan-store";
-import type { PageName } from "../types";
+import { loansApi, applicationsApi, documentsApi } from "../lib/api/index";
+import type { PageName, LoanProduct } from "../types";
+
 interface Props {
   onNavigate: (page: PageName) => void;
 }
+
 const steps = [
   { label: "Loan details" },
   { label: "Employment & income" },
   { label: "Documents" },
   { label: "Review & submit" },
 ];
+
 const durationOptions = [12, 18, 24, 36, 48].map((d) => ({
   value: String(d),
   label: `${d} months`,
 }));
+
 const employmentOptions = [
   { value: "salaried", label: "Salaried" },
   { value: "self-employed", label: "Self-employed" },
   { value: "business-owner", label: "Business owner" },
   { value: "student", label: "Student" },
 ];
+
 function calculateEmi(principal: number, annualRate: number, months: number) {
   const monthlyRate = annualRate / 12 / 100;
   if (!principal || !months) return 0;
@@ -37,6 +41,7 @@ function calculateEmi(principal: number, annualRate: number, months: number) {
     (Math.pow(1 + monthlyRate, months) - 1)
   );
 }
+
 interface FormState {
   loanId: string;
   amount: number;
@@ -48,15 +53,35 @@ interface FormState {
   incomeProofUploaded: boolean;
   addressProofUploaded: boolean;
 }
+
 export default function LoanApplication({ onNavigate }: Props) {
-  const loan = loanProducts[0];
+  const [loanProducts, setLoanProducts] = useState<LoanProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProducts() {
+      setIsLoading(true);
+      try {
+        const res = await loansApi.getLoanProducts();
+        setLoanProducts(res.products || []);
+      } catch (e) {
+        console.error("Failed to fetch loan products", e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadProducts();
+  }, []);
+
+  const defaultLoan = loanProducts[0] || { id: "", maxAmount: 100000, minAmount: 1000, durationMonths: 12, interestRate: 10, name: "", provider: "" };
+
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<FormState>({
-    loanId: loan.id,
-    amount: Math.round(loan.maxAmount / 2),
-    duration: String(loan.durationMonths),
+    loanId: "",
+    amount: 0,
+    duration: "",
     purpose: "",
     phone: "",
     employment: "",
@@ -64,15 +89,56 @@ export default function LoanApplication({ onNavigate }: Props) {
     incomeProofUploaded: false,
     addressProofUploaded: false,
   });
-  const selectedLoan = loanProducts.find((l) => l.id === form.loanId) ?? loan;
+
+  // Init form defaults when products load
+  useEffect(() => {
+    if (loanProducts.length > 0 && !form.loanId) {
+      const loan = loanProducts[0];
+      setForm((f) => ({
+        ...f,
+        loanId: loan.id,
+        amount: Math.round(loan.maxAmount / 2),
+        duration: String(loan.durationMonths),
+      }));
+    }
+  }, [loanProducts, form.loanId]);
+
+  const selectedLoan = loanProducts.find((l) => l.id === form.loanId) ?? defaultLoan;
+
   const emi = useMemo(
     () => calculateEmi(form.amount, selectedLoan.interestRate, Number(form.duration)),
     [form.amount, form.duration, selectedLoan],
   );
+
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
     setErrors((e) => ({ ...e, [key]: "" }));
   }
+
+  const handleFileUpload = async (type: string, files: FileList | null, key: keyof FormState) => {
+    if (!files || files.length === 0) {
+      update(key, false as FormState[typeof key]);
+      return;
+    }
+    const file = files[0];
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64 = (e.target?.result as string).split(",")[1];
+      try {
+        await documentsApi.uploadDocument({
+          documentType: type,
+          fileName: file.name,
+          mimeType: file.type,
+          fileData: base64,
+        });
+        update(key, true as FormState[typeof key]);
+      } catch (err) {
+        console.error("Upload failed", err);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   function validateStep(current: number): boolean {
     const next: Record<string, string> = {};
     if (current === 0) {
@@ -97,35 +163,49 @@ export default function LoanApplication({ onNavigate }: Props) {
     setErrors(next);
     return Object.keys(next).length === 0;
   }
+
   function handleNext() {
     if (!validateStep(step)) return;
     setStep((s) => Math.min(steps.length - 1, s + 1));
   }
+
   function handleBack() {
     setStep((s) => Math.max(0, s - 1));
   }
-  function handleSubmit() {
+
+  async function handleSubmit() {
     if (!validateStep(step)) return;
     setSubmitting(true);
-    setTimeout(() => {
-      createApplication({
-        loanId: form.loanId,
-        amount: form.amount,
-        duration: form.duration,
-        purpose: form.purpose,
-        phone: form.phone,
-        employment: form.employment,
-        monthlyIncome: form.monthlyIncome,
+    try {
+      await applicationsApi.createApplication({
+        requestedAmount: form.amount,
+        purpose: "personal",
+        purposeDescription: form.purpose,
+        productId: form.loanId,
       });
-      setSubmitting(false);
       onNavigate("application-status");
-    }, 800);
+    } catch (e) {
+      console.error("Submission failed", e);
+    } finally {
+      setSubmitting(false);
+    }
   }
+
+  if (isLoading) {
+    return (
+      <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 flex justify-center items-center h-64">
+          <p className="text-stone-500">Loading loan application...</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
   const summary = (
     <Card variant="raised">
       <CardHeader title="Application summary" />
       <CardBody>
-        <DataRow label="Loan product" value={selectedLoan.name} />
+        <DataRow label="Loan product" value={selectedLoan.name || "—"} />
         <DataRow label="Requested amount" value={formatTaka(form.amount || 0)} />
         <DataRow
           label="Duration"
@@ -272,16 +352,12 @@ export default function LoanApplication({ onNavigate }: Props) {
                       <FileUpload
                         label="Income proof (salary slip or bank statement)"
                         error={errors.incomeProofUploaded}
-                        onChange={(files) =>
-                          update("incomeProofUploaded", !!files && files.length > 0)
-                        }
+                        onChange={(files) => handleFileUpload("income-proof", files, "incomeProofUploaded")}
                       />
                       <FileUpload
                         label="Address proof (utility bill)"
                         error={errors.addressProofUploaded}
-                        onChange={(files) =>
-                          update("addressProofUploaded", !!files && files.length > 0)
-                        }
+                        onChange={(files) => handleFileUpload("address-proof", files, "addressProofUploaded")}
                       />
                     </>
                   )}

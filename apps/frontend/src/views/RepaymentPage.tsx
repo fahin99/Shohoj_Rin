@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { PageHeader } from "../components/PageHeader";
 import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
@@ -9,12 +9,14 @@ import { Button } from "../components/Button";
 import { Modal } from "../components/Modal";
 import { DataTable } from "../components/DataTable";
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
-import { useActiveLoan, useTransactions, recordRepayment } from "../lib/loan-store";
+import { loansApi } from "../lib/api/index";
 import { formatTaka, formatDate } from "../lib/format";
 import type { PageName, Transaction } from "../types";
+
 interface Props {
   onNavigate: (page: PageName) => void;
 }
+
 type AmountOption = "full" | "custom" | "payoff";
 type PaymentMethod = "bkash" | "nagad" | "bank" | "card";
 const methodInfo: Record<
@@ -40,13 +42,16 @@ const methodInfo: Record<
 };
 
 export default function RepaymentPage({ onNavigate }: Props) {
-  const activeLoan = useActiveLoan();
-  const allTransactions = useTransactions();
+  const [activeLoan, setActiveLoan] = useState<any>(null);
+  const [allTransactions, setAllTransactions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [amountOption, setAmountOption] = useState<AmountOption>("full");
   const [customAmount, setCustomAmount] = useState<string>("");
   const [method, setMethod] = useState<PaymentMethod>("bkash");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [receiptData, setReceiptData] = useState<{
     receiptId: string;
     closed: boolean;
@@ -57,9 +62,40 @@ export default function RepaymentPage({ onNavigate }: Props) {
     remainingAfter: number;
   } | null>(null);
 
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const loansRes = await loansApi.getActiveLoans();
+        const loan = loansRes[0] || null;
+        setActiveLoan(loan);
+
+        if (loan) {
+          const txs = await loansApi.getLoanTransactions(loan.id);
+          setAllTransactions(txs || []);
+        }
+      } catch (e) {
+        console.error("Failed to fetch repayment data", e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
   const recentPayments: Transaction[] = allTransactions.filter(
     (t) => t.type === "repayment" || t.type === "fee",
   );
+
+  if (isLoading) {
+    return (
+      <AppLayout onNavigate={onNavigate} currentPage="repayment">
+        <div className="max-w-2xl mx-auto px-4 md:px-6 py-10 flex justify-center items-center h-64">
+          <p className="text-stone-500">Loading repayment details...</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (success && receiptData) {
     return (
@@ -309,25 +345,33 @@ export default function RepaymentPage({ onNavigate }: Props) {
           title="Confirm payment"
           footer={
             <>
-              <Button variant="ghost" size="sm" onClick={() => setConfirmOpen(false)}>
+              <Button variant="ghost" size="sm" onClick={() => setConfirmOpen(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => {
-                  const result = recordRepayment(instalmentAmount, method);
-                  setReceiptData({
-                    receiptId: result.receiptId,
-                    closed: result.closed,
-                    loanId: activeLoan.id,
-                    amount: instalmentAmount,
-                    fee,
-                    totalCharged,
-                    remainingAfter: result.closed ? 0 : remainingAfter,
-                  });
-                  setConfirmOpen(false);
-                  setSuccess(true);
+                loading={isSubmitting}
+                onClick={async () => {
+                  setIsSubmitting(true);
+                  try {
+                    const result = await loansApi.createRepayment(activeLoan.id, instalmentAmount, method);
+                    setReceiptData({
+                      receiptId: result.receiptId || "RCPT-" + Math.floor(Math.random() * 10000),
+                      closed: result.closed || false,
+                      loanId: activeLoan.id,
+                      amount: instalmentAmount,
+                      fee,
+                      totalCharged,
+                      remainingAfter: result.closed ? 0 : remainingAfter,
+                    });
+                    setConfirmOpen(false);
+                    setSuccess(true);
+                  } catch (e) {
+                    console.error("Payment failed", e);
+                  } finally {
+                    setIsSubmitting(false);
+                  }
                 }}
               >
                 Pay {formatTaka(totalCharged)}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { PageHeader } from "../components/PageHeader";
 import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
@@ -9,12 +9,14 @@ import { ProgressBar } from "../components/Progress";
 import { Button } from "../components/Button";
 import { DataTable } from "../components/DataTable";
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
-import { useActiveLoan, useRepaymentSchedule, useTransactions } from "../lib/loan-store";
+import { loansApi } from "../lib/api/index";
 import { formatTaka, formatPercent, formatDate } from "../lib/format";
-import type { PageName, RepaymentScheduleRow, Transaction } from "../types";
+import type { PageName, RepaymentScheduleRow, Transaction, TransactionType } from "../types";
+
 interface Props {
   onNavigate: (page: PageName) => void;
 }
+
 const scheduleStatusVariant: Record<
   RepaymentScheduleRow["status"],
   "success" | "warning" | "error" | "neutral"
@@ -24,12 +26,14 @@ const scheduleStatusVariant: Record<
   upcoming: "neutral",
   overdue: "error",
 };
+
 const scheduleStatusLabel: Record<RepaymentScheduleRow["status"], string> = {
   paid: "Paid",
   due: "Due",
   upcoming: "Upcoming",
   overdue: "Overdue",
 };
+
 const txTypeLabel: Record<Transaction["type"], string> = {
   repayment: "Repayment",
   disbursement: "Disbursement",
@@ -37,16 +41,54 @@ const txTypeLabel: Record<Transaction["type"], string> = {
   payment: "Payment",
   refund: "Refund",
 };
+
 const txStatusVariant: Record<Transaction["status"], "success" | "warning" | "error"> = {
   completed: "success",
   pending: "warning",
   failed: "error",
 };
+
 export default function ActiveLoanDetails({ onNavigate }: Props) {
   const [tab, setTab] = useState<"schedule" | "transactions">("schedule");
-  const activeLoan = useActiveLoan();
-  const repaymentSchedule = useRepaymentSchedule();
-  const transactions = useTransactions();
+  const [activeLoan, setActiveLoan] = useState<any>(null);
+  const [repaymentSchedule, setRepaymentSchedule] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const loansRes = await loansApi.getActiveLoans();
+        const loan = loansRes[0] || null;
+        setActiveLoan(loan);
+
+        if (loan) {
+          const [txs, sched] = await Promise.all([
+            loansApi.getLoanTransactions(loan.id),
+            loansApi.getRepaymentSchedule(loan.id)
+          ]);
+          setTransactions(txs || []);
+          setRepaymentSchedule(sched?.installments || sched || []);
+        }
+      } catch (e) {
+        console.error("Failed to load loan details", e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <AppLayout onNavigate={onNavigate} currentPage="active-loan">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-10 flex justify-center items-center h-64">
+          <p className="text-stone-500">Loading loan details...</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (!activeLoan) {
     return (
@@ -205,8 +247,8 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
                   header: "Status",
                   render: (r) => (
                     <div className="flex items-center gap-2 justify-end">
-                      <Badge variant={scheduleStatusVariant[r.status]} size="sm" dot>
-                        {scheduleStatusLabel[r.status]}
+                      <Badge variant={scheduleStatusVariant[r.status as RepaymentScheduleRow["status"]]} size="sm" dot>
+                        {scheduleStatusLabel[r.status as RepaymentScheduleRow["status"]]}
                       </Badge>
                       {r.status === "due" && (
                         <Button
@@ -243,7 +285,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
                   hideBelow: "sm",
                   render: (t) => (
                     <Badge variant="neutral" size="sm">
-                      {txTypeLabel[t.type]}
+                      {txTypeLabel[t.type as TransactionType]}
                     </Badge>
                   ),
                 },
