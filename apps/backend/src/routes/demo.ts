@@ -3,7 +3,7 @@ import { config } from "../config/index.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
 import { requireRole } from "../middleware/authorize.js";
 import { pool } from "../lib/db.js";
-import { getProfileWithCompletion, getRequiredDocuments } from "../services/profile.service.js";
+import { getProfileWithCompletion, getDocumentRequirements } from "../services/profile.service.js";
 import { logAuditEvent } from "../services/audit.service.js";
 import { demoProvider } from "../services/document-verification.service.js";
 // import { recalculateAndPersistTrustScore } from "../services/trust-score.service.js"; // Assume this exists or similar
@@ -29,7 +29,7 @@ router.post("/skip-documents", requireAuth, requireRole("borrower"), async (req,
     const profileData = await getProfileWithCompletion(userId);
     if (!profileData) throw new Error("Profile not found");
     
-    const requiredDocs = getRequiredDocuments(profileData.profile.occupation);
+    const requiredDocs = getDocumentRequirements(profileData.profile.role, profileData.profile.occupation);
     const createdRecords = [];
 
     for (const docType of requiredDocs) {
