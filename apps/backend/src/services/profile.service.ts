@@ -1,6 +1,7 @@
 import { pool } from "../lib/db.js";
 import type { ProfileCompletionItem, ProfileUpdateInput } from "@shohojrin/shared";
-
+const docu_verific_flag=false;
+export const auto_verify_docs=true;
 const profileColumnByField = {
   fullName: "full_name",
   dateOfBirth: "date_of_birth",
@@ -49,8 +50,6 @@ export async function updateProfile(userId: string, data: ProfileUpdateInput) {
     (field) => data[field] !== undefined,
   );
   if (fields.length === 0) return null;
-
-  // SQL identifiers cannot be parameterized, so they must come only from this static map.
   const setClause = fields
     .map((field, index) => `${profileColumnByField[field]} = $${index + 2}`)
     .join(", ");
@@ -67,22 +66,32 @@ export async function updateProfile(userId: string, data: ProfileUpdateInput) {
   return result.rows[0];
 }
 
-export function getRequiredDocuments(occupationType: string | null | undefined): string[] {
+export function getDocumentRequirements(
+  occupationType: string | null | undefined
+) {
   switch (occupationType) {
-    case 'student':
-      return ['nid_front', 'nid_back', 'student_id', 'address_proof'];
-    case 'salaried':
-      return ['nid_front', 'nid_back', 'income_proof', 'address_proof'];
-    case 'self_employed':
-    case 'business':
-      return ['nid_front', 'nid_back', 'income_proof', 'address_proof'];
+    case "student":
+      return [
+        { type: "nid_front", required: docu_verific_flag },
+        { type: "nid_back", required: docu_verific_flag },
+        { type: "student_id", required: docu_verific_flag },
+        { type: "utility_bill", required: docu_verific_flag },
+      ];
+
+    case "salaried":
+    case "self_employed":
+    case "business":
     default:
-      return ['nid_front', 'nid_back', 'address_proof'];
+      return [
+        { type: "nid_front", required: docu_verific_flag },
+        { type: "nid_back", required: docu_verific_flag },
+        { type: "utility_bill", required: docu_verific_flag },
+      ];
   }
 }
 
 export function calculateCompletionStatus(profile: any, verifications: any[]): ProfileCompletionItem[] {
-  const requiredDocs = getRequiredDocuments(profile.occupation);
+  const doc_require = getDocumentRequirements(profile.occupation);
   
   const items: ProfileCompletionItem[] = [];
   
@@ -95,14 +104,23 @@ export function calculateCompletionStatus(profile: any, verifications: any[]): P
     required: true
   });
   
-  // Document checks
-  for (const docType of requiredDocs) {
-    const docVer = verifications.find(v => v.document_type === docType);
+  for (const doc of doc_require) {
+    const docVer = verifications.find(
+      v => v.document_type === doc.type
+    );
+
+    const verified =
+      !!docVer &&
+      (
+        docVer.document_status === "verified" ||
+        docVer.document_status === "demo_verified"
+      );
+
     items.push({
-      key: docType,
-      label: docType.replace('_', ' ').toUpperCase(),
-      completed: !!docVer && (docVer.document_status === 'verified' || docVer.document_status === 'demo_verified'),
-      required: true
+      key: doc.type,
+      label: doc.type.replace("_", " ").toUpperCase(),
+      completed: verified,
+      required: doc.required,
     });
   }
   

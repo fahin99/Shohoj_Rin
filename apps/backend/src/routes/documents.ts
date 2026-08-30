@@ -4,9 +4,10 @@ import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js
 import { pool } from "../lib/db.js";
 import { fileStorage } from "../services/file-storage.service.js";
 import path from "path";
+import {auto_verify_docs} from "../services/profile.service";
 
 const router = Router();
-
+const documentStatus = auto_verify_docs? "demo_verified" : "uploaded";
 router.post("/upload", requireAuth, express.json({ limit: '10mb' }), async (req, res) => {
   const authReq = req as RequestWithAuth;
   try {
@@ -34,9 +35,11 @@ router.post("/upload", requireAuth, express.json({ limit: '10mb' }), async (req,
     const { fileUrl } = await fileStorage.upload(buffer, fileName, mimeType);
     
     const result = await pool.query(
-      `INSERT INTO verification_documents (request_id, document_type, file_url, document_status)
-       VALUES ($1, $2, $3, 'uploaded') RETURNING *, document_id AS id`,
-      [requestId, documentType, fileUrl]
+      `INSERT INTO verification_documents
+      (request_id, document_type, file_url, document_status)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *, document_id AS id`,
+      [requestId, documentType, fileUrl, documentStatus]
     );
     
     return res.status(201).json({ success: true, data: result.rows[0] });
