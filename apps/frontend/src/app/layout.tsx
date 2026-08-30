@@ -4,6 +4,7 @@ import "@fontsource/stack-sans-notch/500.css";
 import "@fontsource/stack-sans-notch/600.css";
 import "@fontsource/stack-sans-notch/700.css";
 import { Providers } from "./providers";
+import { getCurrentUser } from "../lib/auth.server";
 import "../styles.css";
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -29,15 +30,13 @@ export const metadata: Metadata = {
     icon: "/icon.svg",
   },
 };
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
   return (
     <html lang="en" className={`${spaceGrotesk.variable}`}>
       <body>
-        <Providers>
-          <a
-            href="#main-content"
-            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-[6px] focus:border-[1.5px] focus:border-navy focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-navy"
-          >
+        <Providers user={user}>
+          <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-[6px] focus:border-[1.5px] focus:border-navy focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-navy">
             Skip to main content
           </a>
           <main id="main-content">{children}</main>

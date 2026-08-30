@@ -4,6 +4,8 @@ import { Logo } from "./Logo";
 import { Badge } from "./Badge";
 import { IconButton } from "./Button";
 import type { PageName } from "../types";
+import { useCurrentUser } from "../lib/user-context";
+import { getDisplayName } from "../lib/session";
 interface AppLayoutProps {
   children: ReactNode;
   onNavigate: (page: PageName) => void;
@@ -186,13 +188,19 @@ export function AppLayout({
   children,
   onNavigate,
   currentPage,
-  userType = "borrower",
-  userName = "",
+  userType,
+  userName,
 }: AppLayoutProps) {
+  const currentUser = useCurrentUser();
+  const currentUserRole = currentUser?.role;
+  const resolvedUserType: "borrower" | "lender" | "admin" =
+    userType ?? (currentUserRole === "lender" || currentUserRole === "admin" ? currentUserRole : "borrower");
+  const resolvedUserName = userName || getDisplayName(currentUser, "Account");
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const navItems =
-    userType === "admin" ? adminNav : userType === "lender" ? lenderNav : borrowerNav;
+    resolvedUserType === "admin" ? adminNav : resolvedUserType === "lender" ? lenderNav : borrowerNav;
   const sidebar = (
     <aside className="w-56 shrink-0 flex flex-col border-r border-stone-200 bg-offwhite h-full">
       <div className="px-4 py-4 border-b border-stone-200">
@@ -214,15 +222,15 @@ export function AppLayout({
       <div className="px-3 py-4 border-t border-stone-200">
         <div className="flex items-center gap-2.5 px-2 py-2">
           <div className="w-8 h-8 rounded-full bg-teal text-white flex items-center justify-center text-xs font-semibold border border-teal/30">
-            {userName
+            {resolvedUserName
               .split(" ")
               .map((w) => w[0])
               .join("")
               .slice(0, 2)}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-navy truncate">{userName}</p>
-            <p className="text-[10px] text-stone-500 capitalize">{userType}</p>
+            <p className="text-xs font-medium text-navy truncate">{resolvedUserName}</p>
+            <p className="text-[10px] text-stone-500 capitalize">{resolvedUserType}</p>
           </div>
         </div>
       </div>
@@ -322,10 +330,10 @@ export function AppLayout({
           </div>
           <button
             type="button"
-            aria-label={`Account menu for ${userName}`}
+            aria-label={`Account menu for ${resolvedUserName}`}
             className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-teal text-xs font-semibold text-white"
           >
-            {userName
+            {resolvedUserName
               .split(" ")
               .map((w) => w[0])
               .join("")

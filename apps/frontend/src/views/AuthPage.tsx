@@ -5,11 +5,13 @@ import { TextInput, PasswordInput, Checkbox } from "../components/Input";
 import { Alert } from "../components/Alert";
 import type { PageName } from "../types";
 import { apiRequest } from "../lib/api";
+import {useRouter} from "next/navigation";
 type AuthMode = "login" | "register" | "forgot";
 interface AuthPageProps {
   onNavigate: (page: PageName) => void;
 }
 export default function AuthPage({ onNavigate }: AuthPageProps) {
+  const router = useRouter();
   const [mode, setMode] = useState<AuthMode>("login");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -62,6 +64,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
         body: JSON.stringify(payload),
       });
       onNavigate(mode === "register" ? "onboarding" : "borrower-dashboard");
+      router.refresh();
     } catch (error) {
       setApiError(error instanceof Error ? error.message : "Authentication failed");
     } finally {
