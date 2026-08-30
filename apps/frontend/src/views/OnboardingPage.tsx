@@ -12,7 +12,7 @@ interface OnboardingPageProps {
 const steps = [
   { label: "Personal & ID", sublabel: "Identity" },
   { label: "Financial", sublabel: "Profile" },
-  { label: "Employment", sublabel: "Status" },
+  { label: "employmentType", sublabel: "Status" },
   { label: "Goals", sublabel: "" },
   { label: "Preferences", sublabel: "" },
 ];
@@ -29,18 +29,19 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState({
     fullName: "",
-    dob: "",
+    dateOfBirth: "",
     gender: "",
-    nid: "",
-    address: "",
+    nidNumber: "",
+    adressLine: "",
     city: "",
     nidFrontUploaded: false,
     nidBackUploaded: false,
+    utilityBillUploaded: false,
     monthlyIncome: "",
     savingsAmount: "",
     existingLoans: "no",
-    employment: "",
-    employer: "",
+    employmentType: "",
+    employerName: "",
     jobTitle: "",
     incomeType: "",
     institutionId: null as string | null,
@@ -165,8 +166,8 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   <TextInput
                     label="Date of birth"
                     type="date"
-                    value={data.dob}
-                    onChange={(e) => update("dob", e.target.value)}
+                    value={data.dateOfBirth}
+                    onChange={(e) => update("dateOfBirth", e.target.value)}
                     required
                   />
                   <Select
@@ -184,15 +185,15 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                 <TextInput
                   label="National ID Number"
                   placeholder="1234567890"
-                  value={data.nid}
+                  value={data.nidNumber}
                   onChange={(e) => update("nid", e.target.value)}
                   hint="Your 10 or 17 digit NID number"
                 />
                 <TextInput
-                  label="Address"
+                  label="adressLine"
                   placeholder="House 12, Road 5, Block C"
-                  value={data.address}
-                  onChange={(e) => update("address", e.target.value)}
+                  value={data.adressLine}
+                  onChange={(e) => update("adressLine", e.target.value)}
                   required
                 />
                 <Select
@@ -227,19 +228,26 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     <FileUpload
                       label="NID Front Photo"
                       hint="Front side with photo and NID no"
-                      onChange={(files) => handleFileUpload("nid-front", files, "nidFrontUploaded")}
+                      onChange={(files) => handleFileUpload("nid_front", files, "nidFrontUploaded")}
                     />
                     <FileUpload
                       label="NID Back Photo"
-                      hint="Back side with address"
-                      onChange={(files) => handleFileUpload("nid-back", files, "nidBackUploaded")}
+                      hint="Back side with adressLine"
+                      onChange={(files) => handleFileUpload("nid_back", files, "nidBackUploaded")}
+                    />
+                    <FileUpload
+                      label="Utility Bill"
+                      hint="Optional proof of adressLine"
+                      onChange={(files) =>
+                        handleFileUpload("utility_bill", files, "utilityBillUploaded")
+                      }
                     />
                   </div>
                   <div className="bg-sky-light/60 border border-sky/30 rounded-[6px] p-3 mt-3 flex items-start gap-2.5">
                     <span className="text-sm text-sky font-bold mt-0.5">ℹ</span>
                     <p className="text-xs text-stone-600 leading-relaxed">
                       Your identity verification is saved securely. When applying for loans in the
-                      future, you will not need to provide your NID photo, full name, or address
+                      future, you will not need to provide your NID photo, full name, or adressLine
                       again.
                     </p>
                   </div>
@@ -307,15 +315,15 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {}
           {step === 2 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">Employment & income</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">employmentType & income</h2>
               <p className="text-sm text-stone-500 mb-6">
                 Tell us about your current work or study status.
               </p>
               <div className="grid grid-cols-1 gap-5">
                 <Select
-                  label="Employment status"
-                  value={data.employment}
-                  onChange={(e) => update("employment", e.target.value)}
+                  label="employmentType status"
+                  value={data.employmentType}
+                  onChange={(e) => update("employmentType", e.target.value)}
                   options={[
                     { value: "employed-full", label: "Employed (Full-time)" },
                     { value: "employed-part", label: "Employed (Part-time)" },
@@ -327,7 +335,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   placeholder="Select status"
                   required
                 />
-                {data.employment === "student" && (
+                {data.employmentType === "student" && (
                   <>
                     <InstitutionCombobox
                       label="Institution"
@@ -348,15 +356,15 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     />
                   </>
                 )}
-                {data.employment &&
-                  data.employment !== "student" &&
-                  data.employment !== "unemployed" && (
+                {data.employmentType &&
+                  data.employmentType !== "student" &&
+                  data.employmentType !== "unemployed" && (
                     <>
                       <TextInput
-                        label="Employer / Business name"
+                        label="employerName / Business name"
                         placeholder="XYZ Company Ltd."
-                        value={data.employer}
-                        onChange={(e) => update("employer", e.target.value)}
+                        value={data.employerName}
+                        onChange={(e) => update("employerName", e.target.value)}
                       />
                       <TextInput
                         label="Job title / Role"
