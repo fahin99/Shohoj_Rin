@@ -52,12 +52,10 @@ export function Badge({
 export function LoanStatusBadge({ status }: { status: LoanStatus }) {
   const map: Record<LoanStatus, { variant: BadgeVariant; label: string }> = {
     active: { variant: "teal", label: "Active" },
-    pending: { variant: "warning", label: "Pending" },
-    approved: { variant: "success", label: "Approved" },
-    rejected: { variant: "error", label: "Rejected" },
-    disbursed: { variant: "sky", label: "Disbursed" },
-    closed: { variant: "neutral", label: "Closed" },
+    completed: { variant: "neutral", label: "Completed" },
     overdue: { variant: "error", label: "Overdue" },
+    delinquent: { variant: "error", label: "Delinquent" },
+    defaulted: { variant: "error", label: "Defaulted" },
   };
 
   const { variant, label } = map[status];

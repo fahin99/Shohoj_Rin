@@ -10,10 +10,24 @@ const router = Router();
 router.post("/upload", requireAuth, express.json({ limit: '10mb' }), async (req, res) => {
   const authReq = req as RequestWithAuth;
   try {
-    const { documentType, fileName, mimeType, fileData, requestId } = req.body;
+    const { documentType, fileName, mimeType, fileData } = req.body;
+    const requestId = req.body.verificationRequestId ?? req.body.requestId;
     
     if (!fileData) {
       return res.status(400).json({ success: false, error: { message: "No file data provided" } });
+    }
+
+    if (!requestId) {
+      return res.status(400).json({ success: false, error: { message: "Verification request is required" } });
+    }
+
+    const requestResult = await pool.query(
+      `SELECT request_id FROM verification_requests
+       WHERE request_id = $1 AND user_id = $2`,
+      [requestId, authReq.auth!.userId],
+    );
+    if (!requestResult.rows.length) {
+      return res.status(404).json({ success: false, error: { message: "Verification request not found" } });
     }
     
     const buffer = Buffer.from(fileData, 'base64');
@@ -21,7 +35,7 @@ router.post("/upload", requireAuth, express.json({ limit: '10mb' }), async (req,
     
     const result = await pool.query(
       `INSERT INTO verification_documents (request_id, document_type, file_url, document_status)
-       VALUES ($1, $2, $3, 'pending') RETURNING *`,
+       VALUES ($1, $2, $3, 'uploaded') RETURNING *, document_id AS id`,
       [requestId, documentType, fileUrl]
     );
     
@@ -35,8 +49,8 @@ router.get("/", requireAuth, async (req, res) => {
   const authReq = req as RequestWithAuth;
   try {
     const result = await pool.query(
-      `SELECT vd.* FROM verification_documents vd
-       JOIN verification_requests vr ON vr.id = vd.request_id
+      `SELECT vd.*, vd.document_id AS id FROM verification_documents vd
+       JOIN verification_requests vr ON vr.request_id = vd.request_id
        WHERE vr.user_id = $1`,
       [authReq.auth!.userId]
     );
@@ -51,9 +65,9 @@ router.get("/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
-      `SELECT vd.* FROM verification_documents vd
-       JOIN verification_requests vr ON vr.id = vd.request_id
-       WHERE vd.id = $1 AND vr.user_id = $2`,
+      `SELECT vd.*, vd.document_id AS id FROM verification_documents vd
+       JOIN verification_requests vr ON vr.request_id = vd.request_id
+       WHERE vd.document_id = $1 AND vr.user_id = $2`,
       [id, authReq.auth!.userId]
     );
     if (!result.rows.length) {
@@ -71,8 +85,8 @@ router.get("/:id/file", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT vd.file_url FROM verification_documents vd
-       JOIN verification_requests vr ON vr.id = vd.request_id
-       WHERE vd.id = $1 AND vr.user_id = $2`,
+       JOIN verification_requests vr ON vr.request_id = vd.request_id
+       WHERE vd.document_id = $1 AND vr.user_id = $2`,
       [id, authReq.auth!.userId]
     );
     if (!result.rows.length) {
@@ -90,21 +104,21 @@ router.delete("/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
   try {
     const docResult = await pool.query(
-      `SELECT vd.id, vd.file_url, vd.document_status FROM verification_documents vd
-       JOIN verification_requests vr ON vr.id = vd.request_id
-       WHERE vd.id = $1 AND vr.user_id = $2`,
+      `SELECT vd.document_id AS id, vd.file_url, vd.document_status FROM verification_documents vd
+       JOIN verification_requests vr ON vr.request_id = vd.request_id
+       WHERE vd.document_id = $1 AND vr.user_id = $2`,
       [id, authReq.auth!.userId]
     );
     if (!docResult.rows.length) {
       return res.status(404).json({ success: false, error: { message: "Document not found" } });
     }
     const doc = docResult.rows[0];
-    if (doc.document_status !== 'pending' && doc.document_status !== 'rejected') {
+    if (doc.document_status !== 'uploaded' && doc.document_status !== 'rejected') {
       return res.status(403).json({ success: false, error: { message: "Cannot delete document in current status" } });
     }
     
     await fileStorage.delete(doc.file_url);
-    await pool.query(`DELETE FROM verification_documents WHERE id = $1`, [id]);
+    await pool.query(`DELETE FROM verification_documents WHERE document_id = $1`, [id]);
     
     return res.json({ success: true, data: { success: true } });
   } catch (error) {

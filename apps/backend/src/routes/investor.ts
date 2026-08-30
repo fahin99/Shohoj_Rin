@@ -215,7 +215,14 @@ router.get("/opportunities", requireAuth, requireLender, async (req, res) => {
        LEFT JOIN funding_partners fp ON fp.partner_id = la.partner_id
        LEFT JOIN trust_scores ts ON ts.score_id = la.trust_score_id
        LEFT JOIN user_profiles up ON up.user_id = la.user_id
-       WHERE la.status IN ('submitted', 'under_review', 'approved')
+        WHERE la.status IN ('submitted', 'under_review', 'approved')
+          AND la.requested_amount > COALESCE(
+            (SELECT SUM(fc.amount)
+             FROM funding_commitments fc
+             WHERE fc.application_id = la.application_id
+               AND fc.status = 'committed'),
+            0
+          )
        ORDER BY la.submitted_at DESC
        LIMIT $1 OFFSET $2`,
       [limit, offset],
@@ -247,7 +254,7 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
   const userId = authReq.auth!.userId;
   const applicationId = req.params.applicationId;
 
-  const amountSchema = z.object({ amount: z.number().positive() });
+  const amountSchema = z.object({ amount: z.number().finite().positive() });
   const parsed = amountSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({
@@ -260,7 +267,7 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
   try {
     await client.query("BEGIN");
 
-    // Verify application exists and is eligible
+    // Locking the application serializes commitments so the requested amount cannot be over-funded.
     const appResult = await client.query(
       `SELECT application_id, status, partner_id, requested_amount
        FROM loan_applications
@@ -286,11 +293,53 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
       });
     }
 
-    // Log the funding commitment in audit_logs
+    const existingCommitment = await client.query(
+      `SELECT commitment_id
+       FROM funding_commitments
+       WHERE application_id = $1 AND lender_user_id = $2
+       FOR UPDATE`,
+      [applicationId, userId],
+    );
+    if (existingCommitment.rowCount) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        success: false,
+        error: { message: "You have already funded this application" },
+      });
+    }
+
+    const committedResult = await client.query(
+      `SELECT COALESCE(SUM(amount), 0) AS committed_amount
+       FROM funding_commitments
+       WHERE application_id = $1 AND status = 'committed'`,
+      [applicationId],
+    );
+    const requestedAmount = Number(app.requested_amount);
+    const committedAmount = Number(committedResult.rows[0].committed_amount);
+    const remainingAmount = Math.round((requestedAmount - committedAmount) * 100) / 100;
+    const fundingAmount = Math.round(parsed.data.amount * 100) / 100;
+    if (fundingAmount <= 0 || fundingAmount > remainingAmount) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        success: false,
+        error: { message: "Funding amount must not exceed the remaining requested amount" },
+      });
+    }
+
+    const commitmentResult = await client.query(
+      `INSERT INTO funding_commitments (application_id, lender_user_id, amount, status)
+       VALUES ($1, $2, $3, 'committed')
+       RETURNING commitment_id, application_id, lender_user_id, amount, status, created_at`,
+      [applicationId, userId, fundingAmount],
+    );
+    const commitment = commitmentResult.rows[0] as any;
+
+    // Keep an immutable audit event, but never use it as the financial record.
     await client.query(
       `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, after_state)
-       VALUES ($1, 'funding_commitment', 'loan_application', $2, $3)`,
-      [userId, applicationId, JSON.stringify({ amount: parsed.data.amount, investorUserId: userId })],
+       VALUES ($1, 'funding_commitment_created', 'funding_commitment', $2,
+               jsonb_build_object('applicationId', $3::uuid, 'amount', $4::numeric, 'status', 'committed'))`,
+      [userId, commitment.commitment_id, applicationId, fundingAmount],
     );
 
     await client.query("COMMIT");
@@ -299,12 +348,21 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
       success: true,
       data: {
         applicationId,
-        fundedAmount: parsed.data.amount,
+        commitmentId: commitment.commitment_id,
+        fundedAmount: Number(commitment.amount),
+        status: commitment.status,
+        fundedAt: commitment.created_at,
         message: "Funding commitment recorded",
       },
     });
   } catch (error) {
     await client.query("ROLLBACK");
+    if (typeof error === "object" && error && "code" in error && (error as { code?: string }).code === "23505") {
+      return res.status(409).json({
+        success: false,
+        error: { message: "You have already funded this application" },
+      });
+    }
     console.error("Failed to fund opportunity:", error);
     return res.status(500).json({
       success: false,
@@ -321,12 +379,14 @@ router.get("/portfolio", requireAuth, requireLender, async (req, res) => {
   const userId = authReq.auth!.userId;
 
   try {
-    // Get funded loans (via audit log funding commitments)
+    // Funding commitments are the financial source of truth; audit logs are history only.
     const fundedResult = await pool.query(
       `SELECT
-        al.entity_id AS "applicationId",
-        al.after_state->>'amount' AS "fundedAmount",
-        al.created_at AS "fundedAt",
+        fc.commitment_id AS "commitmentId",
+        fc.application_id AS "applicationId",
+        fc.amount AS "fundedAmount",
+        fc.status AS "fundingStatus",
+        fc.created_at AS "fundedAt",
         la.purpose,
         la.requested_amount AS "requestedAmount",
         la.status AS "applicationStatus",
@@ -338,16 +398,15 @@ router.get("/portfolio", requireAuth, requireLender, async (req, res) => {
         l.loan_id AS "loanId",
         l.status AS "loanStatus",
         l.principal_amount AS "principalAmount"
-       FROM audit_logs al
-       JOIN loan_applications la ON la.application_id = al.entity_id::uuid
+       FROM funding_commitments fc
+       JOIN loan_applications la ON la.application_id = fc.application_id
        LEFT JOIN loan_products lp ON lp.product_id = la.product_id
        LEFT JOIN funding_partners fp ON fp.partner_id = la.partner_id
        LEFT JOIN trust_scores ts ON ts.score_id = la.trust_score_id
        LEFT JOIN loans l ON l.application_id = la.application_id
-       WHERE al.user_id = $1
-         AND al.action = 'funding_commitment'
-         AND al.entity_type = 'loan_application'
-       ORDER BY al.created_at DESC`,
+       WHERE fc.lender_user_id = $1
+         AND fc.status = 'committed'
+       ORDER BY fc.created_at DESC`,
       [userId],
     );
 

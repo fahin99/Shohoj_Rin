@@ -16,7 +16,7 @@ export type PageName =
   | "investor-onboarding";
 
 export type LoanStatus =
-  "active" | "pending" | "approved" | "rejected" | "disbursed" | "closed" | "overdue";
+  "active" | "completed" | "overdue" | "delinquent" | "defaulted";
 export type AppStatus =
   "submitted" | "under-review" | "info-required" | "approved" | "rejected" | "disbursed";
 export type TransactionType = "payment" | "repayment" | "disbursement" | "fee" | "refund";

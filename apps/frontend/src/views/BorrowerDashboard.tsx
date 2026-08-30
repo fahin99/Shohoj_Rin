@@ -53,7 +53,7 @@ function TransactionIcon({ type }: { type: Transaction["type"] }) {
 export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboardProps) {
   const [activeLoan, setActiveLoan] = useState<any>(null);
   const [applications, setApplications] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

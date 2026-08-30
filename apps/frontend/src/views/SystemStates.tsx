@@ -38,12 +38,10 @@ function Section({
 }
 const loanStatuses: LoanStatus[] = [
   "active",
-  "pending",
-  "approved",
-  "rejected",
-  "disbursed",
-  "closed",
+  "completed",
   "overdue",
+  "delinquent",
+  "defaulted",
 ];
 const appStatuses: AppStatus[] = [
   "submitted",

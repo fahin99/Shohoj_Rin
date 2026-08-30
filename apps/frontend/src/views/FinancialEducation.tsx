@@ -124,11 +124,11 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
   const [months, setMonths] = useState(24);
   const filtered = useMemo(() => {
     return educationArticles.filter((a) => {
-      const matchesCat = category === "All" || a.tag === category;
+      const matchesCat = category === "All" || a.category === category;
       const matchesQuery =
         query.trim() === "" ||
         a.title.toLowerCase().includes(query.toLowerCase()) ||
-        a.desc.toLowerCase().includes(query.toLowerCase());
+        a.summary.toLowerCase().includes(query.toLowerCase());
       return matchesCat && matchesQuery;
     });
   }, [query, category]);
@@ -191,7 +191,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
             </span>
             <div className="min-w-0">
               <h2 className="text-2xl font-semibold text-white mb-2">{featured.title}</h2>
-              <p className="text-teal-light/90 leading-relaxed mb-4 max-w-xl">{featured.desc}</p>
+              <p className="text-teal-light/90 leading-relaxed mb-4 max-w-xl">{featured.summary}</p>
               <div className="flex items-center gap-3">
                 <Button
                   variant="secondary"
@@ -200,7 +200,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
                 >
                   Read guide
                 </Button>
-                <span className="text-xs text-white/80">{featured.read}</span>
+                <span className="text-xs text-white/80">{featured.readTime}</span>
               </div>
             </div>
           </div>
@@ -223,12 +223,12 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
               >
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-xs bg-teal-light text-teal px-2 py-0.5 rounded-[3px] font-medium border border-teal/20 shrink-0">
-                    {a.tag}
+                    {a.category}
                   </span>
-                  <span className="text-xs text-stone-400">{a.read}</span>
+                  <span className="text-xs text-stone-400">{a.readTime}</span>
                 </div>
                 <h3 className="font-semibold text-navy text-sm mb-2">{a.title}</h3>
-                <p className="text-sm text-stone-500 leading-relaxed line-clamp-2-sr">{a.desc}</p>
+                <p className="text-sm text-stone-500 leading-relaxed line-clamp-2-sr">{a.summary}</p>
               </div>
             ))}
           </div>

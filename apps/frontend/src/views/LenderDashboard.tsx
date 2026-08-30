@@ -161,7 +161,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
             value={formatTaka(stats.totalDeployed)}
             hint="Across 5 active loans"
           />
-          <StatCard label="Active loans" value={String(stats.activeLoans)} hint="1 closed this year" />
+          <StatCard label="Active loans" value={String(stats.activeLoans)} hint="1 completed this year" />
           <StatCard label="Average yield" value={formatPercent(stats.averageYield)} tone="positive" />
           <StatCard label="Repayment rate" value={`${stats.repaymentRate}%`} tone="positive" hint="Last 12 months" />
           <StatCard

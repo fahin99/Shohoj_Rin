@@ -1,5 +1,25 @@
 import { pool } from "../lib/db.js";
-import type { ProfileCompletionItem } from "@shohojrin/shared";
+import type { ProfileCompletionItem, ProfileUpdateInput } from "@shohojrin/shared";
+
+const profileColumnByField = {
+  fullName: "full_name",
+  dateOfBirth: "date_of_birth",
+  gender: "gender",
+  nidNumber: "nid_number",
+  addressLine: "address_line",
+  city: "city",
+  district: "district",
+  postalCode: "postal_code",
+  occupation: "occupation",
+  monthlyFamilyIncome: "monthly_family_income",
+  employmentType: "employment_type",
+  employerName: "employer_name",
+  monthlyIncome: "monthly_income",
+  incomeSource: "income_source",
+  institutionId: "institution_id",
+  studentId: "student_id",
+  enrollmentYear: "enrollment_year",
+} as const satisfies Record<keyof ProfileUpdateInput, string>;
 
 export async function getProfileWithCompletion(userId: string) {
   const result = await pool.query(
@@ -13,9 +33,9 @@ export async function getProfileWithCompletion(userId: string) {
   if (!profile) return null;
 
   const verifications = await pool.query(
-    `SELECT document_type, document_status 
+    `SELECT document_type, document_status
      FROM verification_requests vr
-     JOIN verification_documents vd ON vd.request_id = vr.id
+     JOIN verification_documents vd ON vd.request_id = vr.request_id
      WHERE vr.user_id = $1`,
     [userId]
   );
@@ -24,12 +44,17 @@ export async function getProfileWithCompletion(userId: string) {
   return { profile, completionItems };
 }
 
-export async function updateProfile(userId: string, data: any) {
-  const fields = Object.keys(data);
+export async function updateProfile(userId: string, data: ProfileUpdateInput) {
+  const fields = (Object.keys(data) as Array<keyof ProfileUpdateInput>).filter(
+    (field) => data[field] !== undefined,
+  );
   if (fields.length === 0) return null;
 
-  const setClause = fields.map((f, i) => `${f} = $${i + 2}`).join(", ");
-  const values = [userId, ...fields.map(f => data[f])];
+  // SQL identifiers cannot be parameterized, so they must come only from this static map.
+  const setClause = fields
+    .map((field, index) => `${profileColumnByField[field]} = $${index + 2}`)
+    .join(", ");
+  const values = [userId, ...fields.map((field) => data[field])];
 
   const result = await pool.query(
     `UPDATE user_profiles 

@@ -49,6 +49,11 @@ CREATE TABLE user_profiles (
   student_id VARCHAR(100),
   enrollment_year INTEGER,
   profile_photo_url TEXT,
+  profile_completion_status VARCHAR(30) NOT NULL DEFAULT 'incomplete',
+  employment_type VARCHAR(50),
+  employer_name VARCHAR(255),
+  monthly_income DECIMAL(12,2),
+  income_source VARCHAR(100),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -60,6 +65,7 @@ CREATE TABLE verification_requests (
   status VARCHAR(20) NOT NULL DEFAULT 'pending',
   reviewer_id UUID REFERENCES users (user_id) ON DELETE SET NULL,
   reviewer_notes TEXT,
+  verification_source VARCHAR(30) NOT NULL DEFAULT 'manual_review',
   submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   reviewed_at TIMESTAMPTZ
 );
@@ -71,6 +77,9 @@ CREATE TABLE verification_documents (
   file_url TEXT NOT NULL,
   file_name VARCHAR(255),
   mime_type VARCHAR(100),
+  document_status VARCHAR(30) NOT NULL DEFAULT 'uploaded',
+  assessment_result JSONB,
+  validity_expires_at TIMESTAMPTZ,
   uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
@@ -117,6 +126,41 @@ CREATE TABLE funding_partners (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE users
+  ADD COLUMN partner_id UUID REFERENCES funding_partners (partner_id) ON DELETE SET NULL;
+
+CREATE TABLE investor_profiles (
+  investor_profile_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID UNIQUE NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+  display_name VARCHAR(255),
+  verification_status VARCHAR(30) NOT NULL DEFAULT 'pending',
+  funding_capacity DECIMAL(14,2),
+  preferred_categories TEXT[],
+  risk_preference VARCHAR(30),
+  max_exposure DECIMAL(14,2),
+  account_status VARCHAR(20) NOT NULL DEFAULT 'active',
+  kyc_status VARCHAR(30) NOT NULL DEFAULT 'incomplete',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE loan_products (
+  product_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id UUID NOT NULL REFERENCES funding_partners (partner_id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  min_amount DECIMAL(12,2) NOT NULL,
+  max_amount DECIMAL(12,2) NOT NULL,
+  interest_rate DECIMAL(5,2) NOT NULL,
+  duration_months INTEGER NOT NULL,
+  description TEXT,
+  eligibility JSONB DEFAULT '[]'::jsonb,
+  tags TEXT[] DEFAULT '{}',
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
  
 CREATE TABLE loan_applications (
   application_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -127,9 +171,21 @@ CREATE TABLE loan_applications (
   purpose_description TEXT,
   status VARCHAR(20) NOT NULL DEFAULT 'draft',
   trust_score_id UUID REFERENCES trust_scores (score_id) ON DELETE SET NULL,
+  product_id UUID REFERENCES loan_products (product_id) ON DELETE SET NULL,
   submitted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE funding_commitments (
+  commitment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  application_id UUID NOT NULL REFERENCES loan_applications (application_id) ON DELETE RESTRICT,
+  lender_user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE RESTRICT,
+  amount DECIMAL(12,2) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'committed',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (application_id, lender_user_id)
 );
  
 CREATE TABLE loan_offers (
@@ -260,15 +316,44 @@ CREATE INDEX idx_institutions_name ON institutions(name);
 CREATE INDEX idx_institutions_type ON institutions(type);
 CREATE UNIQUE INDEX idx_trust_scores_user_current ON trust_scores(user_id) WHERE is_current = TRUE;
 CREATE UNIQUE INDEX idx_repayments_provider_ref ON repayments(provider_reference) WHERE provider_reference IS NOT NULL;
-ALTER TABLE users ADD CONSTRAINT chk_users_role CHECK (role IN ('borrower', 'admin', 'partner_agent'));
+CREATE INDEX idx_user_profiles_completion ON user_profiles(profile_completion_status);
+CREATE INDEX idx_verification_requests_user ON verification_requests(user_id);
+CREATE INDEX idx_verification_requests_status ON verification_requests(status);
+CREATE INDEX idx_verification_documents_request ON verification_documents(request_id);
+CREATE INDEX idx_loan_products_category ON loan_products(category);
+CREATE INDEX idx_loan_products_active ON loan_products(is_active) WHERE is_active = TRUE;
+CREATE INDEX idx_investor_profiles_user ON investor_profiles(user_id);
+CREATE INDEX idx_loan_applications_user ON loan_applications(user_id);
+CREATE INDEX idx_loan_applications_status ON loan_applications(status);
+CREATE INDEX idx_loans_user ON loans(user_id);
+CREATE INDEX idx_loans_partner ON loans(partner_id);
+CREATE INDEX idx_loans_status ON loans(status);
+CREATE INDEX idx_funding_commitments_lender ON funding_commitments(lender_user_id, status, created_at DESC);
+CREATE INDEX idx_funding_commitments_application ON funding_commitments(application_id, status);
+ALTER TABLE users ADD CONSTRAINT chk_users_role CHECK (role IN ('borrower', 'lender', 'admin', 'partner_agent'));
 ALTER TABLE users ADD CONSTRAINT chk_users_account_status CHECK (account_status IN ('active', 'suspended', 'deactivated'));
+ALTER TABLE user_profiles ADD CONSTRAINT chk_profile_completion_status CHECK (profile_completion_status IN ('incomplete', 'pending_verification', 'under_review', 'verified', 'rejected', 'needs_update'));
  
 ALTER TABLE verification_requests ADD CONSTRAINT chk_verif_req_status CHECK (status IN ('pending', 'approved', 'rejected', 'needs_review'));
-ALTER TABLE verification_documents ADD CONSTRAINT chk_verif_doc_type CHECK (document_type IN ('nid', 'student_id', 'tuition_receipt', 'utility_bill', 'income_proof', 'other'));
+ALTER TABLE verification_requests ADD CONSTRAINT chk_verif_req_type CHECK (verification_type IN ('identity', 'student', 'document', 'guarantor', 'income', 'address'));
+ALTER TABLE verification_requests ADD CONSTRAINT chk_verif_req_source CHECK (verification_source IN ('manual_review', 'external_provider', 'demo_verification'));
+ALTER TABLE verification_documents ADD CONSTRAINT chk_verif_doc_type CHECK (document_type IN ('nid_front', 'nid_back', 'student_id', 'tuition_receipt', 'utility_bill', 'income_proof', 'address_proof', 'nid', 'other'));
+ALTER TABLE verification_documents ADD CONSTRAINT chk_verif_doc_status CHECK (document_status IN ('pending_upload', 'uploaded', 'under_review', 'verified', 'rejected', 'needs_resubmission', 'demo_verified'));
+
+ALTER TABLE investor_profiles ADD CONSTRAINT chk_investor_verification_status CHECK (verification_status IN ('pending', 'approved', 'rejected'));
+ALTER TABLE investor_profiles ADD CONSTRAINT chk_investor_account_status CHECK (account_status IN ('active', 'suspended', 'deactivated'));
+ALTER TABLE investor_profiles ADD CONSTRAINT chk_investor_kyc_status CHECK (kyc_status IN ('incomplete', 'pending_verification', 'under_review', 'verified', 'rejected', 'needs_update'));
+ALTER TABLE investor_profiles ADD CONSTRAINT chk_investor_risk_preference CHECK (risk_preference IS NULL OR risk_preference IN ('conservative', 'moderate', 'aggressive'));
+
+ALTER TABLE loan_products ADD CONSTRAINT chk_loan_products_category CHECK (category IN ('education', 'emergency', 'business', 'personal', 'development'));
+ALTER TABLE loan_products ADD CONSTRAINT chk_loan_products_amounts CHECK (min_amount > 0 AND max_amount >= min_amount);
+ALTER TABLE loan_products ADD CONSTRAINT chk_loan_products_rate CHECK (interest_rate >= 0);
+ALTER TABLE loan_products ADD CONSTRAINT chk_loan_products_tenure CHECK (duration_months > 0);
  
 ALTER TABLE trust_scores ADD CONSTRAINT chk_trust_scores_band CHECK (trust_band IN ('very_low_risk', 'low_risk', 'moderate_risk', 'high_risk', 'very_high_risk'));
  
 ALTER TABLE loan_applications ADD CONSTRAINT chk_loan_app_status CHECK (status IN ('draft', 'submitted', 'under_review', 'approved', 'rejected', 'disbursed', 'active', 'completed', 'overdue', 'defaulted'));
+ALTER TABLE funding_commitments ADD CONSTRAINT chk_funding_commitments_status CHECK (status IN ('committed', 'cancelled'));
 ALTER TABLE loan_offers ADD CONSTRAINT chk_loan_offer_status CHECK (status IN ('pending', 'accepted', 'declined', 'expired'));
 ALTER TABLE loans ADD CONSTRAINT chk_loans_status CHECK (status IN ('active', 'completed', 'overdue', 'delinquent', 'defaulted'));
  
@@ -282,6 +367,7 @@ ALTER TABLE fraud_flags ADD CONSTRAINT chk_fraud_flags_severity CHECK (severity 
  
 ALTER TABLE notifications ADD CONSTRAINT chk_notifications_delivery_status CHECK (delivery_status IN ('pending', 'sent', 'delivered', 'failed'));
 ALTER TABLE loan_applications ADD CONSTRAINT chk_loan_app_amount CHECK (requested_amount > 0);
+ALTER TABLE funding_commitments ADD CONSTRAINT chk_funding_commitments_amount CHECK (amount > 0);
 ALTER TABLE loan_offers ADD CONSTRAINT chk_loan_offer_amount CHECK (offered_amount > 0);
 ALTER TABLE loan_offers ADD CONSTRAINT chk_loan_offer_rate CHECK (interest_rate >= 0);
 ALTER TABLE loan_offers ADD CONSTRAINT chk_loan_offer_tenure CHECK (tenure_months > 0);
@@ -330,7 +416,10 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
 CREATE TRIGGER trg_user_profiles_updated_at BEFORE UPDATE ON user_profiles FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
 CREATE TRIGGER trg_funding_partners_updated_at BEFORE UPDATE ON funding_partners FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+CREATE TRIGGER trg_investor_profiles_updated_at BEFORE UPDATE ON investor_profiles FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+CREATE TRIGGER trg_loan_products_updated_at BEFORE UPDATE ON loan_products FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
 CREATE TRIGGER trg_loan_applications_updated_at BEFORE UPDATE ON loan_applications FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+CREATE TRIGGER trg_funding_commitments_updated_at BEFORE UPDATE ON funding_commitments FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
 CREATE TRIGGER trg_loans_updated_at BEFORE UPDATE ON loans FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
 CREATE TRIGGER trg_audit_logs_append_only BEFORE UPDATE OR DELETE ON audit_logs FOR EACH ROW EXECUTE PROCEDURE prevent_update_delete();
 CREATE TRIGGER trg_trust_scores_append_only BEFORE DELETE ON trust_scores FOR EACH ROW EXECUTE PROCEDURE prevent_update_delete();

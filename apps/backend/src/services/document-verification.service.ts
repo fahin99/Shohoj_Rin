@@ -50,7 +50,7 @@ export class DocumentVerificationService {
     await pool.query(
       `UPDATE verification_documents 
        SET assessment_result = $1, document_status = $2 
-       WHERE id = $3`,
+       WHERE document_id = $3`,
       [result, status, documentId]
     );
     

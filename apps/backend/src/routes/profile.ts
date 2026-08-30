@@ -4,6 +4,7 @@ import { requireRole } from "../middleware/authorize.js";
 import { getProfileWithCompletion, updateProfile } from "../services/profile.service.js";
 import { logAuditEvent } from "../services/audit.service.js";
 import { pool } from "../lib/db.js";
+import { profileUpdateSchema } from "@shohojrin/shared";
 
 const router = Router();
 
@@ -22,9 +23,19 @@ router.get("/", requireAuth, async (req, res) => {
 
 router.put("/", requireAuth, requireRole('borrower', 'lender'), async (req, res) => {
   const authReq = req as RequestWithAuth;
+  const parsed = profileUpdateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      success: false,
+      error: { message: "Invalid profile data", details: parsed.error.flatten() },
+    });
+  }
+
   try {
-    const data = req.body; // Ideally validate with profileUpdateSchema here
-    const updated = await updateProfile(authReq.auth!.userId, data);
+    const updated = await updateProfile(authReq.auth!.userId, parsed.data);
+    if (!updated) {
+      return res.status(400).json({ success: false, error: { message: "No fields to update" } });
+    }
     return res.json({ success: true, data: updated });
   } catch (error) {
     return res.status(500).json({ success: false, error: { message: "Failed to update profile" } });

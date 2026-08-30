@@ -10,7 +10,8 @@ router.post("/requests", requireAuth, async (req, res) => {
   const { verificationType } = req.body;
   try {
     const result = await pool.query(
-      `INSERT INTO verification_requests (user_id, verification_type) VALUES ($1, $2) RETURNING *`,
+      `INSERT INTO verification_requests (user_id, verification_type)
+       VALUES ($1, $2) RETURNING *, request_id AS id`,
       [authReq.auth!.userId, verificationType]
     );
     return res.status(201).json({ success: true, data: result.rows[0] });
@@ -23,11 +24,16 @@ router.get("/requests", requireAuth, async (req, res) => {
   const authReq = req as RequestWithAuth;
   try {
     const result = await pool.query(
-      `SELECT vr.*, json_agg(vd.*) as documents 
+      `SELECT vr.*, vr.request_id AS id,
+              COALESCE(
+                json_agg(to_jsonb(vd) || jsonb_build_object('id', vd.document_id))
+                  FILTER (WHERE vd.document_id IS NOT NULL),
+                '[]'::json
+              ) AS documents
        FROM verification_requests vr 
-       LEFT JOIN verification_documents vd ON vd.request_id = vr.id 
+       LEFT JOIN verification_documents vd ON vd.request_id = vr.request_id
        WHERE vr.user_id = $1 
-       GROUP BY vr.id`,
+       GROUP BY vr.request_id`,
       [authReq.auth!.userId]
     );
     return res.json({ success: true, data: result.rows });
@@ -41,11 +47,16 @@ router.get("/requests/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
-      `SELECT vr.*, json_agg(vd.*) as documents 
+      `SELECT vr.*, vr.request_id AS id,
+              COALESCE(
+                json_agg(to_jsonb(vd) || jsonb_build_object('id', vd.document_id))
+                  FILTER (WHERE vd.document_id IS NOT NULL),
+                '[]'::json
+              ) AS documents
        FROM verification_requests vr 
-       LEFT JOIN verification_documents vd ON vd.request_id = vr.id 
-       WHERE vr.id = $1 AND vr.user_id = $2
-       GROUP BY vr.id`,
+       LEFT JOIN verification_documents vd ON vd.request_id = vr.request_id
+       WHERE vr.request_id = $1 AND vr.user_id = $2
+       GROUP BY vr.request_id`,
       [id, authReq.auth!.userId] // Basic ownership check via SQL
     );
     if (!result.rows.length) {
@@ -64,8 +75,8 @@ router.put("/requests/:id/review", requireAuth, requireRole('admin', 'partner_ag
   try {
     const result = await pool.query(
       `UPDATE verification_requests 
-       SET status = $1, reviewer_id = $2, reviewer_notes = $3, reviewed_at = NOW(), verification_source = 'manual'
-       WHERE id = $4 RETURNING *`,
+       SET status = $1, reviewer_id = $2, reviewer_notes = $3, reviewed_at = NOW(), verification_source = 'manual_review'
+       WHERE request_id = $4 RETURNING *, request_id AS id`,
       [status, authReq.auth!.userId, reviewerNotes, id]
     );
     if (!result.rows.length) {

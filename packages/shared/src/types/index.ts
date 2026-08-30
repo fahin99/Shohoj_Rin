@@ -2,11 +2,7 @@ export type UserRole = "borrower" | "lender" | "partner_agent" | "admin";
 export type AccountStatus = "active" | "suspended" | "deactivated";
 export type LoanStatus =
   | "active"
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "disbursed"
-  | "closed"
+  | "completed"
   | "overdue"
   | "defaulted"
   | "delinquent";

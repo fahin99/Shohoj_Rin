@@ -52,7 +52,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
   const [tab, setTab] = useState<"schedule" | "transactions">("schedule");
   const [activeLoan, setActiveLoan] = useState<any>(null);
   const [repaymentSchedule, setRepaymentSchedule] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
             loansApi.getRepaymentSchedule(loan.id)
           ]);
           setTransactions(txs || []);
-          setRepaymentSchedule(sched?.installments || sched || []);
+          setRepaymentSchedule(sched || []);
         }
       } catch (e) {
         console.error("Failed to load loan details", e);

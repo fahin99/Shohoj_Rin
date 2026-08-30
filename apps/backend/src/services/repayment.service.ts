@@ -302,7 +302,7 @@ export async function recordRepayment(
       ? nextDueSchedule.status === "overdue"
         ? "overdue"
         : loanRow.status
-      : "closed";
+      : "completed";
     await client.query(
       `UPDATE loans
        SET status = $2,

@@ -54,7 +54,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [receiptData, setReceiptData] = useState<{
     receiptId: string;
-    closed: boolean;
+    completed: boolean;
     loanId: string;
     amount: number;
     fee: number;
@@ -106,10 +106,10 @@ export default function RepaymentPage({ onNavigate }: Props) {
               ✓
             </div>
             <h1 className="text-2xl font-semibold text-navy mb-1">
-              {receiptData.closed ? "Loan Fully Repaid! 🎉" : "Payment successful"}
+              {receiptData.completed ? "Loan Fully Repaid! 🎉" : "Payment successful"}
             </h1>
             <p className="text-sm text-stone-500 mb-6">
-              {receiptData.closed
+              {receiptData.completed
                 ? `Congratulations! You have completed all repayments for loan ${receiptData.loanId}.`
                 : `Your payment has been received and applied to loan ${receiptData.loanId}.`}
             </p>
@@ -358,12 +358,12 @@ export default function RepaymentPage({ onNavigate }: Props) {
                     const result = await loansApi.createRepayment(activeLoan.id, instalmentAmount, method);
                     setReceiptData({
                       receiptId: result.receiptId || "RCPT-" + Math.floor(Math.random() * 10000),
-                      closed: result.closed || false,
+                      completed: result.loan?.status === "completed",
                       loanId: activeLoan.id,
                       amount: instalmentAmount,
                       fee,
                       totalCharged,
-                      remainingAfter: result.closed ? 0 : remainingAfter,
+                      remainingAfter: result.loan?.status === "completed" ? 0 : remainingAfter,
                     });
                     setConfirmOpen(false);
                     setSuccess(true);

@@ -26,7 +26,7 @@ export interface StoredUserProfile {
     institutionId?: string | null;
   };
 }
-export function getDisplayName(user: StoredUserProfile | null, fallback: string) {
+export function getDisplayName(user: StoredUserProfile | null, fallback = "Account") {
   const fullName = user?.profile?.fullName?.trim();
   if (fullName) {
     return fullName;
