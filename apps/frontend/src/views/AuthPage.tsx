@@ -25,7 +25,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
     password: "",
     confirm: "",
     remember: false,
-    role: "borrower" as "borrower" | "lender",
+    
   });
   const update = (k: string, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -62,18 +62,15 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
             identifier: form.email.trim(),
             password: form.password,
           };
-      await apiRequest<{ user: unknown }>(mode === "register" ? "/auth/register" : "/auth/login", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
       if (mode === "register") {
-        const result = await apiRequest<{ user: { role: "borrower" | "lender" } }>(
-          "/auth/register",
-          {
-            method: "POST",
-            body: JSON.stringify(payload),
-          }
-        );
+        const result = await apiRequest<{
+          user: {
+            role: "borrower" | "lender";
+          };
+        }>("/auth/register", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
 
         onNavigate(
           result.user.role === "lender"
@@ -220,6 +217,45 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
                 onChange={(e) => update("phone", e.target.value)}
                 hint="We will send verification codes to this number."
               />
+            )}
+            {mode === "register" && (
+              <div>
+                <p className="text-sm font-medium text-navy mb-3">
+                  I want to join as
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRole("borrower")}
+                    className={`text-left p-4 border-[1.5px] rounded-[6px] transition-all ${
+                      role === "borrower"
+                        ? "border-teal bg-teal-light text-teal"
+                        : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
+                    }`}
+                  >
+                    <p className="font-medium">Customer / Borrower</p>
+                    <p className="text-xs mt-1">
+                      I want to apply for loans.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRole("lender")}
+                    className={`text-left p-4 border-[1.5px] rounded-[6px] transition-all ${
+                      role === "lender"
+                        ? "border-teal bg-teal-light text-teal"
+                        : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
+                    }`}
+                  >
+                    <p className="font-medium">Sponsor / Investor</p>
+                    <p className="text-xs mt-1">
+                      I want to fund borrowers.
+                    </p>
+                  </button>
+                </div>
+              </div>
             )}
             {mode !== "forgot" && (
               <PasswordInput

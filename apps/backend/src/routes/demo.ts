@@ -22,33 +22,58 @@ router.post("/skip-documents", requireAuth, requireRole("borrower"), async (req,
   const authReq = req as RequestWithAuth;
   const userId = authReq.auth!.userId;
   const client = await pool.connect();
-  
+
   try {
     await client.query("BEGIN");
-    
+
     const profileData = await getProfileWithCompletion(userId);
     if (!profileData) throw new Error("Profile not found");
-    
-    const requiredDocs = getDocumentRequirements(profileData.profile.role, profileData.profile.occupation);
+
+    const doc_reqs = getDocumentRequirements(
+      profileData.profile.role,
+      profileData.profile.occupation
+    );
+
+    const reqResult = await client.query(
+      `INSERT INTO verification_requests (
+        user_id,
+        verification_type,
+        status,
+        verification_source
+      )
+      VALUES ($1, 'document', 'approved', 'demo_verification')
+      RETURNING request_id`,
+      [userId]
+    );
+
+    const requestId = reqResult.rows[0].request_id;
+
     const createdRecords = [];
 
-    for (const docType of requiredDocs) {
-      const reqResult = await client.query(
-        `INSERT INTO verification_requests (user_id, verification_type, status, verification_source)
-         VALUES ($1, 'identity', 'approved', 'demo_verification')
-         RETURNING request_id`,
-        [userId]
+    for (const doc of doc_reqs) {
+      const assessmentResult = await demoProvider.assess(
+        doc.type,
+        "demo_id"
       );
-      const requestId = reqResult.rows[0].request_id;
-
-      const assessmentResult = await demoProvider.assess(docType, 'demo_id');
 
       const docResult = await client.query(
-        `INSERT INTO verification_documents (request_id, document_type, file_url, document_status, assessment_result)
-         VALUES ($1, $2, $3, 'demo_verified', $4) RETURNING *, document_id AS id`,
-        [requestId, docType, `demo://${docType}`, assessmentResult]
+        `INSERT INTO verification_documents (
+          request_id,
+          document_type,
+          file_url,
+          document_status,
+          assessment_result
+        )
+        VALUES ($1, $2, $3, 'demo_verified', $4)
+        RETURNING *, document_id AS id`,
+        [
+          requestId,
+          doc.type,
+          `demo://${doc.type}`,
+          assessmentResult,
+        ]
       );
-      
+
       createdRecords.push(docResult.rows[0]);
     }
 
@@ -60,7 +85,7 @@ router.post("/skip-documents", requireAuth, requireRole("borrower"), async (req,
     await logAuditEvent(userId, 'demo_skip_documents', 'user', userId, null, { skipped: true }, req);
 
     await client.query("COMMIT");
-    
+
     // Note: If you need to trigger trust score recalculation, do it here.
     // await recalculateAndPersistTrustScore(userId);
 
