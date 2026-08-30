@@ -70,8 +70,19 @@ export const investorProfileSchema = z.object({
 
 export const documentUploadSchema = z.object({
   documentType: z.enum([
-    "nid_front", "nid_back", "student_id", "tuition_receipt",
-    "utility_bill", "income_proof", "address_proof", "nid", "other",
+    "nid_front",
+    "nid_back",
+    "student_id",
+    "tuition_receipt",
+    "utility_bill",
+    "income_proof",
+    "address_proof",
+    "nid",
+    "tin_certificate",
+    "trade_license",
+    "incorporation_certificate",
+    "regulatory_license",
+    "other",
   ]),
   verificationRequestId: z.string().uuid().optional(),
 });

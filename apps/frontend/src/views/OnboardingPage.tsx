@@ -4,11 +4,12 @@ import { Button } from "../components/Button";
 import { TextInput, Select, Radio, Checkbox, FileUpload } from "../components/Input";
 import { Stepper } from "../components/Progress";
 import InstitutionCombobox from "../components/InstitutionCombobox";
-import { profileApi, documentsApi } from "../lib/api/index";
+import { profileApi, documentsApi, verificationApi } from "../lib/api/index";
 import type { PageName } from "../types";
 interface OnboardingPageProps {
   onNavigate: (page: PageName) => void;
 }
+
 const steps = [
   { label: "Personal & ID", sublabel: "Identity" },
   { label: "Financial", sublabel: "Profile" },
@@ -27,12 +28,13 @@ const goalOptions = [
 export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [doc_verif_req_id, set_doc_verif_req_id] = useState<string | null>(null);
   const [data, setData] = useState({
     fullName: "",
     dateOfBirth: "",
     gender: "",
     nidNumber: "",
-    adressLine: "",
+    addressLine: "",
     city: "",
     nidFrontUploaded: false,
     nidBackUploaded: false,
@@ -71,29 +73,63 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
       goals: d.goals.includes(g) ? d.goals.filter((x) => x !== g) : [...d.goals, g],
     }));
   };
-  const handleFileUpload = async (type: string, files: FileList | null, key: string) => {
-    if (!files || files.length === 0) {
-      update(key, false);
-      return;
+  const handleFileUpload = async (
+  type: string,
+  files: FileList | null,
+  key: string,
+) => {
+  if (!files || files.length === 0) {
+    update(key, false);
+    return;
+  }
+
+  const file = files[0];
+
+  try {
+    let requestId = doc_verif_req_id;
+
+    if (!requestId) {
+      const response = await verificationApi.createVerificationRequest("document");
+      requestId = response.request_id ?? response.id;
+
+      if (!requestId) {
+        throw new Error("Failed to create verification request");
+      }
+
+      set_doc_verif_req_id(requestId);
     }
-    const file = files[0];
+
     const reader = new FileReader();
+
     reader.onload = async (e) => {
-      const base64 = (e.target?.result as string).split(",")[1];
       try {
+        const result = e.target?.result;
+
+        if (typeof result !== "string") {
+          throw new Error("Failed to read file");
+        }
+
+        const base64 = result.split(",")[1];
+
         await documentsApi.uploadDocument({
           documentType: type,
+          verificationRequestId: requestId!,
           fileName: file.name,
           mimeType: file.type,
           fileData: base64,
         });
+
         update(key, true);
       } catch (err) {
         console.error("Upload failed", err);
       }
     };
+
     reader.readAsDataURL(file);
-  };
+  } catch (err) {
+    console.error("Failed to create verification request", err);
+  }
+};
   const next = async () => {
     try {
       await profileApi.updateProfile(data);
@@ -186,14 +222,14 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   label="National ID Number"
                   placeholder="1234567890"
                   value={data.nidNumber}
-                  onChange={(e) => update("nid", e.target.value)}
+                  onChange={(e) => update("nidNumber", e.target.value)}
                   hint="Your 10 or 17 digit NID number"
                 />
                 <TextInput
-                  label="adressLine"
+                  label="addressLine"
                   placeholder="House 12, Road 5, Block C"
-                  value={data.adressLine}
-                  onChange={(e) => update("adressLine", e.target.value)}
+                  value={data.addressLine}
+                  onChange={(e) => update("addressLine", e.target.value)}
                   required
                 />
                 <Select
@@ -232,12 +268,12 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     />
                     <FileUpload
                       label="NID Back Photo"
-                      hint="Back side with adressLine"
+                      hint="Back side with addressLine"
                       onChange={(files) => handleFileUpload("nid_back", files, "nidBackUploaded")}
                     />
                     <FileUpload
                       label="Utility Bill"
-                      hint="Optional proof of adressLine"
+                      hint="Optional proof of addressLine"
                       onChange={(files) =>
                         handleFileUpload("utility_bill", files, "utilityBillUploaded")
                       }
@@ -247,7 +283,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     <span className="text-sm text-sky font-bold mt-0.5">ℹ</span>
                     <p className="text-xs text-stone-600 leading-relaxed">
                       Your identity verification is saved securely. When applying for loans in the
-                      future, you will not need to provide your NID photo, full name, or adressLine
+                      future, you will not need to provide your NID photo, full name, or addressLine
                       again.
                     </p>
                   </div>

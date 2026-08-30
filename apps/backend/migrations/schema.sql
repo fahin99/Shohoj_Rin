@@ -337,7 +337,9 @@ ALTER TABLE user_profiles ADD CONSTRAINT chk_profile_completion_status CHECK (pr
 ALTER TABLE verification_requests ADD CONSTRAINT chk_verif_req_status CHECK (status IN ('pending', 'approved', 'rejected', 'needs_review'));
 ALTER TABLE verification_requests ADD CONSTRAINT chk_verif_req_type CHECK (verification_type IN ('identity', 'student', 'document', 'guarantor', 'income', 'address'));
 ALTER TABLE verification_requests ADD CONSTRAINT chk_verif_req_source CHECK (verification_source IN ('manual_review', 'external_provider', 'demo_verification'));
-ALTER TABLE verification_documents ADD CONSTRAINT chk_verif_doc_type CHECK (document_type IN ('nid_front', 'nid_back', 'student_id', 'tuition_receipt', 'utility_bill', 'income_proof', 'address_proof', 'nid', 'other'));
+ALTER TABLE verification_documents ADD CONSTRAINT chk_verif_doc_type CHECK (document_type IN (
+  'nid_front', 'nid_back', 'student_id', 'tuition_receipt', 'utility_bill', 'income_proof', 'address_proof', 'nid', 
+  'tin_certificate','trade_license','incorporation_certificate','regulatory_license','other'));
 ALTER TABLE verification_documents ADD CONSTRAINT chk_verif_doc_status CHECK (document_status IN ('pending_upload', 'uploaded', 'under_review', 'verified', 'rejected', 'needs_resubmission', 'demo_verified'));
 
 ALTER TABLE investor_profiles ADD CONSTRAINT chk_investor_verification_status CHECK (verification_status IN ('pending', 'approved', 'rejected'));

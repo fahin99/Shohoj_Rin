@@ -41,6 +41,16 @@ router.post("/upload", requireAuth, express.json({ limit: '10mb' }), async (req,
       RETURNING *, document_id AS id`,
       [requestId, documentType, fileUrl, documentStatus]
     );
+    if (auto_verify_docs) {
+      await pool.query(
+        `UPDATE verification_requests
+        SET status = 'approved',
+            verification_source = 'demo_verification',
+            reviewed_at = NOW()
+        WHERE request_id = $1`,
+        [requestId],
+      );
+    }
     
     return res.status(201).json({ success: true, data: result.rows[0] });
   } catch (error) {

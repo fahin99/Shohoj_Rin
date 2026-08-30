@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { FileUpload } from "../components/Input";
+import { documentsApi, verificationApi } from "../lib/api/index";
 import { Logo } from "../components/Logo";
 import { Button } from "../components/Button";
 import { TextInput, Select, Radio } from "../components/Input";
@@ -19,6 +21,13 @@ const steps = [
 export default function InvestorOnboarding({ onNavigate }: Props) {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [documentVerificationRequestId, setDocumentVerificationRequestId] = useState<string | null>(null);
+  const [documents, setDocuments] = useState({
+    tinCertificateUploaded: false,
+    tradeLicenseUploaded: false,
+    incorporationCertificateUploaded: false,
+    regulatoryLicenseUploaded: false,
+  });
   const [data, setData] = useState({
     fullName: "",
     phone: "",
@@ -28,7 +37,63 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
   });
 
   const update = (k: string, v: string) => setData((d) => ({ ...d, [k]: v }));
+  const handleDocumentUpload = async (
+    type: string,
+    files: FileList | null,
+    key: keyof typeof documents,
+  ) => {
+    if (!files || files.length === 0) {
+      setDocuments((d) => ({ ...d, [key]: false }));
+      return;
+    }
 
+    const file = files[0];
+
+    try {
+      let requestId = documentVerificationRequestId;
+
+      if (!requestId) {
+        const response = await verificationApi.createVerificationRequest("document");
+        requestId = response.request_id ?? response.id;
+
+        if (!requestId) {
+          throw new Error("Failed to create verification request");
+        }
+
+        setDocumentVerificationRequestId(requestId);
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = async (e) => {
+        try {
+          const result = e.target?.result;
+
+          if (typeof result !== "string") {
+            throw new Error("Failed to read file");
+          }
+
+          const base64 = result.split(",")[1];
+
+          await documentsApi.uploadDocument({
+            documentType: type,
+            verificationRequestId: requestId!,
+            fileName: file.name,
+            mimeType: file.type,
+            fileData: base64,
+          });
+
+          setDocuments((d) => ({ ...d, [key]: true }));
+        } catch (err) {
+          console.error("Upload failed", err);
+        }
+      };
+
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Failed to create verification request", err);
+    }
+  };
   const next = async () => {
     if (step < steps.length - 1) {
       setStep((s) => s + 1);
@@ -96,6 +161,67 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
                   value={data.phone}
                   onChange={(e) => update("phone", e.target.value)}
                 />
+                <div className="border-t border-stone-200 pt-5 mt-2">
+                  <div className="mb-4">
+                    <p className="text-sm font-semibold text-navy">
+                      Organization Documents
+                    </p>
+                    <p className="text-xs text-stone-500">
+                      Upload documents that establish your organization&apos;s identity,
+                      registration, and legitimacy. All documents are optional for now.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FileUpload
+                      label="TIN Certificate"
+                      hint="Optional"
+                      onChange={(files) =>
+                        handleDocumentUpload(
+                          "tin_certificate",
+                          files,
+                          "tinCertificateUploaded",
+                        )
+                      }
+                    />
+
+                    <FileUpload
+                      label="Trade License"
+                      hint="Optional"
+                      onChange={(files) =>
+                        handleDocumentUpload(
+                          "trade_license",
+                          files,
+                          "tradeLicenseUploaded",
+                        )
+                      }
+                    />
+
+                    <FileUpload
+                      label="Certificate of Incorporation / Registration"
+                      hint="Optional"
+                      onChange={(files) =>
+                        handleDocumentUpload(
+                          "incorporation_certificate",
+                          files,
+                          "incorporationCertificateUploaded",
+                        )
+                      }
+                    />
+
+                    <FileUpload
+                      label="Regulatory / Operating License"
+                      hint="Optional"
+                      onChange={(files) =>
+                        handleDocumentUpload(
+                          "regulatory_license",
+                          files,
+                          "regulatoryLicenseUploaded",
+                        )
+                      }
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}

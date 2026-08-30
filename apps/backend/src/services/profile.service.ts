@@ -24,7 +24,7 @@ const profileColumnByField = {
 
 export async function getProfileWithCompletion(userId: string) {
   const result = await pool.query(
-    `SELECT p.*, u.email, u.phone 
+    `SELECT p.*, u.email, u.phone, u.role 
      FROM user_profiles p
      JOIN users u ON u.user_id = p.user_id
      WHERE p.user_id = $1`,
@@ -67,8 +67,24 @@ export async function updateProfile(userId: string, data: ProfileUpdateInput) {
 }
 
 export function getDocumentRequirements(
-  occupationType: string | null | undefined
+  role: string,
+  occupationType: string | null | undefined,
 ) {
+  if (role === "lender") {
+    return [
+      { type: "tin_certificate", required: docu_verific_flag },
+      { type: "trade_license", required: docu_verific_flag },
+      {
+        type: "incorporation_certificate",
+        required: docu_verific_flag,
+      },
+      {
+        type: "regulatory_license",
+        required: docu_verific_flag,
+      },
+    ];
+  }
+
   switch (occupationType) {
     case "student":
       return [
@@ -78,9 +94,6 @@ export function getDocumentRequirements(
         { type: "utility_bill", required: docu_verific_flag },
       ];
 
-    case "salaried":
-    case "self_employed":
-    case "business":
     default:
       return [
         { type: "nid_front", required: docu_verific_flag },
@@ -91,7 +104,7 @@ export function getDocumentRequirements(
 }
 
 export function calculateCompletionStatus(profile: any, verifications: any[]): ProfileCompletionItem[] {
-  const doc_require = getDocumentRequirements(profile.occupation);
+  const doc_require = getDocumentRequirements(profile.role, profile.occupation);
   
   const items: ProfileCompletionItem[] = [];
   
