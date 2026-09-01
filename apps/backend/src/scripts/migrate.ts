@@ -52,23 +52,34 @@ async function listMigrationFiles() {
     .sort();
 }
 
-async function runMigrationFile(client: PoolClient, migrationName: string) {
-  const filePath = path.resolve(migrationDir, migrationName);
-  const sql = await fs.readFile(filePath, "utf-8");
+async function ensureFundingCommitments(client: PoolClient) {
+  const tableExists = await client.query(`SELECT to_regclass('public.funding_commitments') AS table_name`);
+  if (tableExists.rows[0].table_name) return;
 
-  await client.query("BEGIN");
-  try {
-    await client.query(sql);
-    await client.query("INSERT INTO migrations (name) VALUES ($1) ON CONFLICT (name) DO NOTHING", [
-      migrationName,
-    ]);
-    await client.query("COMMIT");
-    console.log(`Migration ${migrationName} completed successfully.`);
-  } catch (error) {
-    await client.query("ROLLBACK");
-    console.error(`Error executing migration ${migrationName}:`, error);
-    throw error;
-  }
+  console.log("Canonical schema is missing funding_commitments; repairing it from schema.sql definition...");
+  await client.query(`
+    CREATE TABLE funding_commitments (
+      commitment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      application_id UUID NOT NULL REFERENCES loan_applications (application_id) ON DELETE RESTRICT,
+      lender_user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE RESTRICT,
+      amount DECIMAL(12,2) NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'committed',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (application_id, lender_user_id)
+    );
+  `);
+  await client.query(`
+    ALTER TABLE funding_commitments
+      ADD CONSTRAINT chk_funding_commitments_status CHECK (status IN ('committed', 'cancelled')),
+      ADD CONSTRAINT chk_funding_commitments_amount CHECK (amount > 0);
+  `);
+  await client.query(`
+    CREATE INDEX idx_funding_commitments_lender
+      ON funding_commitments(lender_user_id, status, created_at DESC);
+    CREATE INDEX idx_funding_commitments_application
+      ON funding_commitments(application_id, status);
+  `);
 }
 
 async function migrate() {
@@ -81,6 +92,7 @@ async function migrate() {
         executed_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+
     const { rows } = await client.query("SELECT name FROM migrations");
     const executedMigrations = new Set(rows.map((r) => r.name));
     const schemaComplete = await hasCanonicalSchema(client);
@@ -94,12 +106,12 @@ async function migrate() {
         );
       }
 
+      // schema.sql is the only SQL migration file by design.
       const pendingFiles = (await listMigrationFiles()).filter(
-        (file) => !executedMigrations.has(file),
+        (file) => file !== schemaFile && !file.startsWith("2026_08_31_fix_funding_commitments"),
       );
       for (const migrationName of pendingFiles) {
-        if (migrationName === schemaFile) continue;
-        await runMigrationFile(client, migrationName);
+        throw new Error(`Unexpected SQL migration file found: ${migrationName}. Keep schema.sql as the sole canonical SQL file.`);
       }
 
       console.log("Canonical schema is already installed.");
@@ -110,16 +122,11 @@ async function migrate() {
       SELECT EXISTS (
         SELECT FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'users'
-      );
+      ) AS exists;
     `);
 
     if (existingSchemaCheck.rows[0].exists) {
-      const migrationFiles = (await listMigrationFiles()).filter(
-        (file) => !executedMigrations.has(file),
-      );
-      for (const migrationName of migrationFiles) {
-        await runMigrationFile(client, migrationName);
-      }
+      await ensureFundingCommitments(client);
 
       const schemaStillIncomplete = !(await hasCanonicalSchema(client));
       if (schemaStillIncomplete) {
@@ -128,7 +135,14 @@ async function migrate() {
         );
       }
 
-      console.log("Applied compatible migration patch to the existing database.");
+      if (!executedMigrations.has(schemaFile)) {
+        await client.query(
+          "INSERT INTO migrations (name) VALUES ($1) ON CONFLICT (name) DO NOTHING",
+          [schemaFile],
+        );
+      }
+
+      console.log("Applied compatible canonical-schema repair to the existing database.");
       return;
     }
 
