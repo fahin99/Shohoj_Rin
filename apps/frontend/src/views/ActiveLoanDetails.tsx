@@ -66,7 +66,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
         if (loan) {
           const [txs, sched] = await Promise.all([
             loansApi.getLoanTransactions(loan.id),
-            loansApi.getRepaymentSchedule(loan.id)
+            loansApi.getRepaymentSchedule(loan.id),
           ]);
           setTransactions(txs || []);
           setRepaymentSchedule(sched || []);
@@ -247,7 +247,11 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
                   header: "Status",
                   render: (r) => (
                     <div className="flex items-center gap-2 justify-end">
-                      <Badge variant={scheduleStatusVariant[r.status as RepaymentScheduleRow["status"]]} size="sm" dot>
+                      <Badge
+                        variant={scheduleStatusVariant[r.status as RepaymentScheduleRow["status"]]}
+                        size="sm"
+                        dot
+                      >
                         {scheduleStatusLabel[r.status as RepaymentScheduleRow["status"]]}
                       </Badge>
                       {r.status === "due" && (

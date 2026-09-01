@@ -59,10 +59,9 @@ async function runMigrationFile(client: PoolClient, migrationName: string) {
   await client.query("BEGIN");
   try {
     await client.query(sql);
-    await client.query(
-      "INSERT INTO migrations (name) VALUES ($1) ON CONFLICT (name) DO NOTHING",
-      [migrationName],
-    );
+    await client.query("INSERT INTO migrations (name) VALUES ($1) ON CONFLICT (name) DO NOTHING", [
+      migrationName,
+    ]);
     await client.query("COMMIT");
     console.log(`Migration ${migrationName} completed successfully.`);
   } catch (error) {
@@ -95,7 +94,9 @@ async function migrate() {
         );
       }
 
-      const pendingFiles = (await listMigrationFiles()).filter((file) => !executedMigrations.has(file));
+      const pendingFiles = (await listMigrationFiles()).filter(
+        (file) => !executedMigrations.has(file),
+      );
       for (const migrationName of pendingFiles) {
         if (migrationName === schemaFile) continue;
         await runMigrationFile(client, migrationName);
@@ -113,7 +114,9 @@ async function migrate() {
     `);
 
     if (existingSchemaCheck.rows[0].exists) {
-      const migrationFiles = (await listMigrationFiles()).filter((file) => !executedMigrations.has(file));
+      const migrationFiles = (await listMigrationFiles()).filter(
+        (file) => !executedMigrations.has(file),
+      );
       for (const migrationName of migrationFiles) {
         await runMigrationFile(client, migrationName);
       }

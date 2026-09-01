@@ -22,8 +22,14 @@ export async function seedLoanProducts(existingClient?: PoolClient) {
       maxAmount: 500000,
       interestRate: 8.0,
       durationMonths: 48,
-      description: "Affordable education financing for students pursuing higher education, covering tuition fees, books, and living expenses. Flexible repayment starts after graduation.",
-      eligibility: ["Enrolled in recognized institution", "Valid student ID", "Guarantor required for amounts above ৳2,00,000", "Bangladesh national"],
+      description:
+        "Affordable education financing for students pursuing higher education, covering tuition fees, books, and living expenses. Flexible repayment starts after graduation.",
+      eligibility: [
+        "Enrolled in recognized institution",
+        "Valid student ID",
+        "Guarantor required for amounts above ৳2,00,000",
+        "Bangladesh national",
+      ],
       tags: ["education", "tuition", "student", "low-interest"],
     },
     {
@@ -34,7 +40,8 @@ export async function seedLoanProducts(existingClient?: PoolClient) {
       maxAmount: 200000,
       interestRate: 10.5,
       durationMonths: 24,
-      description: "Quick-disbursement medical emergency loans for unexpected health expenses. Fast approval process with minimal documentation for urgent medical needs.",
+      description:
+        "Quick-disbursement medical emergency loans for unexpected health expenses. Fast approval process with minimal documentation for urgent medical needs.",
       eligibility: ["Valid NID", "Medical documentation", "Active bank account", "Age 18-60"],
       tags: ["emergency", "medical", "quick-disbursement", "health"],
     },
@@ -46,8 +53,14 @@ export async function seedLoanProducts(existingClient?: PoolClient) {
       maxAmount: 1500000,
       interestRate: 12.0,
       durationMonths: 36,
-      description: "Working capital financing for small and micro businesses. Supports inventory purchase, equipment maintenance, and operational expenses with flexible terms.",
-      eligibility: ["Business registration or trade license", "6 months business operation", "Income proof", "Valid NID"],
+      description:
+        "Working capital financing for small and micro businesses. Supports inventory purchase, equipment maintenance, and operational expenses with flexible terms.",
+      eligibility: [
+        "Business registration or trade license",
+        "6 months business operation",
+        "Income proof",
+        "Valid NID",
+      ],
       tags: ["business", "working-capital", "sme", "growth"],
     },
     {
@@ -58,7 +71,8 @@ export async function seedLoanProducts(existingClient?: PoolClient) {
       maxAmount: 100000,
       interestRate: 9.0,
       durationMonths: 18,
-      description: "Invest in your professional growth with loans for skill development courses, certifications, and vocational training programs.",
+      description:
+        "Invest in your professional growth with loans for skill development courses, certifications, and vocational training programs.",
       eligibility: ["Valid NID", "Course enrollment proof", "Age 18-45", "Bangladesh resident"],
       tags: ["skills", "training", "professional", "development"],
     },
@@ -70,8 +84,15 @@ export async function seedLoanProducts(existingClient?: PoolClient) {
       maxAmount: 300000,
       interestRate: 11.25,
       durationMonths: 30,
-      description: "Versatile personal loan for various needs including home repairs, family events, relocation expenses, and other personal requirements.",
-      eligibility: ["Valid NID", "Proof of income", "Active bank account", "Age 21-55", "Minimum 6 months employment"],
+      description:
+        "Versatile personal loan for various needs including home repairs, family events, relocation expenses, and other personal requirements.",
+      eligibility: [
+        "Valid NID",
+        "Proof of income",
+        "Active bank account",
+        "Age 21-55",
+        "Minimum 6 months employment",
+      ],
       tags: ["personal", "flexible", "multi-purpose"],
     },
     {
@@ -82,8 +103,14 @@ export async function seedLoanProducts(existingClient?: PoolClient) {
       maxAmount: 400000,
       interestRate: 10.0,
       durationMonths: 24,
-      description: "Tailored financing for rural entrepreneurs and agricultural businesses. Supports crop production, livestock, and rural enterprise expansion.",
-      eligibility: ["Rural residence proof", "Business or farming activity proof", "Valid NID", "Community reference"],
+      description:
+        "Tailored financing for rural entrepreneurs and agricultural businesses. Supports crop production, livestock, and rural enterprise expansion.",
+      eligibility: [
+        "Rural residence proof",
+        "Business or farming activity proof",
+        "Valid NID",
+        "Community reference",
+      ],
       tags: ["rural", "agriculture", "entrepreneur", "growth"],
     },
   ];

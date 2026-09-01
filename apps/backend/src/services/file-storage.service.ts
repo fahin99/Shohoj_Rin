@@ -3,7 +3,11 @@ import fs from "fs/promises";
 import crypto from "crypto";
 
 export interface FileStorageProvider {
-  upload(file: Buffer, originalName: string, mimeType: string): Promise<{ fileUrl: string; fileName: string }>;
+  upload(
+    file: Buffer,
+    originalName: string,
+    mimeType: string,
+  ): Promise<{ fileUrl: string; fileName: string }>;
   getFilePath(fileUrl: string): string;
   delete(fileUrl: string): Promise<void>;
 }
@@ -11,7 +15,7 @@ export interface FileStorageProvider {
 export class LocalFileStorage implements FileStorageProvider {
   private uploadDir: string;
   constructor(uploadDir?: string) {
-    this.uploadDir = uploadDir || path.join(process.cwd(), 'uploads');
+    this.uploadDir = uploadDir || path.join(process.cwd(), "uploads");
   }
   async upload(file: Buffer, originalName: string, mimeType: string) {
     await fs.mkdir(this.uploadDir, { recursive: true });
@@ -22,7 +26,7 @@ export class LocalFileStorage implements FileStorageProvider {
     return { fileUrl: `/uploads/${fileName}`, fileName: originalName };
   }
   getFilePath(fileUrl: string): string {
-    const fileName = fileUrl.replace('/uploads/', '');
+    const fileName = fileUrl.replace("/uploads/", "");
     return path.join(this.uploadDir, fileName);
   }
   async delete(fileUrl: string): Promise<void> {

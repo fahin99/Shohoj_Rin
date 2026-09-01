@@ -8,33 +8,33 @@ export interface VerificationProvider {
 
 export class DemoVerificationProvider implements VerificationProvider {
   async assess(documentType: string, documentId: string): Promise<AssessmentResult> {
-    let confidence = 0.80;
-    
+    let confidence = 0.8;
+
     switch (documentType) {
-      case 'nid_front':
-      case 'nid_back':
+      case "nid_front":
+      case "nid_back":
         confidence = 0.95;
         break;
-      case 'income_proof':
+      case "income_proof":
         confidence = 0.85;
         break;
-      case 'address_proof':
-        confidence = 0.90;
+      case "address_proof":
+        confidence = 0.9;
         break;
-      case 'student_id':
+      case "student_id":
         confidence = 0.88;
         break;
     }
-    
+
     return {
       documentType,
-      status: 'demo_verified',
+      status: "demo_verified",
       confidence: confidence,
       validity: true,
-      reason: 'Demo mode verified',
-      trustSignal: 'positive',
+      reason: "Demo mode verified",
+      trustSignal: "positive",
       assessmentTimestamp: new Date().toISOString(),
-      assessmentSource: 'demo_verification'
+      assessmentSource: "demo_verification",
     };
   }
 }
@@ -44,16 +44,16 @@ export class DocumentVerificationService {
 
   async assessDocument(documentId: string, documentType: string) {
     const result = await this.provider.assess(documentType, documentId);
-    
-    const status = result.validity ? (config.demoMode ? 'demo_verified' : 'verified') : 'rejected';
-    
+
+    const status = result.validity ? (config.demoMode ? "demo_verified" : "verified") : "rejected";
+
     await pool.query(
       `UPDATE verification_documents 
        SET assessment_result = $1, document_status = $2 
        WHERE document_id = $3`,
-      [result, status, documentId]
+      [result, status, documentId],
     );
-    
+
     return result;
   }
 }

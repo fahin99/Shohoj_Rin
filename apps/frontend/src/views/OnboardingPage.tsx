@@ -39,6 +39,9 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     nidFrontUploaded: false,
     nidBackUploaded: false,
     utilityBillUploaded: false,
+    incomeProofUploaded: false,
+    studentIdUploaded: false,
+    businessEvidenceUploaded: false,
     monthlyIncome: "",
     savingsAmount: "",
     existingLoans: "no",
@@ -73,63 +76,59 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
       goals: d.goals.includes(g) ? d.goals.filter((x) => x !== g) : [...d.goals, g],
     }));
   };
-  const handleFileUpload = async (
-  type: string,
-  files: FileList | null,
-  key: string,
-) => {
-  if (!files || files.length === 0) {
-    update(key, false);
-    return;
-  }
-
-  const file = files[0];
-
-  try {
-    let requestId = doc_verif_req_id;
-
-    if (!requestId) {
-      const response = await verificationApi.createVerificationRequest("document");
-      requestId = response.request_id ?? response.id;
-
-      if (!requestId) {
-        throw new Error("Failed to create verification request");
-      }
-
-      set_doc_verif_req_id(requestId);
+  const handleFileUpload = async (type: string, files: FileList | null, key: string) => {
+    if (!files || files.length === 0) {
+      update(key, false);
+      return;
     }
 
-    const reader = new FileReader();
+    const file = files[0];
 
-    reader.onload = async (e) => {
-      try {
-        const result = e.target?.result;
+    try {
+      let requestId = doc_verif_req_id;
 
-        if (typeof result !== "string") {
-          throw new Error("Failed to read file");
+      if (!requestId) {
+        const response = await verificationApi.createVerificationRequest("document");
+        requestId = response.request_id ?? response.id;
+
+        if (!requestId) {
+          throw new Error("Failed to create verification request");
         }
 
-        const base64 = result.split(",")[1];
-
-        await documentsApi.uploadDocument({
-          documentType: type,
-          verificationRequestId: requestId!,
-          fileName: file.name,
-          mimeType: file.type,
-          fileData: base64,
-        });
-
-        update(key, true);
-      } catch (err) {
-        console.error("Upload failed", err);
+        set_doc_verif_req_id(requestId);
       }
-    };
 
-    reader.readAsDataURL(file);
-  } catch (err) {
-    console.error("Failed to create verification request", err);
-  }
-};
+      const reader = new FileReader();
+
+      reader.onload = async (e) => {
+        try {
+          const result = e.target?.result;
+
+          if (typeof result !== "string") {
+            throw new Error("Failed to read file");
+          }
+
+          const base64 = result.split(",")[1];
+
+          await documentsApi.uploadDocument({
+            documentType: type,
+            verificationRequestId: requestId!,
+            fileName: file.name,
+            mimeType: file.type,
+            fileData: base64,
+          });
+
+          update(key, true);
+        } catch (err) {
+          console.error("Upload failed", err);
+        }
+      };
+
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Failed to create verification request", err);
+    }
+  };
   const next = async () => {
     try {
       await profileApi.updateProfile(data);
@@ -278,6 +277,13 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                         handleFileUpload("utility_bill", files, "utilityBillUploaded")
                       }
                     />
+                    <FileUpload
+                      label="Income Proof (salary slip, bank statement, or pay-stub)"
+                      hint="Used for all future loan applications — uploaded once"
+                      onChange={(files) =>
+                        handleFileUpload("income_proof", files, "incomeProofUploaded")
+                      }
+                    />
                   </div>
                   <div className="bg-sky-light/60 border border-sky/30 rounded-[6px] p-3 mt-3 flex items-start gap-2.5">
                     <span className="text-sm text-sky font-bold mt-0.5">ℹ</span>
@@ -424,6 +430,22 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   ]}
                   placeholder="Select income type"
                 />
+                {data.employmentType === "student" && (
+                  <FileUpload
+                    label="Student ID / enrollment evidence"
+                    hint="Required for student loan applications"
+                    onChange={(files) => handleFileUpload("student_id", files, "studentIdUploaded")}
+                  />
+                )}
+                {data.employmentType === "business" && (
+                  <FileUpload
+                    label="Business / trade evidence"
+                    hint="Trade license, business registration, or similar"
+                    onChange={(files) =>
+                      handleFileUpload("business_evidence", files, "businessEvidenceUploaded")
+                    }
+                  />
+                )}
               </div>
             </div>
           )}

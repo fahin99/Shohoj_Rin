@@ -12,7 +12,7 @@ function parseCorsOrigins(rawValue: string | undefined) {
 export const config = {
   port: parseInt(process.env.PORT || "5000", 10),
   nodeEnv: process.env.NODE_ENV || "development",
-  demoMode: process.env.SHOHOJRIN_DEMO_MODE === 'true',
+  demoMode: process.env.SHOHOJRIN_DEMO_MODE === "true",
   cors: {
     origin: parseCorsOrigins(process.env.CORS_ORIGIN),
     credentials: true,
@@ -29,7 +29,7 @@ export const config = {
 } as const;
 
 export function validateConfig() {
-  if (config.demoMode === true && config.nodeEnv === 'production') {
-    throw new Error('DEMO MODE cannot be enabled in production environments!');
+  if (config.demoMode === true && config.nodeEnv === "production") {
+    throw new Error("DEMO MODE cannot be enabled in production environments!");
   }
 }

@@ -1,7 +1,7 @@
 import { pool } from "../lib/db.js";
 import type { ProfileCompletionItem, ProfileUpdateInput } from "@shohojrin/shared";
-const docu_verific_flag=false;
-export const auto_verify_docs=true;
+const docu_verific_flag = false;
+export const auto_verify_docs = true;
 const profileColumnByField = {
   fullName: "full_name",
   dateOfBirth: "date_of_birth",
@@ -28,7 +28,7 @@ export async function getProfileWithCompletion(userId: string) {
      FROM user_profiles p
      JOIN users u ON u.user_id = p.user_id
      WHERE p.user_id = $1`,
-    [userId]
+    [userId],
   );
   const profile = result.rows[0];
   if (!profile) return null;
@@ -38,7 +38,7 @@ export async function getProfileWithCompletion(userId: string) {
      FROM verification_requests vr
      JOIN verification_documents vd ON vd.request_id = vr.request_id
      WHERE vr.user_id = $1`,
-    [userId]
+    [userId],
   );
 
   const completionItems = calculateCompletionStatus(profile, verifications.rows);
@@ -60,16 +60,13 @@ export async function updateProfile(userId: string, data: ProfileUpdateInput) {
      SET ${setClause}, updated_at = NOW() 
      WHERE user_id = $1 
      RETURNING *`,
-    values
+    values,
   );
-  
+
   return result.rows[0];
 }
 
-export function getDocumentRequirements(
-  role: string,
-  occupationType: string | null | undefined,
-) {
+export function getDocumentRequirements(role: string, occupationType: string | null | undefined) {
   if (role === "lender") {
     return [
       { type: "tin_certificate", required: docu_verific_flag },
@@ -103,31 +100,34 @@ export function getDocumentRequirements(
   }
 }
 
-export function calculateCompletionStatus(profile: any, verifications: any[]): ProfileCompletionItem[] {
+export function calculateCompletionStatus(
+  profile: any,
+  verifications: any[],
+): ProfileCompletionItem[] {
   const doc_require = getDocumentRequirements(profile.role, profile.occupation);
-  
+
   const items: ProfileCompletionItem[] = [];
-  
+
   // Basic info check
-  const hasBasicInfo = !!(profile.full_name && profile.date_of_birth && profile.city && profile.district);
+  const hasBasicInfo = !!(
+    profile.full_name &&
+    profile.date_of_birth &&
+    profile.city &&
+    profile.district
+  );
   items.push({
-    key: 'basic_info',
-    label: 'Basic Information',
+    key: "basic_info",
+    label: "Basic Information",
     completed: hasBasicInfo,
-    required: true
+    required: true,
   });
-  
+
   for (const doc of doc_require) {
-    const docVer = verifications.find(
-      v => v.document_type === doc.type
-    );
+    const docVer = verifications.find((v) => v.document_type === doc.type);
 
     const verified =
       !!docVer &&
-      (
-        docVer.document_status === "verified" ||
-        docVer.document_status === "demo_verified"
-      );
+      (docVer.document_status === "verified" || docVer.document_status === "demo_verified");
 
     items.push({
       key: doc.type,
@@ -136,6 +136,6 @@ export function calculateCompletionStatus(profile: any, verifications: any[]): P
       required: doc.required,
     });
   }
-  
+
   return items;
 }

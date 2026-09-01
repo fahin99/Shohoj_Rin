@@ -1,11 +1,6 @@
 export type UserRole = "borrower" | "lender" | "partner_agent" | "admin";
 export type AccountStatus = "active" | "suspended" | "deactivated";
-export type LoanStatus =
-  | "active"
-  | "completed"
-  | "overdue"
-  | "defaulted"
-  | "delinquent";
+export type LoanStatus = "active" | "completed" | "overdue" | "defaulted" | "delinquent";
 export type ApplicationStatus =
   | "draft"
   | "submitted"
@@ -20,15 +15,11 @@ export type ApplicationStatus =
   | "defaulted";
 export type TransactionType = "payment" | "repayment" | "disbursement" | "fee" | "refund";
 export type VerificationStatus = "pending" | "approved" | "rejected" | "needs_review";
-export type VerificationType = "identity" | "student" | "document" | "guarantor" | "income" | "address";
+export type VerificationType =
+  "identity" | "student" | "document" | "guarantor" | "income" | "address";
 export type VerificationSource = "manual_review" | "external_provider" | "demo_verification";
 export type ProfileCompletionStatus =
-  | "incomplete"
-  | "pending_verification"
-  | "under_review"
-  | "verified"
-  | "rejected"
-  | "needs_update";
+  "incomplete" | "pending_verification" | "under_review" | "verified" | "rejected" | "needs_update";
 export type DocumentStatus =
   | "pending_upload"
   | "uploaded"

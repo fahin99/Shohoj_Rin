@@ -1,13 +1,19 @@
 import { apiRequest } from "../api";
 import type { LoanProduct } from "@shohojrin/shared";
 
-export async function getLoanProducts(params?: { category?: string; search?: string; page?: number }) {
+export async function getLoanProducts(params?: {
+  category?: string;
+  search?: string;
+  page?: number;
+}) {
   const searchParams = new URLSearchParams();
-  if (params?.category && params.category !== 'all') searchParams.set('category', params.category);
-  if (params?.search) searchParams.set('search', params.search);
-  if (params?.page) searchParams.set('page', String(params.page));
+  if (params?.category && params.category !== "all") searchParams.set("category", params.category);
+  if (params?.search) searchParams.set("search", params.search);
+  if (params?.page) searchParams.set("page", String(params.page));
   const qs = searchParams.toString();
-  return apiRequest<{ products: LoanProduct[]; total: number }>(`/loan-products${qs ? `?${qs}` : ''}`);
+  return apiRequest<{ products: LoanProduct[]; total: number }>(
+    `/loan-products${qs ? `?${qs}` : ""}`,
+  );
 }
 
 export async function getLoanProduct(id: string) {

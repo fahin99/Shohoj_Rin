@@ -175,10 +175,10 @@ router.put("/applications/:id/review", requireAuth, requireAdmin, async (req, re
     const oldStatus = app.status;
 
     // Update application status
-    await client.query(
-      `UPDATE loan_applications SET status = $1 WHERE application_id = $2`,
-      [decision, req.params.id],
-    );
+    await client.query(`UPDATE loan_applications SET status = $1 WHERE application_id = $2`, [
+      decision,
+      req.params.id,
+    ]);
 
     // Record partner decision if partner is associated
     if (app.partner_id) {

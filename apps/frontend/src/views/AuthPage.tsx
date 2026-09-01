@@ -25,7 +25,6 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
     password: "",
     confirm: "",
     remember: false,
-    
   });
   const update = (k: string, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -52,16 +51,16 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
       const payload =
         mode === "register"
           ? {
-            fullName: form.name.trim(),
-            email: form.email.trim(),
-            phone: form.phone.trim() || undefined,
-            password: form.password,
-            role,
-          }
+              fullName: form.name.trim(),
+              email: form.email.trim(),
+              phone: form.phone.trim() || undefined,
+              password: form.password,
+              role,
+            }
           : {
-            identifier: form.email.trim(),
-            password: form.password,
-          };
+              identifier: form.email.trim(),
+              password: form.password,
+            };
       if (mode === "register") {
         const result = await apiRequest<{
           user: {
@@ -72,11 +71,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
           body: JSON.stringify(payload),
         });
 
-        onNavigate(
-          result.user.role === "lender"
-            ? "investor-onboarding"
-            : "onboarding"
-        );
+        onNavigate(result.user.role === "lender" ? "investor-onboarding" : "onboarding");
       } else {
         await apiRequest("/auth/login", {
           method: "POST",
@@ -94,7 +89,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
   };
   return (
     <div className="min-h-screen bg-offwhite flex">
-      { }
+      {}
       <div className="hidden lg:flex lg:w-[45%] bg-navy flex-col justify-between p-10">
         <Logo variant="white" size="lg" onClick={() => onNavigate("landing")} />
         <div>
@@ -132,13 +127,13 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
           © 2025 Shohoj Rin Technologies Ltd. BFIU Registered.
         </p>
       </div>
-      { }
+      {}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
           <div className="lg:hidden mb-8">
             <Logo onClick={() => onNavigate("landing")} />
           </div>
-          { }
+          {}
           {mode !== "forgot" && (
             <div className="flex gap-0 mb-7 bg-stone-100 border border-stone-200 rounded-[6px] p-1">
               {(["login", "register"] as const).map((m) => (
@@ -150,10 +145,11 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
                     setErrors({});
                     setSuccess(false);
                   }}
-                  className={`flex-1 py-1.5 text-sm font-medium rounded-[4px] transition-all ${mode === m
+                  className={`flex-1 py-1.5 text-sm font-medium rounded-[4px] transition-all ${
+                    mode === m
                       ? "bg-white text-navy shadow-nb-xs border border-stone-200"
                       : "text-stone-500 hover:text-navy"
-                    }`}
+                  }`}
                 >
                   {m === "login" ? "Log in" : "Register"}
                 </button>
@@ -220,9 +216,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
             )}
             {mode === "register" && (
               <div>
-                <p className="text-sm font-medium text-navy mb-3">
-                  I want to join as
-                </p>
+                <p className="text-sm font-medium text-navy mb-3">I want to join as</p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
@@ -235,9 +229,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
                     }`}
                   >
                     <p className="font-medium">Customer / Borrower</p>
-                    <p className="text-xs mt-1">
-                      I want to apply for loans.
-                    </p>
+                    <p className="text-xs mt-1">I want to apply for loans.</p>
                   </button>
 
                   <button
@@ -250,9 +242,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
                     }`}
                   >
                     <p className="font-medium">Sponsor / Investor</p>
-                    <p className="text-xs mt-1">
-                      I want to fund borrowers.
-                    </p>
+                    <p className="text-xs mt-1">I want to fund borrowers.</p>
                   </button>
                 </div>
               </div>

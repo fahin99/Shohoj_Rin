@@ -81,7 +81,15 @@ router.post("/", requireAuth, async (req, res) => {
         status,
         submitted_at AS "submittedAt",
         created_at AS "createdAt"`,
-      [userId, resolvedPartnerId, productId ?? null, requestedAmount, purpose, purposeDescription ?? null, trustScoreId],
+      [
+        userId,
+        resolvedPartnerId,
+        productId ?? null,
+        requestedAmount,
+        purpose,
+        purposeDescription ?? null,
+        trustScoreId,
+      ],
     );
 
     await client.query("COMMIT");

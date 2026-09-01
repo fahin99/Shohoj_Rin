@@ -19,7 +19,7 @@ app.use(
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.get("/", (_req, res) => {
   res.json({
     name: "ShohojRin Microcredit API Server",
@@ -50,7 +50,7 @@ async function start() {
     app.listen(config.port, () => {
       console.log(`\n  ShohojRin API server running on http://localhost:${config.port}`);
       if (config.demoMode) {
-        console.log('  ⚠️  DEMO MODE ENABLED — document bypass available');
+        console.log("  ⚠️  DEMO MODE ENABLED — document bypass available");
       }
       console.log(`  Health check: http://localhost:${config.port}/api/v1/health`);
       console.log(`  Environment: ${config.nodeEnv}`);

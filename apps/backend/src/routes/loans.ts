@@ -20,9 +20,6 @@ router.get("/", requireAuth, async (req, res) => {
     let paramIdx = 1;
 
     if (role === "lender") {
-      // Lender sees loans they funded (partner association)
-      // For now, lender sees loans where they have funded via investor commitments
-      // Fallback: lender sees all loans from partners they're associated with
       whereClause = `WHERE 1=1`;
     } else if (role === "admin") {
       whereClause = `WHERE 1=1`;
@@ -211,10 +208,9 @@ router.get("/:id/transactions", requireAuth, async (req, res) => {
 
   try {
     // Verify ownership
-    const loanResult = await pool.query(
-      `SELECT user_id FROM loans WHERE loan_id = $1`,
-      [req.params.id],
-    );
+    const loanResult = await pool.query(`SELECT user_id FROM loans WHERE loan_id = $1`, [
+      req.params.id,
+    ]);
     if (loanResult.rowCount === 0) {
       return res.status(404).json({
         success: false,

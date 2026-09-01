@@ -15,10 +15,10 @@ export async function createApplication(data: {
 
 export async function getApplications(params?: { status?: string; page?: number }) {
   const searchParams = new URLSearchParams();
-  if (params?.status && params.status !== 'all') searchParams.set('status', params.status);
-  if (params?.page) searchParams.set('page', String(params.page));
+  if (params?.status && params.status !== "all") searchParams.set("status", params.status);
+  if (params?.page) searchParams.set("page", String(params.page));
   const qs = searchParams.toString();
-  return apiRequest<{ applications: any[]; total: number }>(`/applications${qs ? `?${qs}` : ''}`);
+  return apiRequest<{ applications: any[]; total: number }>(`/applications${qs ? `?${qs}` : ""}`);
 }
 
 export async function getApplication(id: string) {

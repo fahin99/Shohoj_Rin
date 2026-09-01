@@ -44,7 +44,9 @@ function setFundingClient(options: { existing?: boolean; failAudit?: boolean } =
     if (sql.includes("FROM loan_applications")) {
       return {
         rowCount: 1,
-        rows: [{ application_id: "application-1", status: "submitted", requested_amount: "5000.00" }],
+        rows: [
+          { application_id: "application-1", status: "submitted", requested_amount: "5000.00" },
+        ],
       };
     }
     if (sql.includes("SELECT commitment_id")) {
@@ -58,14 +60,16 @@ function setFundingClient(options: { existing?: boolean; failAudit?: boolean } =
     if (sql.includes("INSERT INTO funding_commitments")) {
       return {
         rowCount: 1,
-        rows: [{
-          commitment_id: "commitment-1",
-          application_id: "application-1",
-          lender_user_id: "lender-1",
-          amount: "2000.00",
-          status: "committed",
-          created_at: "2026-01-01T00:00:00.000Z",
-        }],
+        rows: [
+          {
+            commitment_id: "commitment-1",
+            application_id: "application-1",
+            lender_user_id: "lender-1",
+            amount: "2000.00",
+            status: "committed",
+            created_at: "2026-01-01T00:00:00.000Z",
+          },
+        ],
       };
     }
     if (sql.includes("INSERT INTO audit_logs")) {
@@ -114,9 +118,17 @@ describe("investor funding commitments", () => {
       });
     });
 
-    expect(client.query.mock.calls.some(([sql]: [string]) => sql.includes("INSERT INTO funding_commitments"))).toBe(true);
-    expect(client.query.mock.calls.some(([sql]: [string]) => sql.includes("INSERT INTO audit_logs"))).toBe(true);
-    expect(client.query.mock.calls.map(([sql]: [string]) => sql).filter((sql) => sql === "COMMIT")).toHaveLength(1);
+    expect(
+      client.query.mock.calls.some(([sql]: [string]) =>
+        sql.includes("INSERT INTO funding_commitments"),
+      ),
+    ).toBe(true);
+    expect(
+      client.query.mock.calls.some(([sql]: [string]) => sql.includes("INSERT INTO audit_logs")),
+    ).toBe(true);
+    expect(
+      client.query.mock.calls.map(([sql]: [string]) => sql).filter((sql) => sql === "COMMIT"),
+    ).toHaveLength(1);
   });
 
   it("rejects a duplicate lender commitment without inserting a financial record", async () => {
@@ -132,7 +144,11 @@ describe("investor funding commitments", () => {
       expect(response.status).toBe(409);
     });
 
-    expect(client.query.mock.calls.some(([sql]: [string]) => sql.includes("INSERT INTO funding_commitments"))).toBe(false);
+    expect(
+      client.query.mock.calls.some(([sql]: [string]) =>
+        sql.includes("INSERT INTO funding_commitments"),
+      ),
+    ).toBe(false);
     expect(client.query.mock.calls.map(([sql]: [string]) => sql)).toContain("ROLLBACK");
   });
 
@@ -158,29 +174,33 @@ describe("investor funding commitments", () => {
     const query = pool.query as unknown as ReturnType<typeof vi.fn>;
     query.mockReset();
     query.mockResolvedValue({
-      rows: [{
-        commitmentId: "commitment-1",
-        applicationId: "application-1",
-        fundedAmount: "2000.00",
-        fundingStatus: "committed",
-        fundedAt: "2026-01-01T00:00:00.000Z",
-        purpose: "education",
-        requestedAmount: "5000.00",
-        applicationStatus: "submitted",
-        productName: null,
-        category: null,
-        interestRate: null,
-        partnerName: null,
-        trustBand: null,
-        loanId: null,
-        loanStatus: null,
-        principalAmount: null,
-      }],
+      rows: [
+        {
+          commitmentId: "commitment-1",
+          applicationId: "application-1",
+          fundedAmount: "2000.00",
+          fundingStatus: "committed",
+          fundedAt: "2026-01-01T00:00:00.000Z",
+          purpose: "education",
+          requestedAmount: "5000.00",
+          applicationStatus: "submitted",
+          productName: null,
+          category: null,
+          interestRate: null,
+          partnerName: null,
+          trustBand: null,
+          loanId: null,
+          loanStatus: null,
+          principalAmount: null,
+        },
+      ],
     });
 
     await withServer(async (baseUrl) => {
       const response = await fetch(`${baseUrl}/portfolio`);
-      const payload = (await response.json()) as { data: { totalDeployed: number; fundedLoans: unknown[] } };
+      const payload = (await response.json()) as {
+        data: { totalDeployed: number; fundedLoans: unknown[] };
+      };
 
       expect(response.status).toBe(200);
       expect(payload.data.totalDeployed).toBe(2000);

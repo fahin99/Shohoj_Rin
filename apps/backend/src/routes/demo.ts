@@ -31,7 +31,7 @@ router.post("/skip-documents", requireAuth, requireRole("borrower"), async (req,
 
     const doc_reqs = getDocumentRequirements(
       profileData.profile.role,
-      profileData.profile.occupation
+      profileData.profile.occupation,
     );
 
     const reqResult = await client.query(
@@ -43,7 +43,7 @@ router.post("/skip-documents", requireAuth, requireRole("borrower"), async (req,
       )
       VALUES ($1, 'document', 'approved', 'demo_verification')
       RETURNING request_id`,
-      [userId]
+      [userId],
     );
 
     const requestId = reqResult.rows[0].request_id;
@@ -51,10 +51,7 @@ router.post("/skip-documents", requireAuth, requireRole("borrower"), async (req,
     const createdRecords = [];
 
     for (const doc of doc_reqs) {
-      const assessmentResult = await demoProvider.assess(
-        doc.type,
-        "demo_id"
-      );
+      const assessmentResult = await demoProvider.assess(doc.type, "demo_id");
 
       const docResult = await client.query(
         `INSERT INTO verification_documents (
@@ -66,12 +63,7 @@ router.post("/skip-documents", requireAuth, requireRole("borrower"), async (req,
         )
         VALUES ($1, $2, $3, 'demo_verified', $4)
         RETURNING *, document_id AS id`,
-        [
-          requestId,
-          doc.type,
-          `demo://${doc.type}`,
-          assessmentResult,
-        ]
+        [requestId, doc.type, `demo://${doc.type}`, assessmentResult],
       );
 
       createdRecords.push(docResult.rows[0]);
@@ -79,10 +71,18 @@ router.post("/skip-documents", requireAuth, requireRole("borrower"), async (req,
 
     await client.query(
       `UPDATE user_profiles SET profile_completion_status = 'verified' WHERE user_id = $1`,
-      [userId]
+      [userId],
     );
 
-    await logAuditEvent(userId, 'demo_skip_documents', 'user', userId, null, { skipped: true }, req);
+    await logAuditEvent(
+      userId,
+      "demo_skip_documents",
+      "user",
+      userId,
+      null,
+      { skipped: true },
+      req,
+    );
 
     await client.query("COMMIT");
 

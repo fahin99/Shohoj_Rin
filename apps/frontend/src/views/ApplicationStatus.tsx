@@ -25,13 +25,20 @@ interface StoredApplication {
 
 function statusToStage(status: string): number {
   switch (status) {
-    case "submitted": return 1;
-    case "under-review": return 2;
-    case "info-required": return 2;
-    case "approved": return 3;
-    case "rejected": return 3;
-    case "disbursed": return 4;
-    default: return 1;
+    case "submitted":
+      return 1;
+    case "under-review":
+      return 2;
+    case "info-required":
+      return 2;
+    case "approved":
+      return 3;
+    case "rejected":
+      return 3;
+    case "disbursed":
+      return 4;
+    default:
+      return 1;
   }
 }
 
@@ -95,7 +102,9 @@ export default function ApplicationStatus({ onNavigate }: Props) {
     }
   }, []);
 
-  useEffect(() => { fetchApplications(); }, [fetchApplications]);
+  useEffect(() => {
+    fetchApplications();
+  }, [fetchApplications]);
 
   const filtered = applications.filter((a) => matchesFilter(a.status, filter));
   const selected = applications.find((a) => a.id === selectedId) ?? null;

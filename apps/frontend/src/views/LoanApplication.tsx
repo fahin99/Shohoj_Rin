@@ -4,9 +4,9 @@ import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
 import { Button } from "../components/Button";
 import { Stepper } from "../components/Progress";
 import { Alert } from "../components/Alert";
-import { CurrencyInput, TextInput, Select, FileUpload, Textarea } from "../components/Input";
+import { CurrencyInput, TextInput, Select, Textarea } from "../components/Input";
 import { formatTaka } from "../lib/format";
-import { loansApi, applicationsApi, documentsApi } from "../lib/api/index";
+import { loansApi, applicationsApi } from "../lib/api/index";
 import type { PageName, LoanProduct } from "../types";
 
 interface Props {
@@ -16,7 +16,6 @@ interface Props {
 const steps = [
   { label: "Loan details" },
   { label: "Employment & income" },
-  { label: "Documents" },
   { label: "Review & submit" },
 ];
 
@@ -50,8 +49,6 @@ interface FormState {
   phone: string;
   employment: string;
   monthlyIncome: number;
-  incomeProofUploaded: boolean;
-  addressProofUploaded: boolean;
 }
 
 export default function LoanApplication({ onNavigate }: Props) {
@@ -73,7 +70,15 @@ export default function LoanApplication({ onNavigate }: Props) {
     loadProducts();
   }, []);
 
-  const defaultLoan = loanProducts[0] || { id: "", maxAmount: 100000, minAmount: 1000, durationMonths: 12, interestRate: 10, name: "", provider: "" };
+  const defaultLoan = loanProducts[0] || {
+    id: "",
+    maxAmount: 100000,
+    minAmount: 1000,
+    durationMonths: 12,
+    interestRate: 10,
+    name: "",
+    provider: "",
+  };
 
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -86,8 +91,6 @@ export default function LoanApplication({ onNavigate }: Props) {
     phone: "",
     employment: "",
     monthlyIncome: 0,
-    incomeProofUploaded: false,
-    addressProofUploaded: false,
   });
 
   // Init form defaults when products load
@@ -115,30 +118,6 @@ export default function LoanApplication({ onNavigate }: Props) {
     setErrors((e) => ({ ...e, [key]: "" }));
   }
 
-  const handleFileUpload = async (type: string, files: FileList | null, key: keyof FormState) => {
-    if (!files || files.length === 0) {
-      update(key, false as FormState[typeof key]);
-      return;
-    }
-    const file = files[0];
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const base64 = (e.target?.result as string).split(",")[1];
-      try {
-        await documentsApi.uploadDocument({
-          documentType: type,
-          fileName: file.name,
-          mimeType: file.type,
-          fileData: base64,
-        });
-        update(key, true as FormState[typeof key]);
-      } catch (err) {
-        console.error("Upload failed", err);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
   function validateStep(current: number): boolean {
     const next: Record<string, string> = {};
     if (current === 0) {
@@ -155,10 +134,6 @@ export default function LoanApplication({ onNavigate }: Props) {
       if (!form.employment) next.employment = "Select your employment type";
       if (!form.monthlyIncome || form.monthlyIncome <= 0)
         next.monthlyIncome = "Enter your monthly income";
-    }
-    if (current === 2) {
-      if (!form.incomeProofUploaded) next.incomeProofUploaded = "Income proof is required";
-      if (!form.addressProofUploaded) next.addressProofUploaded = "Address proof is required";
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -179,7 +154,7 @@ export default function LoanApplication({ onNavigate }: Props) {
     try {
       await applicationsApi.createApplication({
         requestedAmount: form.amount,
-        purpose: "personal",
+        purpose: selectedLoan.category ?? "personal",
         purposeDescription: form.purpose,
         productId: form.loanId,
       });
@@ -337,31 +312,6 @@ export default function LoanApplication({ onNavigate }: Props) {
                     </>
                   )}
                   {step === 2 && (
-                    <>
-                      <div className="bg-teal-light/50 border border-teal/20 rounded-[6px] p-3 flex items-center gap-2">
-                        <span className="text-teal font-semibold text-xs">
-                          ✓ NID photo verified
-                        </span>
-                        <span className="text-xs text-stone-500">
-                          — Uploaded during onboarding. Only income and address proof needed below.
-                        </span>
-                      </div>
-                      <Alert variant="info" title="Accepted formats">
-                        Upload clear scans or photos (PDF, JPG, PNG) up to 5MB each.
-                      </Alert>
-                      <FileUpload
-                        label="Income proof (salary slip or bank statement)"
-                        error={errors.incomeProofUploaded}
-                        onChange={(files) => handleFileUpload("income-proof", files, "incomeProofUploaded")}
-                      />
-                      <FileUpload
-                        label="Address proof (utility bill)"
-                        error={errors.addressProofUploaded}
-                        onChange={(files) => handleFileUpload("address-proof", files, "addressProofUploaded")}
-                      />
-                    </>
-                  )}
-                  {step === 3 && (
                     <div className="flex flex-col gap-4">
                       <Alert variant="success" title="Ready to submit">
                         Please review your details below. You can go back to make changes before
@@ -381,6 +331,8 @@ export default function LoanApplication({ onNavigate }: Props) {
                           Identity &amp; employment
                         </p>
                         <DataRow label="Identity & NID" value="Verified from profile ✓" />
+                        <DataRow label="Address" value="Verified from profile ✓" />
+                        <DataRow label="Income source" value="Verified from profile ✓" />
                         <DataRow label="Contact mobile" value={form.phone || "—"} />
                         <DataRow
                           label="Employment type"
@@ -395,17 +347,11 @@ export default function LoanApplication({ onNavigate }: Props) {
                       </div>
                       <div className="border-t border-stone-200 pt-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">
-                          Documents
+                          Verification from onboarding
                         </p>
-                        <DataRow label="NID Card" value="Verified in profile ✓" />
-                        <DataRow
-                          label="Income proof"
-                          value={form.incomeProofUploaded ? "Uploaded" : "Missing"}
-                        />
-                        <DataRow
-                          label="Address proof"
-                          value={form.addressProofUploaded ? "Uploaded" : "Missing"}
-                        />
+                        <DataRow label="Identity" value="Verified ✓" />
+                        <DataRow label="Address" value="Verified ✓" />
+                        <DataRow label="Income" value="Verified ✓" />
                       </div>
                     </div>
                   )}

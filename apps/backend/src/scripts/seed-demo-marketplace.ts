@@ -90,7 +90,9 @@ async function seedDemoMarketplace() {
     );
 
     if (borrowers.rowCount === 0) {
-      throw new Error("No borrower users found. Please seed user accounts before running demo marketplace seeding.");
+      throw new Error(
+        "No borrower users found. Please seed user accounts before running demo marketplace seeding.",
+      );
     }
 
     const products = await client.query(
@@ -102,15 +104,52 @@ async function seedDemoMarketplace() {
     );
 
     if (products.rowCount === 0) {
-      throw new Error("No active loan products exist. Seed loan products before generating demo applications.");
+      throw new Error(
+        "No active loan products exist. Seed loan products before generating demo applications.",
+      );
     }
 
     const applicationTemplates = [
-      { userIndex: 0, productName: "Student Tuition Support Loan", requestedAmount: 180000, purpose: "Tuition fees", status: "submitted", daysAgo: 5 },
-      { userIndex: 1, productName: "Small Business Working Capital Facility", requestedAmount: 450000, purpose: "Inventory purchase", status: "under_review", daysAgo: 9 },
-      { userIndex: 2, productName: "Emergency Medical Assistance", requestedAmount: 120000, purpose: "Medical treatment", status: "approved", daysAgo: 12 },
-      { userIndex: 3, productName: "Personal Flexible Loan", requestedAmount: 210000, purpose: "Home repair", status: "submitted", daysAgo: 3 },
-      { userIndex: 4, productName: "Skills & Professional Development Loan", requestedAmount: 65000, purpose: "Certification course", status: "approved", daysAgo: 15 },
+      {
+        userIndex: 0,
+        productName: "Student Tuition Support Loan",
+        requestedAmount: 180000,
+        purpose: "Tuition fees",
+        status: "submitted",
+        daysAgo: 5,
+      },
+      {
+        userIndex: 1,
+        productName: "Small Business Working Capital Facility",
+        requestedAmount: 450000,
+        purpose: "Inventory purchase",
+        status: "under_review",
+        daysAgo: 9,
+      },
+      {
+        userIndex: 2,
+        productName: "Emergency Medical Assistance",
+        requestedAmount: 120000,
+        purpose: "Medical treatment",
+        status: "approved",
+        daysAgo: 12,
+      },
+      {
+        userIndex: 3,
+        productName: "Personal Flexible Loan",
+        requestedAmount: 210000,
+        purpose: "Home repair",
+        status: "submitted",
+        daysAgo: 3,
+      },
+      {
+        userIndex: 4,
+        productName: "Skills & Professional Development Loan",
+        requestedAmount: 65000,
+        purpose: "Certification course",
+        status: "approved",
+        daysAgo: 15,
+      },
     ];
 
     for (const template of applicationTemplates) {

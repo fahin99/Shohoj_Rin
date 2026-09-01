@@ -23,7 +23,7 @@ function requireLender(req: RequestWithAuth, res: any, next: any) {
   return next();
 }
 
-// GET /api/v1/investor/profile
+// GET /api/v1/investor/profile — read lender profile (auto-create stub if missing)
 router.get("/profile", requireAuth, requireLender, async (req, res) => {
   const authReq = req as RequestWithAuth;
   const userId = authReq.auth!.userId;
@@ -31,69 +31,55 @@ router.get("/profile", requireAuth, requireLender, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT
-        ip.investor_profile_id AS "investorProfileId",
-        ip.user_id AS "userId",
-        ip.display_name AS "displayName",
-        ip.verification_status AS "verificationStatus",
-        ip.funding_capacity AS "fundingCapacity",
-        ip.preferred_categories AS "preferredCategories",
-        ip.risk_preference AS "riskPreference",
-        ip.max_exposure AS "maxExposure",
-        ip.account_status AS "accountStatus",
-        ip.kyc_status AS "kycStatus",
-        ip.created_at AS "createdAt",
-        ip.updated_at AS "updatedAt"
-       FROM investor_profiles ip
-       WHERE ip.user_id = $1`,
+         investor_profile_id AS "investorProfileId",
+         user_id AS "userId",
+         display_name AS "displayName",
+         verification_status AS "verificationStatus",
+         funding_capacity AS "fundingCapacity",
+         preferred_categories AS "preferredCategories",
+         risk_preference AS "riskPreference",
+         max_exposure AS "maxExposure",
+         account_status AS "accountStatus",
+         kyc_status AS "kycStatus",
+         created_at AS "createdAt",
+         updated_at AS "updatedAt"
+       FROM investor_profiles
+       WHERE user_id = $1`,
       [userId],
     );
 
     if (result.rowCount === 0) {
-      // Auto-create profile for new investors
-      const createResult = await pool.query(
-        `INSERT INTO investor_profiles (user_id)
-         VALUES ($1)
+      const insert = await pool.query(
+        `INSERT INTO investor_profiles (user_id, verification_status, kyc_status, account_status)
+         VALUES ($1, 'pending', 'incomplete', 'active')
          RETURNING
-          investor_profile_id AS "investorProfileId",
-          user_id AS "userId",
-          display_name AS "displayName",
-          verification_status AS "verificationStatus",
-          funding_capacity AS "fundingCapacity",
-          preferred_categories AS "preferredCategories",
-          risk_preference AS "riskPreference",
-          max_exposure AS "maxExposure",
-          account_status AS "accountStatus",
-          kyc_status AS "kycStatus",
-          created_at AS "createdAt",
-          updated_at AS "updatedAt"`,
+           investor_profile_id AS "investorProfileId",
+           user_id AS "userId",
+           display_name AS "displayName",
+           verification_status AS "verificationStatus",
+           funding_capacity AS "fundingCapacity",
+           preferred_categories AS "preferredCategories",
+           risk_preference AS "riskPreference",
+           max_exposure AS "maxExposure",
+           account_status AS "accountStatus",
+           kyc_status AS "kycStatus",
+           created_at AS "createdAt",
+           updated_at AS "updatedAt"`,
         [userId],
       );
-      return res.status(200).json({
-        success: true,
-        data: createResult.rows[0],
-      });
+      return res.status(200).json({ success: true, data: insert.rows[0] });
     }
 
-    const profile = result.rows[0] as any;
-    return res.status(200).json({
-      success: true,
-      data: {
-        ...profile,
-        fundingCapacity: profile.fundingCapacity ? parseFloat(profile.fundingCapacity) : null,
-        maxExposure: profile.maxExposure ? parseFloat(profile.maxExposure) : null,
-        preferredCategories: profile.preferredCategories ?? [],
-      },
-    });
+    return res.status(200).json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error("Failed to fetch investor profile:", error);
-    return res.status(500).json({
-      success: false,
-      error: { message: "Failed to fetch investor profile" },
-    });
+    return res
+      .status(500)
+      .json({ success: false, error: { message: "Failed to fetch investor profile" } });
   }
 });
 
-// PUT /api/v1/investor/profile
+// PUT /api/v1/investor/profile — upsert lender profile (preferences, capacity, risk)
 router.put("/profile", requireAuth, requireLender, async (req, res) => {
   const authReq = req as RequestWithAuth;
   const userId = authReq.auth!.userId;
@@ -107,132 +93,205 @@ router.put("/profile", requireAuth, requireLender, async (req, res) => {
   }
 
   const data = parsed.data;
-
-  try {
-    const setClauses: string[] = [];
-    const params: any[] = [];
-    let paramIdx = 1;
-
-    if (data.displayName !== undefined) {
-      setClauses.push(`display_name = $${paramIdx++}`);
-      params.push(data.displayName);
-    }
-    if (data.fundingCapacity !== undefined) {
-      setClauses.push(`funding_capacity = $${paramIdx++}`);
-      params.push(data.fundingCapacity);
-    }
-    if (data.preferredCategories !== undefined) {
-      setClauses.push(`preferred_categories = $${paramIdx++}`);
-      params.push(data.preferredCategories);
-    }
-    if (data.riskPreference !== undefined) {
-      setClauses.push(`risk_preference = $${paramIdx++}`);
-      params.push(data.riskPreference);
-    }
-    if (data.maxExposure !== undefined) {
-      setClauses.push(`max_exposure = $${paramIdx++}`);
-      params.push(data.maxExposure);
-    }
-
-    if (setClauses.length === 0) {
+  const allowedCategories = ["education", "emergency", "business", "personal", "development"];
+  if (data.preferredCategories) {
+    const invalid = data.preferredCategories.filter((c) => !allowedCategories.includes(c));
+    if (invalid.length > 0) {
       return res.status(400).json({
         success: false,
-        error: { message: "No fields to update" },
+        error: { message: `Unsupported category values: ${invalid.join(", ")}` },
       });
     }
+  }
 
-    params.push(userId);
+  try {
     const result = await pool.query(
-      `UPDATE investor_profiles
-       SET ${setClauses.join(", ")}
-       WHERE user_id = $${paramIdx}
+      `INSERT INTO investor_profiles (
+         user_id,
+         display_name,
+         funding_capacity,
+         preferred_categories,
+         risk_preference,
+         max_exposure,
+         verification_status,
+         kyc_status,
+         account_status
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', 'incomplete', 'active')
+       ON CONFLICT (user_id) DO UPDATE SET
+         display_name = COALESCE(EXCLUDED.display_name, investor_profiles.display_name),
+         funding_capacity = COALESCE(EXCLUDED.funding_capacity, investor_profiles.funding_capacity),
+         preferred_categories = COALESCE(EXCLUDED.preferred_categories, investor_profiles.preferred_categories),
+         risk_preference = COALESCE(EXCLUDED.risk_preference, investor_profiles.risk_preference),
+         max_exposure = COALESCE(EXCLUDED.max_exposure, investor_profiles.max_exposure),
+         updated_at = NOW()
        RETURNING
-        investor_profile_id AS "investorProfileId",
-        user_id AS "userId",
-        display_name AS "displayName",
-        verification_status AS "verificationStatus",
-        funding_capacity AS "fundingCapacity",
-        preferred_categories AS "preferredCategories",
-        risk_preference AS "riskPreference",
-        max_exposure AS "maxExposure",
-        account_status AS "accountStatus",
-        kyc_status AS "kycStatus",
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"`,
-      params,
+         investor_profile_id AS "investorProfileId",
+         user_id AS "userId",
+         display_name AS "displayName",
+         verification_status AS "verificationStatus",
+         funding_capacity AS "fundingCapacity",
+         preferred_categories AS "preferredCategories",
+         risk_preference AS "riskPreference",
+         max_exposure AS "maxExposure",
+         account_status AS "accountStatus",
+         kyc_status AS "kycStatus",
+         created_at AS "createdAt",
+         updated_at AS "updatedAt"`,
+      [
+        userId,
+        data.displayName ?? null,
+        data.fundingCapacity ?? null,
+        data.preferredCategories ?? null,
+        data.riskPreference ?? null,
+        data.maxExposure ?? null,
+      ],
     );
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({
-        success: false,
-        error: { message: "Investor profile not found" },
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: result.rows[0],
-    });
+    return res.status(200).json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error("Failed to update investor profile:", error);
-    return res.status(500).json({
-      success: false,
-      error: { message: "Failed to update investor profile" },
-    });
+    return res
+      .status(500)
+      .json({ success: false, error: { message: "Failed to update investor profile" } });
   }
 });
 
-// GET /api/v1/investor/opportunities — eligible funding opportunities
+// GET /api/v1/investor/opportunities — lender-only application queue
 router.get("/opportunities", requireAuth, requireLender, async (req, res) => {
+  const authReq = req as RequestWithAuth;
+  const userId = authReq.auth!.userId;
+
   try {
     const page = Math.max(1, parseInt(String(req.query.page || "1"), 10));
     const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit || "20"), 10)));
     const offset = (page - 1) * limit;
 
-    // Show submitted/approved applications as opportunities
-    // Privacy: expose only decision-relevant data, NO raw NID/documents
     const result = await pool.query(
-      `SELECT
-        la.application_id AS "applicationId",
-        la.purpose,
-        la.requested_amount AS "requestedAmount",
-        la.status,
-        la.submitted_at AS "submittedAt",
-        lp.name AS "productName",
-        lp.category,
-        lp.interest_rate AS "interestRate",
-        lp.duration_months AS "durationMonths",
-        fp.name AS "partnerName",
-        ts.trust_band AS "trustBand",
-        ts.score AS "trustScore",
-        up.profile_completion_status AS "verificationStatus",
-        CASE WHEN EXISTS (
-          SELECT 1 FROM verification_requests vr
-          WHERE vr.user_id = la.user_id AND vr.verification_type = 'income' AND vr.status = 'approved'
-        ) THEN TRUE ELSE FALSE END AS "incomeVerified"
-       FROM loan_applications la
-       LEFT JOIN loan_products lp ON lp.product_id = la.product_id
-       LEFT JOIN funding_partners fp ON fp.partner_id = la.partner_id
-       LEFT JOIN trust_scores ts ON ts.score_id = la.trust_score_id
-       LEFT JOIN user_profiles up ON up.user_id = la.user_id
-        WHERE la.status IN ('submitted', 'under_review', 'approved')
-          AND la.requested_amount > COALESCE(
-            (SELECT SUM(fc.amount)
+      `WITH lender_preferences AS (
+         SELECT u.cat AS category, u.priority
+         FROM investor_profiles ip
+         CROSS JOIN LATERAL UNNEST(COALESCE(ip.preferred_categories, ARRAY[]::text[]))
+           WITH ORDINALITY AS u(cat, priority)
+         WHERE ip.user_id = $1
+           AND ip.preferred_categories IS NOT NULL
+           AND array_length(ip.preferred_categories, 1) > 0
+       ),
+       eligible_apps AS (
+         SELECT
+           la.application_id AS "applicationId",
+           up.full_name AS "borrowerName",
+           up.profile_completion_status AS "borrowerProfileStatus",
+           la.purpose,
+           la.purpose_description AS "purposeDescription",
+           la.requested_amount AS "requestedAmount",
+           la.status,
+           la.submitted_at AS "submittedAt",
+           la.product_id AS "productId",
+           lp.name AS "productName",
+           lp.category,
+           lp.min_amount AS "minAmount",
+           lp.max_amount AS "maxAmount",
+           lp.interest_rate AS "interestRate",
+           lp.duration_months AS "durationMonths",
+           fp.name AS "partnerName",
+           ts.score_id AS "trustScoreId",
+           ts.trust_band AS "trustBand",
+           ts.score AS "trustScore",
+           (up.nid_number IS NOT NULL) AS "nidOnFile",
+           CASE WHEN EXISTS (
+             SELECT 1 FROM verification_requests vr
+             WHERE vr.user_id = la.user_id
+               AND vr.verification_type = 'income'
+               AND vr.status = 'approved'
+           ) THEN TRUE ELSE FALSE END AS "incomeVerified",
+           CASE WHEN EXISTS (
+             SELECT 1 FROM verification_requests vr
+             WHERE vr.user_id = la.user_id
+               AND vr.verification_type = 'address'
+               AND vr.status = 'approved'
+           ) THEN TRUE ELSE FALSE END AS "addressVerified",
+           CASE WHEN EXISTS (
+             SELECT 1 FROM verification_requests vr
+             WHERE vr.user_id = la.user_id
+               AND vr.verification_type = 'identity'
+               AND vr.status = 'approved'
+           ) THEN TRUE ELSE FALSE END AS "identityVerified",
+           COALESCE((
+             SELECT SUM(fc.amount)
              FROM funding_commitments fc
              WHERE fc.application_id = la.application_id
-               AND fc.status = 'committed'),
-            0
-          )
-       ORDER BY la.submitted_at DESC
-       LIMIT $1 OFFSET $2`,
-      [limit, offset],
+               AND fc.status = 'committed'
+           ), 0) AS "committedAmount",
+           COALESCE((
+             SELECT json_agg(json_build_object(
+               'name', tsf.factor_name,
+               'score', tsf.factor_value,
+               'weight', tsf.factor_weight,
+               'description', tsf.description
+             ) ORDER BY tsf.factor_name)
+             FROM trust_score_factors tsf
+             WHERE tsf.score_id = ts.score_id
+           ), '[]'::json) AS "trustFactors"
+         FROM loan_applications la
+         LEFT JOIN loan_products lp ON lp.product_id = la.product_id
+         LEFT JOIN funding_partners fp ON fp.partner_id = la.partner_id
+         LEFT JOIN trust_scores ts ON ts.score_id = la.trust_score_id
+         LEFT JOIN user_profiles up ON up.user_id = la.user_id
+         WHERE la.status IN ('submitted', 'under_review', 'approved')
+           AND la.requested_amount > COALESCE((
+             SELECT SUM(fc.amount)
+             FROM funding_commitments fc
+             WHERE fc.application_id = la.application_id
+               AND fc.status = 'committed'
+           ), 0)
+       )
+       SELECT
+         ea."applicationId",
+         ea."borrowerName",
+         ea."borrowerProfileStatus",
+         ea.purpose,
+         ea."purposeDescription",
+         ea."requestedAmount",
+         ea.status,
+         ea."submittedAt",
+         ea."productId",
+         ea."productName",
+         ea.category,
+         ea."minAmount",
+         ea.maxAmount,
+         ea."interestRate",
+         ea."durationMonths",
+         ea."partnerName",
+         ea."trustScoreId",
+         ea."trustBand",
+         ea."trustScore",
+         ea."nidOnFile",
+         ea."incomeVerified",
+         ea."addressVerified",
+         ea."identityVerified",
+         ea."committedAmount",
+         ea."trustFactors"
+       FROM eligible_apps ea
+       LEFT JOIN lender_preferences lpref ON lpref.category = ea.category
+       WHERE NOT EXISTS (SELECT 1 FROM lender_preferences)
+          OR lpref.category IS NOT NULL
+       ORDER BY
+         CASE WHEN EXISTS (SELECT 1 FROM lender_preferences) THEN lpref.priority END,
+         ea."submittedAt" DESC
+       LIMIT $2 OFFSET $3`,
+      [userId, limit, offset],
     );
 
     const opportunities = result.rows.map((row: any) => ({
       ...row,
       requestedAmount: parseFloat(row.requestedAmount),
+      minAmount: row.minAmount ? parseFloat(row.minAmount) : null,
+      maxAmount: row.maxAmount ? parseFloat(row.maxAmount) : null,
       interestRate: row.interestRate ? parseFloat(row.interestRate) : null,
       trustScore: row.trustScore ? parseFloat(row.trustScore) : null,
+      committedAmount: row.committedAmount ? parseFloat(row.committedAmount) : 0,
+      trustFactors: Array.isArray(row.trustFactors) ? row.trustFactors : [],
     }));
 
     return res.status(200).json({
@@ -357,7 +416,12 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
     });
   } catch (error) {
     await client.query("ROLLBACK");
-    if (typeof error === "object" && error && "code" in error && (error as { code?: string }).code === "23505") {
+    if (
+      typeof error === "object" &&
+      error &&
+      "code" in error &&
+      (error as { code?: string }).code === "23505"
+    ) {
       return res.status(409).json({
         success: false,
         error: { message: "You have already funded this application" },

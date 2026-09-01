@@ -19,10 +19,12 @@ vi.mock("../../middleware/authenticate.js", () => ({
   },
 }));
 vi.mock("../../middleware/authorize.js", () => ({
-  requireRole: (...roles: string[]) => (req: any, res: any, next: () => void) =>
-    roles.includes(req.auth?.role)
-      ? next()
-      : res.status(403).json({ success: false, error: { message: "Forbidden" } }),
+  requireRole:
+    (...roles: string[]) =>
+    (req: any, res: any, next: () => void) =>
+      roles.includes(req.auth?.role)
+        ? next()
+        : res.status(403).json({ success: false, error: { message: "Forbidden" } }),
 }));
 vi.mock("../../services/profile.service.js", () => ({
   getProfileWithCompletion: demoMocks.getProfileWithCompletion,
@@ -70,7 +72,9 @@ describe("demo document skip", () => {
         return { rows: [{ request_id: `request-${requestNumber}` }] };
       }
       if (sql.includes("INSERT INTO verification_documents")) {
-        return { rows: [{ document_id: `document-${requestNumber}`, id: `document-${requestNumber}` }] };
+        return {
+          rows: [{ document_id: `document-${requestNumber}`, id: `document-${requestNumber}` }],
+        };
       }
       return { rows: [] };
     });

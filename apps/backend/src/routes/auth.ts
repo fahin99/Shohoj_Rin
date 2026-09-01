@@ -159,7 +159,7 @@ router.post("/register", async (req, res) => {
         error: { message: "An account with this email or phone already exists" },
       });
     }
-    const role = parsed.data.role || 'borrower';
+    const role = parsed.data.role || "borrower";
     const userResult = await client.query(
       `INSERT INTO users (email, phone, password_hash, role)
        VALUES ($1, $2, $3, $4)
@@ -175,11 +175,8 @@ router.post("/register", async (req, res) => {
        VALUES ($1, $2)`,
       [user.user_id, fullName],
     );
-    if (role === 'lender') {
-      await client.query(
-        `INSERT INTO investor_profiles (user_id) VALUES ($1)`,
-        [user.user_id]
-      );
+    if (role === "lender") {
+      await client.query(`INSERT INTO investor_profiles (user_id) VALUES ($1)`, [user.user_id]);
     }
     const session = await createSession(client, user.user_id, user.role, sessionId);
     await client.query("COMMIT");

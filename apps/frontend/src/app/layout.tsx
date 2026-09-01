@@ -36,7 +36,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className={`${spaceGrotesk.variable}`}>
       <body>
         <Providers user={user}>
-          <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-[6px] focus:border-[1.5px] focus:border-navy focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-navy">
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-[6px] focus:border-[1.5px] focus:border-navy focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-navy"
+          >
             Skip to main content
           </a>
           <main id="main-content">{children}</main>

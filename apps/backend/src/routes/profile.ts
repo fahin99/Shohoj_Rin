@@ -21,7 +21,7 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
-router.put("/", requireAuth, requireRole('borrower', 'lender'), async (req, res) => {
+router.put("/", requireAuth, requireRole("borrower", "lender"), async (req, res) => {
   const authReq = req as RequestWithAuth;
   const parsed = profileUpdateSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -51,7 +51,9 @@ router.get("/completion", requireAuth, async (req, res) => {
     }
     return res.json({ success: true, data: profileData.completionItems });
   } catch (error) {
-    return res.status(500).json({ success: false, error: { message: "Failed to get completion status" } });
+    return res
+      .status(500)
+      .json({ success: false, error: { message: "Failed to get completion status" } });
   }
 });
 
@@ -61,12 +63,22 @@ router.post("/submit-verification", requireAuth, async (req, res) => {
   try {
     await pool.query(
       `UPDATE user_profiles SET profile_completion_status = 'pending_verification' WHERE user_id = $1`,
-      [userId]
+      [userId],
     );
-    await logAuditEvent(userId, 'submit_profile_verification', 'user_profile', userId, null, { status: 'pending_verification' }, req);
-    return res.json({ success: true, data: { status: 'pending_verification' } });
+    await logAuditEvent(
+      userId,
+      "submit_profile_verification",
+      "user_profile",
+      userId,
+      null,
+      { status: "pending_verification" },
+      req,
+    );
+    return res.json({ success: true, data: { status: "pending_verification" } });
   } catch (error) {
-    return res.status(500).json({ success: false, error: { message: "Failed to submit verification" } });
+    return res
+      .status(500)
+      .json({ success: false, error: { message: "Failed to submit verification" } });
   }
 });
 

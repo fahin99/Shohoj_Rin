@@ -45,7 +45,7 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
     applicant: string;
   } | null>(null);
   const [tab, setTab] = useState("applications");
-  
+
   const userName = getDisplayName(user);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
         if (appsRes?.applications) {
           setLiveApplications(appsRes.applications);
         }
-        
+
         if (statsRes) {
           setStats({
             applicationsToday: statsRes.applicationsToday || 27,
@@ -69,22 +69,62 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
             overdueAccounts: statsRes.overdueAccounts || 18,
           });
         }
-        
+
         if (usersRes?.users) {
-          setUsersList(usersRes.users.length > 0 ? usersRes.users : [
-            { id: "U-2201", name: "Riya Ahmed", role: "Borrower", joined: "2025-09-28", status: "active" },
-            { id: "U-1987", name: "Tanvir Hossain", role: "Lender", joined: "2025-06-10", status: "active" },
-          ]);
+          setUsersList(
+            usersRes.users.length > 0
+              ? usersRes.users
+              : [
+                  {
+                    id: "U-2201",
+                    name: "Riya Ahmed",
+                    role: "Borrower",
+                    joined: "2025-09-28",
+                    status: "active",
+                  },
+                  {
+                    id: "U-1987",
+                    name: "Tanvir Hossain",
+                    role: "Lender",
+                    joined: "2025-06-10",
+                    status: "active",
+                  },
+                ],
+          );
         } else {
           setUsersList([
-            { id: "U-2201", name: "Riya Ahmed", role: "Borrower", joined: "2025-09-28", status: "active" },
-            { id: "U-1987", name: "Tanvir Hossain", role: "Lender", joined: "2025-06-10", status: "active" },
+            {
+              id: "U-2201",
+              name: "Riya Ahmed",
+              role: "Borrower",
+              joined: "2025-09-28",
+              status: "active",
+            },
+            {
+              id: "U-1987",
+              name: "Tanvir Hossain",
+              role: "Lender",
+              joined: "2025-06-10",
+              status: "active",
+            },
           ]);
         }
-        
+
         setProviders([
-          { id: "P-01", name: "Bengal Microfinance Bank", products: 2, activeLoans: 142, status: "active" },
-          { id: "P-02", name: "Shohoj Care Finance", products: 1, activeLoans: 67, status: "active" },
+          {
+            id: "P-01",
+            name: "Bengal Microfinance Bank",
+            products: 2,
+            activeLoans: 142,
+            status: "active",
+          },
+          {
+            id: "P-02",
+            name: "Shohoj Care Finance",
+            products: 1,
+            activeLoans: 67,
+            status: "active",
+          },
         ]);
       } catch (err) {
         console.error("Failed to fetch admin data", err);
@@ -116,9 +156,9 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
   const handleDecision = async (id: string, decision: "approved" | "rejected") => {
     const app = queue.find((q) => q.id === id);
     if (!app) return;
-    
+
     setLocalDecisions((prev) => ({ ...prev, [id]: decision }));
-    
+
     try {
       await reviewApplication(id, { decision });
       setConfirmation({ type: decision, applicant: app.applicant });
@@ -217,11 +257,23 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
           </div>
         )}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          <StatCard label="Applications today" value={String(stats.applicationsToday)} hint="+4 vs yesterday" />
+          <StatCard
+            label="Applications today"
+            value={String(stats.applicationsToday)}
+            hint="+4 vs yesterday"
+          />
           <StatCard label="Pending review" value={String(pendingCount)} tone="attention" />
           <StatCard label="Approval rate" value={`${stats.approvalRate}%`} tone="positive" />
-          <StatCard label="Disbursed this month" value={formatTaka(stats.disbursedThisMonth)} tone="info" />
-          <StatCard label="Overdue accounts" value={String(stats.overdueAccounts)} tone="critical" />
+          <StatCard
+            label="Disbursed this month"
+            value={formatTaka(stats.disbursedThisMonth)}
+            tone="info"
+          />
+          <StatCard
+            label="Overdue accounts"
+            value={String(stats.overdueAccounts)}
+            tone="critical"
+          />
         </div>
         <Tabs
           variant="card"
@@ -312,7 +364,7 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
             />
           </div>
         </TabPanel>
-        
+
         <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5">
           <h2 className="text-sm font-semibold text-navy mb-4">System health</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

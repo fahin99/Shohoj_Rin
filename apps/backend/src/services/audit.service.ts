@@ -8,10 +8,10 @@ export async function logAuditEvent(
   entityId: string | null,
   beforeState: unknown = null,
   afterState: unknown = null,
-  req?: Request
+  req?: Request,
 ) {
   const ipAddress = req?.ip || req?.socket?.remoteAddress || null;
-  const userAgent = req?.headers['user-agent'] || null;
+  const userAgent = req?.headers["user-agent"] || null;
 
   try {
     await pool.query(
@@ -25,8 +25,8 @@ export async function logAuditEvent(
         beforeState ? JSON.stringify(beforeState) : null,
         afterState ? JSON.stringify(afterState) : null,
         ipAddress,
-        userAgent
-      ]
+        userAgent,
+      ],
     );
   } catch (error) {
     console.error("Failed to log audit event:", error);

@@ -62,13 +62,13 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
         setIsLoading(true);
         const [loansRes, appsRes] = await Promise.all([
           loansApi.getActiveLoans(),
-          applicationsApi.getApplications()
+          applicationsApi.getApplications(),
         ]);
-        
+
         const loan = loansRes[0] || null;
         setActiveLoan(loan);
         setApplications(appsRes.applications || []);
-        
+
         if (loan) {
           const txs = await loansApi.getLoanTransactions(loan.id);
           setTransactions(txs || []);
@@ -93,7 +93,12 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
 
   if (isLoading) {
     return (
-      <AppLayout onNavigate={onNavigate} currentPage="borrower-dashboard" userType="borrower" userName={userName}>
+      <AppLayout
+        onNavigate={onNavigate}
+        currentPage="borrower-dashboard"
+        userType="borrower"
+        userName={userName}
+      >
         <div className="mx-auto max-w-5xl px-4 py-6 md:px-6 flex justify-center items-center h-64">
           <p className="text-stone-500">Loading dashboard...</p>
         </div>
@@ -136,7 +141,11 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
           <StatCard
             label="Next repayment"
             value={formatTaka(activeLoan ? activeLoan.monthlyPayment : 0)}
-            hint={activeLoan && activeLoan.nextPaymentDate ? `Due ${formatDate(activeLoan.nextPaymentDate)}` : "No payments due"}
+            hint={
+              activeLoan && activeLoan.nextPaymentDate
+                ? `Due ${formatDate(activeLoan.nextPaymentDate)}`
+                : "No payments due"
+            }
             tone={activeLoan ? "attention" : undefined}
           />
           <StatCard

@@ -345,7 +345,12 @@ export default function RepaymentPage({ onNavigate }: Props) {
           title="Confirm payment"
           footer={
             <>
-              <Button variant="ghost" size="sm" onClick={() => setConfirmOpen(false)} disabled={isSubmitting}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setConfirmOpen(false)}
+                disabled={isSubmitting}
+              >
                 Cancel
               </Button>
               <Button
@@ -355,7 +360,11 @@ export default function RepaymentPage({ onNavigate }: Props) {
                 onClick={async () => {
                   setIsSubmitting(true);
                   try {
-                    const result = await loansApi.createRepayment(activeLoan.id, instalmentAmount, method);
+                    const result = await loansApi.createRepayment(
+                      activeLoan.id,
+                      instalmentAmount,
+                      method,
+                    );
                     setReceiptData({
                       receiptId: result.receiptId || "RCPT-" + Math.floor(Math.random() * 10000),
                       completed: result.loan?.status === "completed",

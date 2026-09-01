@@ -119,7 +119,7 @@ const lenderNav: SidebarItem[] = [
   },
   {
     label: "Opportunities",
-    page: "loan-marketplace",
+    page: "lender-dashboard",
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.5" />
@@ -194,13 +194,18 @@ export function AppLayout({
   const currentUser = useCurrentUser();
   const currentUserRole = currentUser?.role;
   const resolvedUserType: "borrower" | "lender" | "admin" =
-    userType ?? (currentUserRole === "lender" || currentUserRole === "admin" ? currentUserRole : "borrower");
+    userType ??
+    (currentUserRole === "lender" || currentUserRole === "admin" ? currentUserRole : "borrower");
   const resolvedUserName = userName || getDisplayName(currentUser, "Account");
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const navItems =
-    resolvedUserType === "admin" ? adminNav : resolvedUserType === "lender" ? lenderNav : borrowerNav;
+    resolvedUserType === "admin"
+      ? adminNav
+      : resolvedUserType === "lender"
+        ? lenderNav
+        : borrowerNav;
   const sidebar = (
     <aside className="w-56 shrink-0 flex flex-col border-r border-stone-200 bg-offwhite h-full">
       <div className="px-4 py-4 border-b border-stone-200">

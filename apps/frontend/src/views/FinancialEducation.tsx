@@ -34,8 +34,7 @@ const educationArticles = [
     title: "Smart Repayment Strategies",
     category: "Repayment",
     readTime: "6 min",
-    summary:
-      "Practical strategies to manage your loan repayments effectively and avoid late fees.",
+    summary: "Practical strategies to manage your loan repayments effectively and avoid late fees.",
     content:
       "Managing loan repayments requires planning and discipline. Here are proven strategies used by successful borrowers...",
   },
@@ -228,7 +227,9 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
                   <span className="text-xs text-stone-400">{a.readTime}</span>
                 </div>
                 <h3 className="font-semibold text-navy text-sm mb-2">{a.title}</h3>
-                <p className="text-sm text-stone-500 leading-relaxed line-clamp-2-sr">{a.summary}</p>
+                <p className="text-sm text-stone-500 leading-relaxed line-clamp-2-sr">
+                  {a.summary}
+                </p>
               </div>
             ))}
           </div>
