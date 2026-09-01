@@ -7,6 +7,7 @@ import { pool } from "../lib/db.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const schemaFile = "schema.sql";
+const migrationDir = path.resolve(__dirname, "../../migrations");
 
 async function hasCanonicalSchema(client: PoolClient) {
   const { rows } = await client.query(`
@@ -43,6 +44,34 @@ async function hasCanonicalSchema(client: PoolClient) {
   return Boolean(rows[0].complete);
 }
 
+async function listMigrationFiles() {
+  const entries = await fs.readdir(migrationDir, { withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".sql"))
+    .map((entry) => entry.name)
+    .sort();
+}
+
+async function runMigrationFile(client: PoolClient, migrationName: string) {
+  const filePath = path.resolve(migrationDir, migrationName);
+  const sql = await fs.readFile(filePath, "utf-8");
+
+  await client.query("BEGIN");
+  try {
+    await client.query(sql);
+    await client.query(
+      "INSERT INTO migrations (name) VALUES ($1) ON CONFLICT (name) DO NOTHING",
+      [migrationName],
+    );
+    await client.query("COMMIT");
+    console.log(`Migration ${migrationName} completed successfully.`);
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error(`Error executing migration ${migrationName}:`, error);
+    throw error;
+  }
+}
+
 async function migrate() {
   const client = await pool.connect();
   try {
@@ -57,20 +86,21 @@ async function migrate() {
     const executedMigrations = new Set(rows.map((r) => r.name));
     const schemaComplete = await hasCanonicalSchema(client);
 
-    if (executedMigrations.has(schemaFile) && !schemaComplete) {
-      throw new Error(
-        "The database is not compatible with the canonical schema.sql. Recreate the development database and rerun migrate.",
-      );
-    }
-
     if (schemaComplete) {
       if (!executedMigrations.has(schemaFile)) {
         console.log("Existing canonical database detected. Baselining schema.sql...");
         await client.query(
-          "INSERT INTO migrations (name) VALUES ($1) ON CONFLICT DO NOTHING",
+          "INSERT INTO migrations (name) VALUES ($1) ON CONFLICT (name) DO NOTHING",
           [schemaFile],
         );
       }
+
+      const pendingFiles = (await listMigrationFiles()).filter((file) => !executedMigrations.has(file));
+      for (const migrationName of pendingFiles) {
+        if (migrationName === schemaFile) continue;
+        await runMigrationFile(client, migrationName);
+      }
+
       console.log("Canonical schema is already installed.");
       return;
     }
@@ -83,19 +113,33 @@ async function migrate() {
     `);
 
     if (existingSchemaCheck.rows[0].exists) {
-      throw new Error(
-        "The existing database is missing required canonical schema fields. Recreate the development database and rerun migrate.",
-      );
+      const migrationFiles = (await listMigrationFiles()).filter((file) => !executedMigrations.has(file));
+      for (const migrationName of migrationFiles) {
+        await runMigrationFile(client, migrationName);
+      }
+
+      const schemaStillIncomplete = !(await hasCanonicalSchema(client));
+      if (schemaStillIncomplete) {
+        throw new Error(
+          "The existing database is missing required canonical schema fields. Recreate the development database and rerun migrate.",
+        );
+      }
+
+      console.log("Applied compatible migration patch to the existing database.");
+      return;
     }
 
     console.log(`Executing migration: ${schemaFile}`);
-    const filePath = path.resolve(__dirname, "../../migrations", schemaFile);
+    const filePath = path.resolve(migrationDir, schemaFile);
     const sql = await fs.readFile(filePath, "utf-8");
 
     await client.query("BEGIN");
     try {
       await client.query(sql);
-      await client.query("INSERT INTO migrations (name) VALUES ($1)", [schemaFile]);
+      await client.query(
+        "INSERT INTO migrations (name) VALUES ($1) ON CONFLICT (name) DO NOTHING",
+        [schemaFile],
+      );
       await client.query("COMMIT");
       console.log(`Migration ${schemaFile} completed successfully.`);
     } catch (error) {

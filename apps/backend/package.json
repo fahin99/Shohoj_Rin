@@ -9,6 +9,8 @@
     "db:check": "tsx src/scripts/check-db.ts",
     "migrate": "tsx src/scripts/migrate.ts",
     "seed:institutions": "tsx src/scripts/seed-institutions.ts",
+    "seed:loan-products": "tsx src/scripts/seed-loan-products.ts",
+    "seed:demo-marketplace": "tsx src/scripts/seed-demo-marketplace.ts",
     "test": "vitest run",
     "start": "node dist/app.js"
   },

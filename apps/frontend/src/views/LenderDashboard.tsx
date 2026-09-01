@@ -58,11 +58,17 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
     const fetchData = async () => {
       try {
         const [portfolioRes, oppsRes] = await Promise.all([
-          getPortfolio().catch(() => null),
-          getOpportunities().catch(() => [])
+          getPortfolio().catch((error) => {
+            console.error("Failed to fetch portfolio", error);
+            return null;
+          }),
+          getOpportunities().catch((error) => {
+            console.error("Failed to fetch opportunities", error);
+            return null;
+          }),
         ]);
 
-        if (portfolioRes) {
+        if (portfolioRes && typeof portfolioRes === "object") {
           setStats({
             totalDeployed: portfolioRes.totalDeployed || 2340000,
             activeLoans: portfolioRes.activeLoans || 4,
@@ -85,8 +91,8 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
             { label: "High risk", value: 10, color: "coral" as const },
           ]);
         }
-        
-        if (oppsRes) {
+
+        if (Array.isArray(oppsRes)) {
           setOpportunities(oppsRes.length > 0 ? oppsRes : []);
         }
       } catch (err) {

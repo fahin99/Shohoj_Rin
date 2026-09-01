@@ -1,5 +1,8 @@
 import { pool, closePool } from "../lib/db.js";
-async function seedLoanProducts() {
+import { fileURLToPath } from "node:url";
+import type { PoolClient } from "pg";
+
+export async function seedLoanProducts(existingClient?: PoolClient) {
   console.log("🌱 Seeding loan products...\n");
 
   const partners = [
@@ -85,9 +88,12 @@ async function seedLoanProducts() {
     },
   ];
 
-  const client = await pool.connect();
+  const client = existingClient ?? (await pool.connect());
+  const shouldManageTransaction = !existingClient;
   try {
-    await client.query("BEGIN");
+    if (shouldManageTransaction) {
+      await client.query("BEGIN");
+    }
 
     // Upsert partners
     const partnerIds: Record<string, string> = {};
@@ -126,15 +132,25 @@ async function seedLoanProducts() {
       console.log(`  ✓ Product: ${product.name} (${product.category})`);
     }
 
-    await client.query("COMMIT");
+    if (shouldManageTransaction) {
+      await client.query("COMMIT");
+    }
     console.log("\n✅ Loan products seeded successfully!");
   } catch (error) {
-    await client.query("ROLLBACK");
+    if (shouldManageTransaction) {
+      await client.query("ROLLBACK");
+    }
     console.error("\n❌ Seed failed:", error);
+    throw error;
   } finally {
-    client.release();
-    await closePool();
+    if (shouldManageTransaction) {
+      client.release();
+      await closePool();
+    }
   }
 }
 
-seedLoanProducts();
+const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isDirectRun) {
+  void seedLoanProducts();
+}
