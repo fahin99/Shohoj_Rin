@@ -23,10 +23,8 @@ function requireLender(req: RequestWithAuth, res: any, next: any) {
   return next();
 }
 
-// GET /api/v1/investor/profile — read lender profile (auto-create stub if missing)
 router.get("/profile", requireAuth, requireLender, async (req, res) => {
-  const authReq = req as RequestWithAuth;
-  const userId = authReq.auth!.userId;
+  const userId = (req as RequestWithAuth).auth!.userId;
 
   try {
     const result = await pool.query(
@@ -73,17 +71,12 @@ router.get("/profile", requireAuth, requireLender, async (req, res) => {
     return res.status(200).json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error("Failed to fetch investor profile:", error);
-    return res
-      .status(500)
-      .json({ success: false, error: { message: "Failed to fetch investor profile" } });
+    return res.status(500).json({ success: false, error: { message: "Failed to fetch investor profile" } });
   }
 });
 
-// PUT /api/v1/investor/profile — upsert lender profile (preferences, capacity, risk)
 router.put("/profile", requireAuth, requireLender, async (req, res) => {
-  const authReq = req as RequestWithAuth;
-  const userId = authReq.auth!.userId;
-
+  const userId = (req as RequestWithAuth).auth!.userId;
   const parsed = investorProfileSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({
@@ -95,7 +88,7 @@ router.put("/profile", requireAuth, requireLender, async (req, res) => {
   const data = parsed.data;
   const allowedCategories = ["education", "emergency", "business", "personal", "development"];
   if (data.preferredCategories) {
-    const invalid = data.preferredCategories.filter((c) => !allowedCategories.includes(c));
+    const invalid = data.preferredCategories.filter((category) => !allowedCategories.includes(category));
     if (invalid.length > 0) {
       return res.status(400).json({
         success: false,
@@ -107,15 +100,8 @@ router.put("/profile", requireAuth, requireLender, async (req, res) => {
   try {
     const result = await pool.query(
       `INSERT INTO investor_profiles (
-         user_id,
-         display_name,
-         funding_capacity,
-         preferred_categories,
-         risk_preference,
-         max_exposure,
-         verification_status,
-         kyc_status,
-         account_status
+         user_id, display_name, funding_capacity, preferred_categories,
+         risk_preference, max_exposure, verification_status, kyc_status, account_status
        )
        VALUES ($1, $2, $3, $4, $5, $6, 'pending', 'incomplete', 'active')
        ON CONFLICT (user_id) DO UPDATE SET
@@ -151,16 +137,13 @@ router.put("/profile", requireAuth, requireLender, async (req, res) => {
     return res.status(200).json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error("Failed to update investor profile:", error);
-    return res
-      .status(500)
-      .json({ success: false, error: { message: "Failed to update investor profile" } });
+    return res.status(500).json({ success: false, error: { message: "Failed to update investor profile" } });
   }
 });
 
-// GET /api/v1/investor/opportunities — lender-only application queue
+// GET /api/v1/investor/opportunities — lender-only application queue.
 router.get("/opportunities", requireAuth, requireLender, async (req, res) => {
-  const authReq = req as RequestWithAuth;
-  const userId = authReq.auth!.userId;
+  const userId = (req as RequestWithAuth).auth!.userId;
 
   try {
     const page = Math.max(1, parseInt(String(req.query.page || "1"), 10));
@@ -169,17 +152,18 @@ router.get("/opportunities", requireAuth, requireLender, async (req, res) => {
 
     const result = await pool.query(
       `WITH lender_preferences AS (
-         SELECT u.cat AS category, u.priority
+         SELECT pref.category, pref.priority
          FROM investor_profiles ip
-         CROSS JOIN LATERAL UNNEST(COALESCE(ip.preferred_categories, ARRAY[]::text[]))
-           WITH ORDINALITY AS u(cat, priority)
+         CROSS JOIN LATERAL UNNEST(
+           COALESCE(ip.preferred_categories, ARRAY[]::text[])
+         ) WITH ORDINALITY AS pref(category, priority)
          WHERE ip.user_id = $1
-           AND ip.preferred_categories IS NOT NULL
-           AND array_length(ip.preferred_categories, 1) > 0
+           AND cardinality(COALESCE(ip.preferred_categories, ARRAY[]::text[])) > 0
        ),
        eligible_apps AS (
          SELECT
            la.application_id AS "applicationId",
+           la.user_id AS "borrowerId",
            up.full_name AS "borrowerName",
            up.profile_completion_status AS "borrowerProfileStatus",
            la.purpose,
@@ -199,24 +183,24 @@ router.get("/opportunities", requireAuth, requireLender, async (req, res) => {
            ts.trust_band AS "trustBand",
            ts.score AS "trustScore",
            (up.nid_number IS NOT NULL) AS "nidOnFile",
-           CASE WHEN EXISTS (
+           EXISTS (
              SELECT 1 FROM verification_requests vr
              WHERE vr.user_id = la.user_id
                AND vr.verification_type = 'income'
                AND vr.status = 'approved'
-           ) THEN TRUE ELSE FALSE END AS "incomeVerified",
-           CASE WHEN EXISTS (
+           ) AS "incomeVerified",
+           EXISTS (
              SELECT 1 FROM verification_requests vr
              WHERE vr.user_id = la.user_id
                AND vr.verification_type = 'address'
                AND vr.status = 'approved'
-           ) THEN TRUE ELSE FALSE END AS "addressVerified",
-           CASE WHEN EXISTS (
+           ) AS "addressVerified",
+           EXISTS (
              SELECT 1 FROM verification_requests vr
              WHERE vr.user_id = la.user_id
                AND vr.verification_type = 'identity'
                AND vr.status = 'approved'
-           ) THEN TRUE ELSE FALSE END AS "identityVerified",
+           ) AS "identityVerified",
            COALESCE((
              SELECT SUM(fc.amount)
              FROM funding_commitments fc
@@ -248,6 +232,7 @@ router.get("/opportunities", requireAuth, requireLender, async (req, res) => {
        )
        SELECT
          ea."applicationId",
+         ea."borrowerId",
          ea."borrowerName",
          ea."borrowerProfileStatus",
          ea.purpose,
@@ -259,7 +244,7 @@ router.get("/opportunities", requireAuth, requireLender, async (req, res) => {
          ea."productName",
          ea.category,
          ea."minAmount",
-         ea.maxAmount,
+         ea."maxAmount",
          ea."interestRate",
          ea."durationMonths",
          ea."partnerName",
@@ -277,7 +262,7 @@ router.get("/opportunities", requireAuth, requireLender, async (req, res) => {
        WHERE NOT EXISTS (SELECT 1 FROM lender_preferences)
           OR lpref.category IS NOT NULL
        ORDER BY
-         CASE WHEN EXISTS (SELECT 1 FROM lender_preferences) THEN lpref.priority END,
+         CASE WHEN EXISTS (SELECT 1 FROM lender_preferences) THEN lpref.priority ELSE 999999 END,
          ea."submittedAt" DESC
        LIMIT $2 OFFSET $3`,
       [userId, limit, offset],
@@ -285,48 +270,35 @@ router.get("/opportunities", requireAuth, requireLender, async (req, res) => {
 
     const opportunities = result.rows.map((row: any) => ({
       ...row,
-      requestedAmount: parseFloat(row.requestedAmount),
-      minAmount: row.minAmount ? parseFloat(row.minAmount) : null,
-      maxAmount: row.maxAmount ? parseFloat(row.maxAmount) : null,
-      interestRate: row.interestRate ? parseFloat(row.interestRate) : null,
-      trustScore: row.trustScore ? parseFloat(row.trustScore) : null,
-      committedAmount: row.committedAmount ? parseFloat(row.committedAmount) : 0,
+      requestedAmount: Number(row.requestedAmount),
+      minAmount: row.minAmount == null ? null : Number(row.minAmount),
+      maxAmount: row.maxAmount == null ? null : Number(row.maxAmount),
+      interestRate: row.interestRate == null ? null : Number(row.interestRate),
+      trustScore: row.trustScore == null ? null : Number(row.trustScore),
+      committedAmount: Number(row.committedAmount || 0),
       trustFactors: Array.isArray(row.trustFactors) ? row.trustFactors : [],
     }));
 
-    return res.status(200).json({
-      success: true,
-      data: opportunities,
-    });
+    return res.status(200).json({ success: true, data: opportunities });
   } catch (error) {
     console.error("Failed to fetch opportunities:", error);
-    return res.status(500).json({
-      success: false,
-      error: { message: "Failed to fetch opportunities" },
-    });
+    return res.status(500).json({ success: false, error: { message: "Failed to fetch opportunities" } });
   }
 });
 
-// POST /api/v1/investor/fund/:applicationId — fund an opportunity
 router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res) => {
-  const authReq = req as RequestWithAuth;
-  const userId = authReq.auth!.userId;
+  const userId = (req as RequestWithAuth).auth!.userId;
   const applicationId = req.params.applicationId;
+  const parsed = z.object({ amount: z.number().finite().positive() }).safeParse(req.body);
 
-  const amountSchema = z.object({ amount: z.number().finite().positive() });
-  const parsed = amountSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({
-      success: false,
-      error: { message: "Invalid funding amount" },
-    });
+    return res.status(400).json({ success: false, error: { message: "Invalid funding amount" } });
   }
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
-    // Locking the application serializes commitments so the requested amount cannot be over-funded.
     const appResult = await client.query(
       `SELECT application_id, status, partner_id, requested_amount
        FROM loan_applications
@@ -337,19 +309,13 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
 
     if (appResult.rowCount === 0) {
       await client.query("ROLLBACK");
-      return res.status(404).json({
-        success: false,
-        error: { message: "Application not found" },
-      });
+      return res.status(404).json({ success: false, error: { message: "Application not found" } });
     }
 
     const app = appResult.rows[0] as any;
     if (!["submitted", "under_review", "approved"].includes(app.status)) {
       await client.query("ROLLBACK");
-      return res.status(400).json({
-        success: false,
-        error: { message: "Application is not eligible for funding" },
-      });
+      return res.status(400).json({ success: false, error: { message: "Application is not eligible for funding" } });
     }
 
     const existingCommitment = await client.query(
@@ -361,10 +327,7 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
     );
     if (existingCommitment.rowCount) {
       await client.query("ROLLBACK");
-      return res.status(409).json({
-        success: false,
-        error: { message: "You have already funded this application" },
-      });
+      return res.status(409).json({ success: false, error: { message: "You have already funded this application" } });
     }
 
     const committedResult = await client.query(
@@ -373,16 +336,12 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
        WHERE application_id = $1 AND status = 'committed'`,
       [applicationId],
     );
-    const requestedAmount = Number(app.requested_amount);
-    const committedAmount = Number(committedResult.rows[0].committed_amount);
-    const remainingAmount = Math.round((requestedAmount - committedAmount) * 100) / 100;
+    const remainingAmount = Math.round((Number(app.requested_amount) - Number(committedResult.rows[0].committed_amount)) * 100) / 100;
     const fundingAmount = Math.round(parsed.data.amount * 100) / 100;
+
     if (fundingAmount <= 0 || fundingAmount > remainingAmount) {
       await client.query("ROLLBACK");
-      return res.status(400).json({
-        success: false,
-        error: { message: "Funding amount must not exceed the remaining requested amount" },
-      });
+      return res.status(400).json({ success: false, error: { message: "Funding amount must not exceed the remaining requested amount" } });
     }
 
     const commitmentResult = await client.query(
@@ -393,7 +352,6 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
     );
     const commitment = commitmentResult.rows[0] as any;
 
-    // Keep an immutable audit event, but never use it as the financial record.
     await client.query(
       `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, after_state)
        VALUES ($1, 'funding_commitment_created', 'funding_commitment', $2,
@@ -402,7 +360,6 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
     );
 
     await client.query("COMMIT");
-
     return res.status(200).json({
       success: true,
       data: {
@@ -416,34 +373,20 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
     });
   } catch (error) {
     await client.query("ROLLBACK");
-    if (
-      typeof error === "object" &&
-      error &&
-      "code" in error &&
-      (error as { code?: string }).code === "23505"
-    ) {
-      return res.status(409).json({
-        success: false,
-        error: { message: "You have already funded this application" },
-      });
+    if (typeof error === "object" && error && "code" in error && (error as { code?: string }).code === "23505") {
+      return res.status(409).json({ success: false, error: { message: "You have already funded this application" } });
     }
     console.error("Failed to fund opportunity:", error);
-    return res.status(500).json({
-      success: false,
-      error: { message: "Failed to record funding commitment" },
-    });
+    return res.status(500).json({ success: false, error: { message: "Failed to record funding commitment" } });
   } finally {
     client.release();
   }
 });
 
-// GET /api/v1/investor/portfolio — portfolio summary
 router.get("/portfolio", requireAuth, requireLender, async (req, res) => {
-  const authReq = req as RequestWithAuth;
-  const userId = authReq.auth!.userId;
+  const userId = (req as RequestWithAuth).auth!.userId;
 
   try {
-    // Funding commitments are the financial source of truth; audit logs are history only.
     const fundedResult = await pool.query(
       `SELECT
         fc.commitment_id AS "commitmentId",
@@ -476,31 +419,22 @@ router.get("/portfolio", requireAuth, requireLender, async (req, res) => {
 
     const fundedLoans = fundedResult.rows.map((row: any) => ({
       ...row,
-      fundedAmount: parseFloat(row.fundedAmount || "0"),
-      requestedAmount: parseFloat(row.requestedAmount),
-      interestRate: row.interestRate ? parseFloat(row.interestRate) : null,
-      principalAmount: row.principalAmount ? parseFloat(row.principalAmount) : null,
+      fundedAmount: Number(row.fundedAmount || 0),
+      requestedAmount: Number(row.requestedAmount || 0),
+      interestRate: row.interestRate == null ? null : Number(row.interestRate),
+      principalAmount: row.principalAmount == null ? null : Number(row.principalAmount),
     }));
 
-    // Calculate portfolio metrics
-    const totalDeployed = fundedLoans.reduce((sum: number, l: any) => sum + l.fundedAmount, 0);
-    const activeLoans = fundedLoans.filter((l: any) => l.loanStatus === "active").length;
+    const totalDeployed = fundedLoans.reduce((sum: number, loan: any) => sum + loan.fundedAmount, 0);
+    const activeLoans = fundedLoans.filter((loan: any) => loan.loanStatus === "active").length;
 
     return res.status(200).json({
       success: true,
-      data: {
-        totalDeployed,
-        activeLoans,
-        fundedLoans,
-        totalFunded: fundedLoans.length,
-      },
+      data: { totalDeployed, activeLoans, fundedLoans, totalFunded: fundedLoans.length },
     });
   } catch (error) {
     console.error("Failed to fetch portfolio:", error);
-    return res.status(500).json({
-      success: false,
-      error: { message: "Failed to fetch portfolio" },
-    });
+    return res.status(500).json({ success: false, error: { message: "Failed to fetch portfolio" } });
   }
 });
 
