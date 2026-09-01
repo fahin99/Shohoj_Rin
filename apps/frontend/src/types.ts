@@ -11,6 +11,7 @@ export type PageName =
   | "repayment"
   | "education"
   | "lender-dashboard"
+  | "lender-opportunities"
   | "admin"
   | "system-states"
   | "investor-onboarding";
