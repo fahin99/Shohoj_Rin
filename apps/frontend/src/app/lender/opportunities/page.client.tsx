@@ -250,7 +250,7 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                     />
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="secondary"
                       onClick={() => void handleReject(opportunity)}
                       disabled={isFunding || rejectingId === opportunity.applicationId}
                     >
