@@ -134,6 +134,8 @@ CREATE TABLE investor_profiles (
   investor_profile_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID UNIQUE NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
   display_name VARCHAR(255),
+  company VARCHAR(255),
+  address TEXT,
   verification_status VARCHAR(30) NOT NULL DEFAULT 'pending',
   funding_capacity DECIMAL(14,2),
   preferred_categories TEXT[],
