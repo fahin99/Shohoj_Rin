@@ -79,6 +79,20 @@ export interface InvestorProfile {
   createdAt: string;
   updatedAt: string;
 }
+
+export type LenderMatchStatus = "pending" | "viewed" | "accepted" | "rejected" | "expired";
+
+export interface LenderCompany {
+  partnerId: string;
+  name: string;
+  type: string;
+  address: string | null;
+  branch: string | null;
+  goal: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  isActive: boolean;
+}
 export interface AssessmentResult {
   documentType: string;
   status: DocumentStatus;

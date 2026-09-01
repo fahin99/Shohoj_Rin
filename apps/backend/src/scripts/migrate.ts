@@ -82,6 +82,44 @@ async function ensureFundingCommitments(client: PoolClient) {
   `);
 }
 
+async function ensureLenderMarketplaceSchema(client: PoolClient) {
+  await client.query(`
+    ALTER TABLE funding_partners
+      ADD COLUMN IF NOT EXISTS address TEXT,
+      ADD COLUMN IF NOT EXISTS branch VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS goal VARCHAR(255);
+  `);
+
+  const tableExists = await client.query(
+    `SELECT to_regclass('public.lender_application_matches') AS table_name`,
+  );
+  if (tableExists.rows[0].table_name) return;
+
+  console.log("Canonical schema is missing lender_application_matches; creating it...");
+  await client.query(`
+    CREATE TABLE lender_application_matches (
+      match_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      application_id UUID NOT NULL REFERENCES loan_applications (application_id) ON DELETE CASCADE,
+      lender_user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+      priority INTEGER NOT NULL DEFAULT 0,
+      status VARCHAR(20) NOT NULL DEFAULT 'pending',
+      matched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      viewed_at TIMESTAMPTZ,
+      decided_at TIMESTAMPTZ,
+      decision_reason TEXT,
+      UNIQUE (application_id, lender_user_id)
+    );
+  `);
+  await client.query(`
+    ALTER TABLE lender_application_matches
+      ADD CONSTRAINT chk_lender_match_status CHECK (status IN ('pending', 'viewed', 'accepted', 'rejected', 'expired'));
+  `);
+  await client.query(`
+    CREATE INDEX idx_lender_matches_lender ON lender_application_matches(lender_user_id, status, matched_at DESC);
+    CREATE INDEX idx_lender_matches_application ON lender_application_matches(application_id, priority ASC);
+  `);
+}
+
 async function migrate() {
   const client = await pool.connect();
   try {
@@ -114,6 +152,8 @@ async function migrate() {
         throw new Error(`Unexpected SQL migration file found: ${migrationName}. Keep schema.sql as the sole canonical SQL file.`);
       }
 
+      await ensureLenderMarketplaceSchema(client);
+
       console.log("Canonical schema is already installed.");
       return;
     }
@@ -127,6 +167,7 @@ async function migrate() {
 
     if (existingSchemaCheck.rows[0].exists) {
       await ensureFundingCommitments(client);
+      await ensureLenderMarketplaceSchema(client);
 
       const schemaStillIncomplete = !(await hasCanonicalSchema(client));
       if (schemaStillIncomplete) {
@@ -164,6 +205,8 @@ async function migrate() {
       console.error(`Error executing migration ${schemaFile}:`, error);
       throw error;
     }
+
+    await ensureLenderMarketplaceSchema(client);
 
     console.log("Canonical schema installed successfully.");
   } finally {

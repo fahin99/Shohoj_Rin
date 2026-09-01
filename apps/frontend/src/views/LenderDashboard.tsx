@@ -7,10 +7,10 @@ import { Badge, LoanStatusBadge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { ProgressBar } from "../components/Progress";
 import { CurrencyInput } from "../components/Input";
-import { formatTaka, formatPercent } from "../lib/format";
+import { formatTaka, formatPercent, formatDate } from "../lib/format";
 import type { PageName, LoanStatus } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
-import { getPortfolio, getOpportunities, fundOpportunity } from "../lib/api/investor";
+import { getPortfolio, getOpportunities, fundOpportunity, rejectOpportunity } from "../lib/api/investor";
 
 interface Props {
   onNavigate: (page: PageName) => void;
@@ -25,6 +25,8 @@ interface FundedLoan {
   rate: number;
   tenure: number;
   repaidPct: number;
+  remainingAmount: number;
+  nextDueDate: string | null;
   status: LoanStatus;
 }
 
@@ -117,7 +119,9 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
             amount: Number(row.fundedAmount ?? 0),
             rate: Number(row.interestRate ?? 0),
             tenure: Number(row.durationMonths ?? 0),
-            repaidPct: 0,
+            repaidPct: Number(row.repaidPct ?? 0),
+            remainingAmount: Number(row.remainingAmount ?? 0),
+            nextDueDate: (row.nextDueDate as string | null) ?? null,
             status: (row.loanStatus as LoanStatus | undefined) ?? "active",
           }));
           setFundedLoans(funded);
@@ -165,6 +169,21 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
     }
   };
 
+  const [rejectedIds, setRejectedIds] = useState<Set<string>>(new Set());
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+
+  const handleReject = async (opp: Opportunity) => {
+    try {
+      setRejectingId(opp.applicationId);
+      await rejectOpportunity(opp.applicationId);
+      setRejectedIds((prev) => new Set(prev).add(opp.applicationId));
+    } catch (err) {
+      console.error("Failed to reject opportunity", err);
+    } finally {
+      setRejectingId(null);
+    }
+  };
+
   const toggleFactors = (id: string) => {
     setExpandedFactors((prev) => {
       const next = new Set(prev);
@@ -202,6 +221,19 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
       render: (r) => `${r.tenure} mo`,
     },
     { key: "repaid", header: "Repaid", numeric: true, render: (r) => `${r.repaidPct}%` },
+    {
+      key: "remaining",
+      header: "Remaining",
+      numeric: true,
+      hideBelow: "md",
+      render: (r) => formatTaka(r.remainingAmount),
+    },
+    {
+      key: "nextDue",
+      header: "Next due",
+      hideBelow: "lg",
+      render: (r) => (r.nextDueDate ? formatDate(r.nextDueDate) : "—"),
+    },
     { key: "status", header: "Status", render: (r) => <LoanStatusBadge status={r.status} /> },
   ];
   const maxDeployed =
@@ -329,7 +361,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
             </p>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {opportunities.map((op) => {
+              {opportunities.filter((op) => !rejectedIds.has(op.applicationId)).map((op) => {
                 const isFunded = funded.has(op.applicationId);
                 const remaining = Math.max(0, op.requestedAmount - (op.committedAmount ?? 0));
                 const bandMeta = op.trustBand ? trustBandDisplay[op.trustBand] : null;
@@ -437,11 +469,20 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                           />
                         </div>
                         <Button
+                          variant="secondary"
+                          size="sm"
+                          loading={rejectingId === op.applicationId}
+                          onClick={() => handleReject(op)}
+                          disabled={fundingId !== null || rejectingId !== null}
+                        >
+                          Not now
+                        </Button>
+                        <Button
                           variant="primary"
                           size="sm"
                           loading={fundingId === op.applicationId}
                           onClick={() => handleFund(op)}
-                          disabled={fundingId !== null}
+                          disabled={fundingId !== null || rejectingId !== null}
                         >
                           Fund
                         </Button>

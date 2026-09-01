@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../lib/db.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
+import { matchApplicationToLenders } from "../services/lender-matching.service.js";
 
 const router = Router();
 
@@ -56,15 +57,9 @@ router.post("/", requireAuth, async (req, res) => {
     );
     const trustScoreId = trustResult.rows[0]?.score_id ?? null;
 
-    // Resolve partner from product if not directly specified
-    let resolvedPartnerId = partnerId ?? null;
-    if (!resolvedPartnerId && productId) {
-      const productResult = await client.query(
-        `SELECT partner_id FROM loan_products WHERE product_id = $1`,
-        [productId],
-      );
-      resolvedPartnerId = productResult.rows[0]?.partner_id ?? null;
-    }
+    // Marketplace applications are not pinned to a single lender: partner_id
+    // stays null unless the caller explicitly targets a partner.
+    const resolvedPartnerId = partnerId ?? null;
 
     const appResult = await client.query(
       `INSERT INTO loan_applications
@@ -92,9 +87,12 @@ router.post("/", requireAuth, async (req, res) => {
       ],
     );
 
+    const app = appResult.rows[0] as any;
+
+    await matchApplicationToLenders(client, app.applicationId, purpose);
+
     await client.query("COMMIT");
 
-    const app = appResult.rows[0] as any;
     return res.status(201).json({
       success: true,
       data: {

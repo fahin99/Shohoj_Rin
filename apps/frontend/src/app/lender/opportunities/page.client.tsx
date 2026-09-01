@@ -6,7 +6,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { Badge } from "../../../components/Badge";
 import { Button } from "../../../components/Button";
 import { formatTaka, formatPercent } from "../../../lib/format";
-import { fundOpportunity, getOpportunities } from "../../../lib/api/investor";
+import { fundOpportunity, getOpportunities, rejectOpportunity } from "../../../lib/api/investor";
 import { getDisplayName, type StoredUserProfile } from "../../../lib/session";
 import type { PageName } from "../../../types";
 
@@ -98,6 +98,23 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
     }
   };
 
+  const [rejectedIds, setRejectedIds] = useState<Set<string>>(new Set());
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+
+  const handleReject = async (opportunity: Opportunity) => {
+    try {
+      setRejectingId(opportunity.applicationId);
+      setError(null);
+      await rejectOpportunity(opportunity.applicationId);
+      setRejectedIds((prev) => new Set(prev).add(opportunity.applicationId));
+    } catch (err) {
+      console.error("Failed to reject opportunity", err);
+      setError(err instanceof Error ? err.message : "Failed to reject opportunity");
+    } finally {
+      setRejectingId(null);
+    }
+  };
+
   const toggle = (applicationId: string) => {
     setExpanded((current) => {
       const next = new Set(current);
@@ -142,7 +159,7 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {opportunities.map((opportunity) => {
+            {opportunities.filter((o) => !rejectedIds.has(o.applicationId)).map((opportunity) => {
               const remaining = Math.max(0, opportunity.requestedAmount - opportunity.committedAmount);
               const band = opportunity.trustBand ? trustBandDisplay[opportunity.trustBand] : null;
               const isExpanded = expanded.has(opportunity.applicationId);
@@ -231,6 +248,14 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                       placeholder={`Up to ${formatTaka(remaining)}`}
                       className="h-10 flex-1 rounded-[6px] border-[1.5px] border-stone-300 px-3 text-sm text-navy outline-none focus:border-teal"
                     />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void handleReject(opportunity)}
+                      disabled={isFunding || rejectingId === opportunity.applicationId}
+                    >
+                      {rejectingId === opportunity.applicationId ? "Rejecting…" : "Not now"}
+                    </Button>
                     <Button type="button" onClick={() => void handleFund(opportunity)} disabled={isFunding || remaining <= 0}>
                       {isFunding ? "Funding…" : "Fund application"}
                     </Button>

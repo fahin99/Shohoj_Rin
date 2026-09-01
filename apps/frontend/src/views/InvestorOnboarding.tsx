@@ -39,9 +39,14 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
     incorporationCertificateUploaded: false,
     regulatoryLicenseUploaded: false,
   });
+  const [companyNameError, setCompanyNameError] = useState("");
   const [data, setData] = useState({
     fullName: "",
     phone: "",
+    companyName: "",
+    companyAddress: "",
+    companyBranch: "",
+    companyGoal: "",
     fundingCapacity: "",
     riskPreference: "moderate",
     investmentGoals: "growth",
@@ -107,6 +112,10 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
     }
   };
   const next = async () => {
+    if (step === 0 && !data.companyName.trim()) {
+      setCompanyNameError("Company name is required");
+      return;
+    }
     if (step < steps.length - 1) {
       setStep((s) => s + 1);
       return;
@@ -114,11 +123,15 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
     setSaving(true);
     try {
       await updateInvestorProfile({
-        fullName: data.fullName,
+        displayName: data.fullName,
         phone: data.phone,
         fundingCapacity: Number(data.fundingCapacity) || 0,
         riskPreference: data.riskPreference,
         investmentGoals: data.investmentGoals,
+        companyName: data.companyName,
+        companyAddress: data.companyAddress,
+        companyBranch: data.companyBranch,
+        companyGoal: data.companyGoal,
         preferredCategories,
       });
       onNavigate("lender-dashboard");
@@ -190,6 +203,47 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
                   value={data.phone}
                   onChange={(e) => update("phone", e.target.value)}
                 />
+                <div className="border-t border-stone-200 pt-5 mt-2">
+                  <div className="mb-4">
+                    <p className="text-sm font-semibold text-navy">Company / organization</p>
+                    <p className="text-xs text-stone-500">
+                      We link your lender account to a company record so borrowers can see who is
+                      funding their loan. If this company already exists on Shohoj Rin, we link
+                      your account to it instead of creating a duplicate.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-5">
+                    <TextInput
+                      label="Company name"
+                      placeholder="e.g., Bengal Microfinance Bank"
+                      required
+                      value={data.companyName}
+                      onChange={(e) => {
+                        update("companyName", e.target.value);
+                        setCompanyNameError("");
+                      }}
+                      error={companyNameError}
+                    />
+                    <TextInput
+                      label="Company address"
+                      placeholder="House, road, area, city"
+                      value={data.companyAddress}
+                      onChange={(e) => update("companyAddress", e.target.value)}
+                    />
+                    <TextInput
+                      label="Branch"
+                      placeholder="e.g., Dhanmondi Branch"
+                      value={data.companyBranch}
+                      onChange={(e) => update("companyBranch", e.target.value)}
+                    />
+                    <TextInput
+                      label="Company / lending goal"
+                      placeholder="e.g., Expand access to education financing"
+                      value={data.companyGoal}
+                      onChange={(e) => update("companyGoal", e.target.value)}
+                    />
+                  </div>
+                </div>
                 <div className="border-t border-stone-200 pt-5 mt-2">
                   <div className="mb-4">
                     <p className="text-sm font-semibold text-navy">Organization Documents</p>

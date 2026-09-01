@@ -41,6 +41,12 @@ async function withServer(run: (baseUrl: string) => Promise<void>) {
 function setFundingClient(options: { existing?: boolean; failAudit?: boolean } = {}) {
   const query = vi.fn(async (queryText: string) => {
     const sql = String(queryText);
+    if (sql.includes("FROM lender_application_matches")) {
+      return {
+        rowCount: 1,
+        rows: [{ match_id: "match-1", status: "pending" }],
+      };
+    }
     if (sql.includes("FROM loan_applications")) {
       return {
         rowCount: 1,

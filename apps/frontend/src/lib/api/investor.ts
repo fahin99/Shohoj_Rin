@@ -26,3 +26,10 @@ export async function fundOpportunity(applicationId: string, amount: number) {
 export async function getPortfolio() {
   return apiRequest<any>("/investor/portfolio");
 }
+
+export async function rejectOpportunity(applicationId: string, reason?: string) {
+  return apiRequest<any>(`/investor/applications/${applicationId}/reject`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}

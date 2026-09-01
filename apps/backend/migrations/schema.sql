@@ -122,6 +122,9 @@ CREATE TABLE funding_partners (
   type VARCHAR(50) NOT NULL,
   contact_email VARCHAR(255),
   contact_phone VARCHAR(20),
+  address TEXT,
+  branch VARCHAR(255),
+  goal VARCHAR(255),
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -187,6 +190,19 @@ CREATE TABLE funding_commitments (
   status VARCHAR(20) NOT NULL DEFAULT 'committed',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (application_id, lender_user_id)
+);
+
+CREATE TABLE lender_application_matches (
+  match_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  application_id UUID NOT NULL REFERENCES loan_applications (application_id) ON DELETE CASCADE,
+  lender_user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+  priority INTEGER NOT NULL DEFAULT 0,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  matched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  viewed_at TIMESTAMPTZ,
+  decided_at TIMESTAMPTZ,
+  decision_reason TEXT,
   UNIQUE (application_id, lender_user_id)
 );
  
@@ -332,6 +348,8 @@ CREATE INDEX idx_loans_partner ON loans(partner_id);
 CREATE INDEX idx_loans_status ON loans(status);
 CREATE INDEX idx_funding_commitments_lender ON funding_commitments(lender_user_id, status, created_at DESC);
 CREATE INDEX idx_funding_commitments_application ON funding_commitments(application_id, status);
+CREATE INDEX idx_lender_matches_lender ON lender_application_matches(lender_user_id, status, matched_at DESC);
+CREATE INDEX idx_lender_matches_application ON lender_application_matches(application_id, priority ASC);
 ALTER TABLE users ADD CONSTRAINT chk_users_role CHECK (role IN ('borrower', 'lender', 'admin', 'partner_agent'));
 ALTER TABLE users ADD CONSTRAINT chk_users_account_status CHECK (account_status IN ('active', 'suspended', 'deactivated'));
 ALTER TABLE user_profiles ADD CONSTRAINT chk_profile_completion_status CHECK (profile_completion_status IN ('incomplete', 'pending_verification', 'under_review', 'verified', 'rejected', 'needs_update'));
@@ -358,6 +376,7 @@ ALTER TABLE trust_scores ADD CONSTRAINT chk_trust_scores_band CHECK (trust_band 
  
 ALTER TABLE loan_applications ADD CONSTRAINT chk_loan_app_status CHECK (status IN ('draft', 'submitted', 'under_review', 'approved', 'rejected', 'disbursed', 'active', 'completed', 'overdue', 'defaulted'));
 ALTER TABLE funding_commitments ADD CONSTRAINT chk_funding_commitments_status CHECK (status IN ('committed', 'cancelled'));
+ALTER TABLE lender_application_matches ADD CONSTRAINT chk_lender_match_status CHECK (status IN ('pending', 'viewed', 'accepted', 'rejected', 'expired'));
 ALTER TABLE loan_offers ADD CONSTRAINT chk_loan_offer_status CHECK (status IN ('pending', 'accepted', 'declined', 'expired'));
 ALTER TABLE loans ADD CONSTRAINT chk_loans_status CHECK (status IN ('active', 'completed', 'overdue', 'delinquent', 'defaulted'));
  

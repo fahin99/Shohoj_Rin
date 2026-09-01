@@ -62,10 +62,16 @@ export const profileUpdateSchema = z.object({
 
 export const investorProfileSchema = z.object({
   displayName: z.string().trim().min(2).optional(),
+  phone: z.string().trim().min(5).optional(),
   fundingCapacity: z.number().positive().optional(),
   preferredCategories: z.array(z.string()).optional(),
   riskPreference: z.enum(["conservative", "moderate", "aggressive"]).optional(),
   maxExposure: z.number().positive().optional(),
+  investmentGoals: z.string().trim().optional(),
+  companyName: z.string().trim().min(2).optional(),
+  companyAddress: z.string().trim().optional(),
+  companyBranch: z.string().trim().optional(),
+  companyGoal: z.string().trim().optional(),
 });
 
 export const documentUploadSchema = z.object({

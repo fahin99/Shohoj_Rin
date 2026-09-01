@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const demoMocks = vi.hoisted(() => ({
   getProfileWithCompletion: vi.fn(),
-  getRequiredDocuments: vi.fn(),
+  getDocumentRequirements: vi.fn(),
   assess: vi.fn(),
   logAuditEvent: vi.fn(),
 }));
@@ -28,7 +28,7 @@ vi.mock("../../middleware/authorize.js", () => ({
 }));
 vi.mock("../../services/profile.service.js", () => ({
   getProfileWithCompletion: demoMocks.getProfileWithCompletion,
-  getRequiredDocuments: demoMocks.getRequiredDocuments,
+  getDocumentRequirements: demoMocks.getDocumentRequirements,
 }));
 vi.mock("../../services/document-verification.service.js", () => ({
   demoProvider: { assess: demoMocks.assess },
@@ -58,7 +58,7 @@ describe("demo document skip", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     demoMocks.getProfileWithCompletion.mockResolvedValue({ profile: { occupation: "student" } });
-    demoMocks.getRequiredDocuments.mockReturnValue(["nid_front", "student_id"]);
+    demoMocks.getDocumentRequirements.mockReturnValue(["nid_front", "student_id"]);
     demoMocks.assess.mockResolvedValue({ status: "demo_verified", confidence: 100 });
     demoMocks.logAuditEvent.mockResolvedValue(undefined);
   });

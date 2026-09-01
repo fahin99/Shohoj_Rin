@@ -20,7 +20,14 @@ router.get("/", requireAuth, async (req, res) => {
     let paramIdx = 1;
 
     if (role === "lender") {
-      whereClause = `WHERE 1=1`;
+      whereClause = `WHERE EXISTS (
+        SELECT 1 FROM funding_commitments fc
+        WHERE fc.application_id = l.application_id
+          AND fc.lender_user_id = $${paramIdx}
+          AND fc.status = 'committed'
+      )`;
+      params.push(userId);
+      paramIdx++;
     } else if (role === "admin") {
       whereClause = `WHERE 1=1`;
     } else {
@@ -147,6 +154,20 @@ router.get("/:id", requireAuth, async (req, res) => {
       });
     }
 
+    if (role === "lender") {
+      const fundingCheck = await pool.query(
+        `SELECT 1 FROM funding_commitments
+         WHERE application_id = $1 AND lender_user_id = $2 AND status = 'committed'`,
+        [loan.applicationId, userId],
+      );
+      if (fundingCheck.rowCount === 0) {
+        return res.status(403).json({
+          success: false,
+          error: { message: "Access denied" },
+        });
+      }
+    }
+
     // Get disbursement info
     const disbursements = await pool.query(
       `SELECT
@@ -208,9 +229,10 @@ router.get("/:id/transactions", requireAuth, async (req, res) => {
 
   try {
     // Verify ownership
-    const loanResult = await pool.query(`SELECT user_id FROM loans WHERE loan_id = $1`, [
-      req.params.id,
-    ]);
+    const loanResult = await pool.query(
+      `SELECT user_id, application_id FROM loans WHERE loan_id = $1`,
+      [req.params.id],
+    );
     if (loanResult.rowCount === 0) {
       return res.status(404).json({
         success: false,
@@ -222,6 +244,19 @@ router.get("/:id/transactions", requireAuth, async (req, res) => {
         success: false,
         error: { message: "Access denied" },
       });
+    }
+    if (role === "lender") {
+      const fundingCheck = await pool.query(
+        `SELECT 1 FROM funding_commitments
+         WHERE application_id = $1 AND lender_user_id = $2 AND status = 'committed'`,
+        [loanResult.rows[0].application_id, userId],
+      );
+      if (fundingCheck.rowCount === 0) {
+        return res.status(403).json({
+          success: false,
+          error: { message: "Access denied" },
+        });
+      }
     }
 
     // Get repayments as transactions
