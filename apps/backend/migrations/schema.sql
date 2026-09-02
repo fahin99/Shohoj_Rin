@@ -329,7 +329,8 @@ CREATE TABLE notifications (
   sent_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
- 
+CREATE UNIQUE INDEX idx_funding_partners_name_normalized ON funding_partners (lower(regexp_replace(btrim(name), '\s+', ' ', 'g')));
+
 CREATE INDEX idx_institutions_name ON institutions(name);
 CREATE INDEX idx_institutions_type ON institutions(type);
 CREATE UNIQUE INDEX idx_trust_scores_user_current ON trust_scores(user_id) WHERE is_current = TRUE;
@@ -435,6 +436,17 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION ensure_lender_investor_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.role = 'lender' THEN
+        INSERT INTO investor_profiles (user_id, verification_status, kyc_status, account_status)
+        VALUES (NEW.user_id, 'pending', 'incomplete', 'active')
+        ON CONFLICT (user_id) DO NOTHING;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
 CREATE TRIGGER trg_user_profiles_updated_at BEFORE UPDATE ON user_profiles FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
@@ -448,3 +460,4 @@ CREATE TRIGGER trg_audit_logs_append_only BEFORE UPDATE OR DELETE ON audit_logs 
 CREATE TRIGGER trg_trust_scores_append_only BEFORE DELETE ON trust_scores FOR EACH ROW EXECUTE PROCEDURE prevent_update_delete();
 CREATE TRIGGER trg_trust_scores_restrict_update BEFORE UPDATE ON trust_scores FOR EACH ROW EXECUTE PROCEDURE restrict_trust_scores_update();
 CREATE TRIGGER trg_repayments_append_only BEFORE UPDATE OR DELETE ON repayments FOR EACH ROW EXECUTE PROCEDURE prevent_update_delete();
+CREATE TRIGGER trg_users_ensure_lender_investor_profile AFTER INSERT OR UPDATE OF role ON users FOR EACH ROW EXECUTE PROCEDURE ensure_lender_investor_profile();

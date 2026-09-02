@@ -1,5 +1,6 @@
 export interface StoredUserProfile {
   userId?: string;
+  username?: string | null;
   email?: string;
   phone?: string | null;
   role?: string;
@@ -25,6 +26,7 @@ export interface StoredUserProfile {
     studentId?: string | null;
     enrollmentYear?: number | null;
     institutionId?: string | null;
+    profilePhotoUrl?: string | null;
   };
 }
 export function getDisplayName(user: StoredUserProfile | null, fallback = "Account") {

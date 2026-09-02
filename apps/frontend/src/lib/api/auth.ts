@@ -1,7 +1,7 @@
 import { apiRequest } from "../api";
 
 export async function registerUser(data: {
-  fullName: string;
+  username: string;
   email: string;
   phone?: string;
   password: string;

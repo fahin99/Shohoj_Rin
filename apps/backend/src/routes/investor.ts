@@ -117,33 +117,19 @@ router.put("/profile", requireAuth, requireLender, async (req, res) => {
     await client.query("BEGIN");
 
     if (data.companyName) {
-      const companyName = data.companyName.trim();
-
-      const existingPartner = await client.query(
-        `SELECT partner_id FROM funding_partners WHERE LOWER(TRIM(name)) = LOWER($1) FOR UPDATE`,
-        [companyName],
+      const companyName = data.companyName.trim().replace(/\s+/g, " ");
+      const partnerResult = await client.query(
+        `INSERT INTO funding_partners (name, type, address, branch, goal)
+         VALUES ($1, 'other', $2, $3, $4)
+         ON CONFLICT ((lower(regexp_replace(btrim(name), '\\s+', ' ', 'g'))))
+         DO UPDATE SET
+           address = COALESCE(EXCLUDED.address, funding_partners.address),
+           branch = COALESCE(EXCLUDED.branch, funding_partners.branch),
+           goal = COALESCE(EXCLUDED.goal, funding_partners.goal)
+         RETURNING partner_id`,
+        [companyName, data.companyAddress ?? null, data.companyBranch ?? null, data.companyGoal ?? null],
       );
-
-      let partnerId: string;
-      if (existingPartner.rowCount && existingPartner.rowCount > 0) {
-        partnerId = existingPartner.rows[0].partner_id;
-        await client.query(
-          `UPDATE funding_partners
-           SET address = COALESCE($2, address),
-               branch = COALESCE($3, branch),
-               goal = COALESCE($4, goal)
-           WHERE partner_id = $1`,
-          [partnerId, data.companyAddress ?? null, data.companyBranch ?? null, data.companyGoal ?? null],
-        );
-      } else {
-        const insertPartner = await client.query(
-          `INSERT INTO funding_partners (name, type, address, branch, goal)
-           VALUES ($1, 'other', $2, $3, $4)
-           RETURNING partner_id`,
-          [companyName, data.companyAddress ?? null, data.companyBranch ?? null, data.companyGoal ?? null],
-        );
-        partnerId = insertPartner.rows[0].partner_id;
-      }
+      const partnerId: string = partnerResult.rows[0].partner_id;
 
       await client.query(`UPDATE users SET partner_id = $1 WHERE user_id = $2`, [partnerId, userId]);
     }
@@ -304,7 +290,6 @@ router.get("/opportunities", requireAuth, requireLender, async (req, res) => {
   }
 });
 
-// POST /api/v1/investor/fund/:applicationId — accept a matched application and commit funding.
 router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res) => {
   const userId = (req as RequestWithAuth).auth!.userId;
   const applicationId = req.params.applicationId;
@@ -435,7 +420,6 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
   }
 });
 
-// POST /api/v1/investor/applications/:applicationId/reject — decline a matched application.
 router.post("/applications/:applicationId/reject", requireAuth, requireLender, async (req, res) => {
   const userId = (req as RequestWithAuth).auth!.userId;
   const applicationId = req.params.applicationId;
