@@ -95,8 +95,13 @@ async function seedDemoMarketplace() {
       );
     }
 
+    // NOTE: lp.category is selected here (not just name/partner) because it is the
+    // canonical value that must be written to loan_applications.purpose — lender
+    // matching (matchApplicationToLenders) compares purpose against each lender's
+    // investor_profiles.preferred_categories, which only ever contains canonical
+    // categories ("education" | "emergency" | "business" | "personal" | "development").
     const products = await client.query(
-      `SELECT lp.product_id, lp.name, fp.partner_id, fp.name AS partner_name
+      `SELECT lp.product_id, lp.name, lp.category, fp.partner_id, fp.name AS partner_name
        FROM loan_products lp
        JOIN funding_partners fp ON fp.partner_id = lp.partner_id
        WHERE lp.is_active = TRUE
@@ -109,12 +114,14 @@ async function seedDemoMarketplace() {
       );
     }
 
+    // `purposeDescription` is free text for humans; `purpose` (set below from the
+    // matched product's canonical category) is what lender matching actually reads.
     const applicationTemplates = [
       {
         userIndex: 0,
         productName: "Student Tuition Support Loan",
         requestedAmount: 180000,
-        purpose: "Tuition fees",
+        purposeDescription: "Tuition fees",
         status: "submitted",
         daysAgo: 5,
       },
@@ -122,7 +129,7 @@ async function seedDemoMarketplace() {
         userIndex: 1,
         productName: "Small Business Working Capital Facility",
         requestedAmount: 450000,
-        purpose: "Inventory purchase",
+        purposeDescription: "Inventory purchase",
         status: "under_review",
         daysAgo: 9,
       },
@@ -130,7 +137,7 @@ async function seedDemoMarketplace() {
         userIndex: 2,
         productName: "Emergency Medical Assistance",
         requestedAmount: 120000,
-        purpose: "Medical treatment",
+        purposeDescription: "Medical treatment",
         status: "approved",
         daysAgo: 12,
       },
@@ -138,7 +145,7 @@ async function seedDemoMarketplace() {
         userIndex: 3,
         productName: "Personal Flexible Loan",
         requestedAmount: 210000,
-        purpose: "Home repair",
+        purposeDescription: "Home repair",
         status: "submitted",
         daysAgo: 3,
       },
@@ -146,7 +153,7 @@ async function seedDemoMarketplace() {
         userIndex: 4,
         productName: "Skills & Professional Development Loan",
         requestedAmount: 65000,
-        purpose: "Certification course",
+        purposeDescription: "Certification course",
         status: "approved",
         daysAgo: 15,
       },
@@ -172,7 +179,7 @@ async function seedDemoMarketplace() {
          FROM loan_applications
          WHERE user_id = $1 AND product_id = $2 AND purpose = $3 AND requested_amount = $4
          LIMIT 1`,
-        [borrower.user_id, product.product_id, template.purpose, template.requestedAmount],
+        [borrower.user_id, product.product_id, product.category, template.requestedAmount],
       );
 
       if (existingApp.rowCount === 0) {
@@ -193,8 +200,8 @@ async function seedDemoMarketplace() {
             product.partner_id,
             product.product_id,
             template.requestedAmount,
-            template.purpose,
-            `Demo ${template.purpose.toLowerCase()} financing for ${borrower.full_name ?? "borrower"}.`,
+            product.category,
+            `Demo ${template.purposeDescription.toLowerCase()} financing for ${borrower.full_name ?? "borrower"}.`,
             template.status,
             trustScoreId,
             template.daysAgo,
@@ -204,10 +211,10 @@ async function seedDemoMarketplace() {
     }
 
     await client.query("COMMIT");
-    console.log("✅ Demo marketplace seeded successfully.");
+    console.log("OK Demo marketplace seeded successfully.");
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("❌ Demo marketplace seed failed:", error);
+    console.error("X Demo marketplace seed failed:", error);
     throw error;
   } finally {
     client.release();

@@ -175,9 +175,10 @@ router.post("/register", async (req, res) => {
        VALUES ($1, $2)`,
       [user.user_id, fullName],
     );
-    if (role === "lender") {
-      await client.query(`INSERT INTO investor_profiles (user_id) VALUES ($1)`, [user.user_id]);
-    }
+    // NOTE: investor_profiles for lenders is created automatically by the
+    // trg_users_ensure_lender_investor_profile DB trigger (see schema.sql), which
+    // enforces the "every lender has an investor profile" invariant for every
+    // insertion/role-change path, not just this route.
     const session = await createSession(client, user.user_id, user.role, sessionId);
     await client.query("COMMIT");
     setAuthCookies(res, session.accessToken, session.refreshToken);

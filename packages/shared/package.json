@@ -1,17 +1,42 @@
 {
-  "name": "@shohojrin/shared",
+  "name": "@shohojrin/backend",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "dev": "tsx watch src/app.ts",
+    "build": "tsc",
+    "db:check": "tsx src/scripts/check-db.ts",
+    "migrate": "tsx src/scripts/migrate.ts",
+    "seed:institutions": "tsx src/scripts/seed-institutions.ts",
+    "seed:loan-products": "tsx src/scripts/seed-loan-products.ts",
+    "seed:demo-marketplace": "tsx src/scripts/seed-demo-marketplace.ts",
+    "backfill:lender-matches": "tsx src/scripts/backfill-lender-matches.ts",
+    "test": "vitest run",
+    "start": "node dist/app.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "bd-instituition-list-by-solutya": "^1.2.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "@types/bcryptjs": "^3.0.0",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^22.16.5",
+    "@types/pg": "^8.20.4",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.11"
   }
 }

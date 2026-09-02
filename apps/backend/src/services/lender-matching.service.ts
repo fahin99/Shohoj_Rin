@@ -4,14 +4,6 @@ export interface LenderMatchResult {
   lenderUserId: string;
   priority: number;
 }
-
-/**
- * Matches a newly-submitted loan application to every active lender whose
- * `investor_profiles.preferred_categories` includes the application's purpose,
- * or who has no preferences set (matches everything). Priority mirrors each
- * lender's own preference ordering. Persists rows in `lender_application_matches`
- * and notifies matched lenders.
- */
 export async function matchApplicationToLenders(
   client: Pick<PoolClient, "query">,
   applicationId: string,
@@ -23,7 +15,7 @@ export async function matchApplicationToLenders(
   }>(
     `SELECT u.user_id, ip.preferred_categories
      FROM users u
-     JOIN investor_profiles ip ON ip.user_id = u.user_id
+     LEFT JOIN investor_profiles ip ON ip.user_id = u.user_id
      LEFT JOIN funding_partners fp ON fp.partner_id = u.partner_id
      WHERE u.role = 'lender'
        AND u.account_status = 'active'

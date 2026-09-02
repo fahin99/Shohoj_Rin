@@ -120,6 +120,91 @@ async function ensureLenderMarketplaceSchema(client: PoolClient) {
   `);
 }
 
+/**
+ * Race-safe company creation (item 3): funding_partners.name is only exact-match
+ * UNIQUE, so pre-existing databases may already contain rows that differ only by
+ * case/whitespace (e.g. "ABC Bank" and " abc bank "). Merge any such duplicates into
+ * a single canonical row (the earliest-created one) before installing the normalized
+ * unique index the application now relies on for its ON CONFLICT upsert.
+ */
+async function ensureFundingPartnerNameNormalizedIndex(client: PoolClient) {
+  const indexExists = await client.query(
+    `SELECT to_regclass('public.idx_funding_partners_name_normalized') AS index_name`,
+  );
+  if (indexExists.rows[0].index_name) return;
+
+  console.log("Deduplicating funding_partners by normalized name before adding unique index...");
+  await client.query(`
+    DO $$
+    DECLARE
+      dup RECORD;
+    BEGIN
+      FOR dup IN
+        SELECT array_agg(partner_id ORDER BY created_at, partner_id) AS ids
+        FROM funding_partners
+        GROUP BY lower(regexp_replace(btrim(name), '\\s+', ' ', 'g'))
+        HAVING COUNT(*) > 1
+      LOOP
+        UPDATE users SET partner_id = dup.ids[1] WHERE partner_id = ANY(dup.ids[2:]);
+        UPDATE loan_products SET partner_id = dup.ids[1] WHERE partner_id = ANY(dup.ids[2:]);
+        UPDATE loan_applications SET partner_id = dup.ids[1] WHERE partner_id = ANY(dup.ids[2:]);
+        UPDATE loan_offers SET partner_id = dup.ids[1] WHERE partner_id = ANY(dup.ids[2:]);
+        UPDATE loans SET partner_id = dup.ids[1] WHERE partner_id = ANY(dup.ids[2:]);
+        UPDATE partner_rules SET partner_id = dup.ids[1] WHERE partner_id = ANY(dup.ids[2:]);
+        UPDATE partner_decisions SET partner_id = dup.ids[1] WHERE partner_id = ANY(dup.ids[2:]);
+        DELETE FROM funding_partners WHERE partner_id = ANY(dup.ids[2:]);
+      END LOOP;
+    END $$;
+  `);
+
+  console.log("Creating idx_funding_partners_name_normalized...");
+  await client.query(`
+    CREATE UNIQUE INDEX idx_funding_partners_name_normalized
+      ON funding_partners (lower(regexp_replace(btrim(name), '\\s+', ' ', 'g')));
+  `);
+}
+
+/**
+ * Lender → investor_profiles invariant (item 4): install the trigger that guarantees
+ * every users row with role = 'lender' has a matching investor_profiles row, then
+ * backfill any pre-existing lender accounts that predate the trigger.
+ */
+async function ensureLenderInvestorProfileInvariant(client: PoolClient) {
+  await client.query(`
+    CREATE OR REPLACE FUNCTION ensure_lender_investor_profile()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        IF NEW.role = 'lender' THEN
+            INSERT INTO investor_profiles (user_id, verification_status, kyc_status, account_status)
+            VALUES (NEW.user_id, 'pending', 'incomplete', 'active')
+            ON CONFLICT (user_id) DO NOTHING;
+        END IF;
+        RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+  await client.query(`DROP TRIGGER IF EXISTS trg_users_ensure_lender_investor_profile ON users;`);
+  await client.query(`
+    CREATE TRIGGER trg_users_ensure_lender_investor_profile
+      AFTER INSERT OR UPDATE OF role ON users
+      FOR EACH ROW EXECUTE PROCEDURE ensure_lender_investor_profile();
+  `);
+
+  const backfill = await client.query(`
+    INSERT INTO investor_profiles (user_id, verification_status, kyc_status, account_status)
+    SELECT user_id, 'pending', 'incomplete', 'active'
+    FROM users
+    WHERE role = 'lender'
+    ON CONFLICT (user_id) DO NOTHING
+    RETURNING user_id;
+  `);
+  if (backfill.rowCount && backfill.rowCount > 0) {
+    console.log(
+      `Backfilled investor_profiles for ${backfill.rowCount} pre-existing lender account(s).`,
+    );
+  }
+}
+
 async function migrate() {
   const client = await pool.connect();
   try {
@@ -153,6 +238,8 @@ async function migrate() {
       }
 
       await ensureLenderMarketplaceSchema(client);
+      await ensureFundingPartnerNameNormalizedIndex(client);
+      await ensureLenderInvestorProfileInvariant(client);
 
       console.log("Canonical schema is already installed.");
       return;
@@ -168,6 +255,8 @@ async function migrate() {
     if (existingSchemaCheck.rows[0].exists) {
       await ensureFundingCommitments(client);
       await ensureLenderMarketplaceSchema(client);
+      await ensureFundingPartnerNameNormalizedIndex(client);
+      await ensureLenderInvestorProfileInvariant(client);
 
       const schemaStillIncomplete = !(await hasCanonicalSchema(client));
       if (schemaStillIncomplete) {
@@ -207,6 +296,8 @@ async function migrate() {
     }
 
     await ensureLenderMarketplaceSchema(client);
+    await ensureFundingPartnerNameNormalizedIndex(client);
+    await ensureLenderInvestorProfileInvariant(client);
 
     console.log("Canonical schema installed successfully.");
   } finally {
