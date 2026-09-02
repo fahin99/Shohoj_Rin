@@ -7,7 +7,7 @@
     "dev": "tsx watch src/app.ts",
     "build": "tsc",
     "db:check": "tsx src/scripts/check-db.ts",
-    "migrate": "tsx src/scripts/migrate.ts",
+    "migrate": "tsx src/scripts/migrate.ts && tsx src/scripts/migrate-account-identity.ts",
     "seed:institutions": "tsx src/scripts/seed-institutions.ts",
     "seed:loan-products": "tsx src/scripts/seed-loan-products.ts",
     "seed:demo-marketplace": "tsx src/scripts/seed-demo-marketplace.ts",
