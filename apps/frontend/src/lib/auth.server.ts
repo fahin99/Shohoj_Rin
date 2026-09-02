@@ -10,29 +10,35 @@ const API_BASE_URL = (
 ).replace(/\/$/, "");
 type BackendUser = {
   userId: string;
+  username?: string | null;
   email: string;
   phone: string | null;
   role: string;
   accountStatus: string;
   emailVerified: boolean;
-  profileCompletionStatus?: string;
-  fullName: string | null;
-  dateOfBirth: string | null;
-  gender: string | null;
-  city: string | null;
-  district: string | null;
-  occupation: string | null;
-  nidNumber?: string | null;
-  addressLine?: string | null;
-  postalCode?: string | null;
-  monthlyFamilyIncome?: number | null;
-  employmentType?: string | null;
-  employerName?: string | null;
-  monthlyIncome?: number | null;
-  incomeSource?: string | null;
-  studentId?: string | null;
-  enrollmentYear?: number | null;
-  institutionId?: string | null;
+  profileCompletionStatus?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  profile?: {
+    fullName?: string | null;
+    dateOfBirth?: string | null;
+    gender?: string | null;
+    city?: string | null;
+    district?: string | null;
+    occupation?: string | null;
+    nidNumber?: string | null;
+    addressLine?: string | null;
+    postalCode?: string | null;
+    monthlyFamilyIncome?: number | null;
+    employmentType?: string | null;
+    employerName?: string | null;
+    monthlyIncome?: number | null;
+    incomeSource?: string | null;
+    studentId?: string | null;
+    enrollmentYear?: number | null;
+    institutionId?: string | null;
+    profilePhotoUrl?: string | null;
+  };
 };
 type MeResponse = {
   success: boolean;
@@ -41,31 +47,35 @@ type MeResponse = {
 function toStoredUser(user: BackendUser): StoredUserProfile {
   return {
     userId: user.userId,
+    username: user.username,
     email: user.email,
     phone: user.phone,
     role: user.role,
     accountStatus: user.accountStatus,
     emailVerified: user.emailVerified,
     profileCompletionStatus: user.profileCompletionStatus,
-    profile: {
-      fullName: user.fullName,
-      dateOfBirth: user.dateOfBirth,
-      gender: user.gender,
-      city: user.city,
-      district: user.district,
-      occupation: user.occupation,
-      nidNumber: user.nidNumber,
-      addressLine: user.addressLine,
-      postalCode: user.postalCode,
-      monthlyFamilyIncome: user.monthlyFamilyIncome,
-      employmentType: user.employmentType,
-      employerName: user.employerName,
-      monthlyIncome: user.monthlyIncome,
-      incomeSource: user.incomeSource,
-      studentId: user.studentId,
-      enrollmentYear: user.enrollmentYear,
-      institutionId: user.institutionId,
-    },
+    profile: user.profile
+      ? {
+          fullName: user.profile.fullName,
+          dateOfBirth: user.profile.dateOfBirth,
+          gender: user.profile.gender,
+          city: user.profile.city,
+          district: user.profile.district,
+          occupation: user.profile.occupation,
+          nidNumber: user.profile.nidNumber,
+          addressLine: user.profile.addressLine,
+          postalCode: user.profile.postalCode,
+          monthlyFamilyIncome: user.profile.monthlyFamilyIncome,
+          employmentType: user.profile.employmentType,
+          employerName: user.profile.employerName,
+          monthlyIncome: user.profile.monthlyIncome,
+          incomeSource: user.profile.incomeSource,
+          studentId: user.profile.studentId,
+          enrollmentYear: user.profile.enrollmentYear,
+          institutionId: user.profile.institutionId,
+          profilePhotoUrl: user.profile.profilePhotoUrl,
+        }
+      : undefined,
   };
 }
 export async function getCurrentUser(): Promise<StoredUserProfile | null> {
