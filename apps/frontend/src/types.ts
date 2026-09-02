@@ -14,7 +14,8 @@ export type PageName =
   | "lender-opportunities"
   | "admin"
   | "system-states"
-  | "investor-onboarding";
+  | "investor-onboarding"
+  | "profile";
 
 export type LoanStatus = "active" | "completed" | "overdue" | "delinquent" | "defaulted";
 export type AppStatus =

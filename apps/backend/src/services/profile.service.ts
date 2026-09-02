@@ -24,9 +24,10 @@ const profileColumnByField = {
 
 export async function getProfileWithCompletion(userId: string) {
   const result = await pool.query(
-    `SELECT p.*, u.email, u.phone, u.role 
+    `SELECT p.*, u.email, u.phone, u.role, i.name AS institution_name 
      FROM user_profiles p
      JOIN users u ON u.user_id = p.user_id
+     LEFT JOIN institutions i ON i.institution_id = p.institution_id
      WHERE p.user_id = $1`,
     [userId],
   );

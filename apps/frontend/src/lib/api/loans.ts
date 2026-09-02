@@ -20,6 +20,15 @@ export async function getLoanProduct(id: string) {
   return apiRequest<LoanProduct>(`/loan-products/${id}`);
 }
 
+export async function getLoansCountByStatus(status?: string) {
+  const searchParams = new URLSearchParams();
+  if (status) searchParams.set("status", status);
+  searchParams.set("limit", "1");
+  const qs = searchParams.toString();
+  const data = await apiRequest<{ loans: any[]; total: number }>(`/loans?${qs}`);
+  return data.total;
+}
+
 export async function getActiveLoans() {
   const data = await apiRequest<{ loans: any[] }>("/loans?status=active");
   return data.loans.map((loan) => {

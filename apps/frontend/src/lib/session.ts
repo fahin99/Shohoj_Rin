@@ -6,6 +6,7 @@ export interface StoredUserProfile {
   accountStatus?: string;
   emailVerified?: boolean;
   profileCompletionStatus?: string;
+  username?: string | null;
   profile?: {
     fullName?: string | null;
     dateOfBirth?: string | null;
