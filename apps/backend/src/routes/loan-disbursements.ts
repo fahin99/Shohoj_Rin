@@ -49,6 +49,24 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
       }
     }
 
+    // The loans row is locked FOR UPDATE above, so concurrent disbursement
+    // requests for the same loan will block here until this transaction
+    // commits or rolls back, keeping this total safe against races.
+    const disbursedResult = await client.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total_disbursed FROM loan_disbursements WHERE loan_id = $1`,
+      [parsed.data.loanId],
+    );
+    const alreadyDisbursed = Number(disbursedResult.rows[0].total_disbursed);
+    const principalAmount = Number(loan.principal_amount);
+
+    if (alreadyDisbursed + parsed.data.amount > principalAmount) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        success: false,
+        error: { message: "Disbursement amount exceeds remaining loan principal" },
+      });
+    }
+
     const disbResult = await client.query(
       `INSERT INTO loan_disbursements (loan_id, amount, disbursement_method, reference_number, disbursed_at)
        VALUES ($1, $2, $3, $4, NOW())
