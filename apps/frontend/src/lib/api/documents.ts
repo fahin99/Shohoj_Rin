@@ -4,23 +4,23 @@ export async function uploadDocument(data: {
   documentType: string;
   fileName: string;
   mimeType: string;
-  fileData: string; // base64
+  fileData: string;
   verificationRequestId?: string;
 }) {
-  return apiRequest<any>("/documents/upload", {
+  return apiRequest<unknown>("/documents/upload", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
 export async function getDocuments() {
-  return apiRequest<any[]>("/documents");
+  return apiRequest<unknown[]>("/documents");
 }
 
 export async function getDocument(id: string) {
-  return apiRequest<any>(`/documents/${id}`);
+  return apiRequest<unknown>(`/documents/${id}`);
 }
 
 export async function deleteDocument(id: string) {
-  return apiRequest<any>(`/documents/${id}`, { method: "DELETE" });
+  return apiRequest<unknown>(`/documents/${id}`, { method: "DELETE" });
 }

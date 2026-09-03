@@ -5,5 +5,5 @@ export async function getDemoStatus() {
 }
 
 export async function skipDocuments() {
-  return apiRequest<any>("/demo/skip-documents", { method: "POST" });
+  return apiRequest<unknown>("/demo/skip-documents", { method: "POST" });
 }

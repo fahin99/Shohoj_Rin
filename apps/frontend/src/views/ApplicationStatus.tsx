@@ -85,14 +85,14 @@ export default function ApplicationStatus({ onNavigate }: Props) {
   const fetchApplications = useCallback(async () => {
     try {
       const data = await applicationsApi.getApplications();
-      const mapped = (data.applications || []).map((a: any) => ({
-        id: a.applicationId,
+      const mapped = (data.applications || []).map((a) => ({
+        id: a.applicationId ?? "",
         product: a.productName || a.purpose || "Loan Application",
         provider: a.partnerName || "Shohoj Rin",
-        amount: a.requestedAmount,
+        amount: a.requestedAmount ?? 0,
         status: a.status as AppStatus,
-        submitted: a.submittedAt || a.createdAt,
-        stage: statusToStage(a.status),
+        submitted: a.submittedAt || a.createdAt || "",
+        stage: statusToStage(a.status ?? ""),
       }));
       setApplications(mapped);
     } catch {

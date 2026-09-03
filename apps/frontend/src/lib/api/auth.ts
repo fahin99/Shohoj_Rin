@@ -7,14 +7,14 @@ export async function registerUser(data: {
   password: string;
   role?: "borrower" | "lender";
 }) {
-  return apiRequest<{ user: any }>("/auth/register", {
+  return apiRequest<{ user: Record<string, unknown> }>("/auth/register", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
 export async function loginUser(data: { identifier: string; password: string }) {
-  return apiRequest<{ user: any }>("/auth/login", {
+  return apiRequest<{ user: Record<string, unknown> }>("/auth/login", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -25,5 +25,9 @@ export async function logoutUser() {
 }
 
 export async function getSession() {
-  return apiRequest<{ authenticated: boolean; user: any; session: any }>("/auth/session");
+  return apiRequest<{
+    authenticated: boolean;
+    user: Record<string, unknown>;
+    session: Record<string, unknown>;
+  }>("/auth/session");
 }

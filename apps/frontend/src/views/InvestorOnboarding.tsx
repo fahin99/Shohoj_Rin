@@ -71,7 +71,7 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
 
       if (!requestId) {
         const response = await verificationApi.createVerificationRequest("document");
-        requestId = response.request_id ?? response.id;
+        requestId = response.request_id ?? response.id ?? null;
 
         if (!requestId) {
           throw new Error("Failed to create verification request");

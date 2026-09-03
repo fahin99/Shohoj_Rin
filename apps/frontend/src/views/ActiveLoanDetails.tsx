@@ -11,7 +11,13 @@ import { DataTable } from "../components/DataTable";
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
 import { loansApi } from "../lib/api/index";
 import { formatTaka, formatPercent, formatDate } from "../lib/format";
-import type { PageName, RepaymentScheduleRow, Transaction, TransactionType } from "../types";
+import type {
+  ActiveLoan,
+  PageName,
+  RepaymentScheduleRow,
+  Transaction,
+  TransactionType,
+} from "../types";
 
 interface Props {
   onNavigate: (page: PageName) => void;
@@ -50,8 +56,8 @@ const txStatusVariant: Record<Transaction["status"], "success" | "warning" | "er
 
 export default function ActiveLoanDetails({ onNavigate }: Props) {
   const [tab, setTab] = useState<"schedule" | "transactions">("schedule");
-  const [activeLoan, setActiveLoan] = useState<any>(null);
-  const [repaymentSchedule, setRepaymentSchedule] = useState<any[]>([]);
+  const [activeLoan, setActiveLoan] = useState<ActiveLoan | null>(null);
+  const [repaymentSchedule, setRepaymentSchedule] = useState<RepaymentScheduleRow[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

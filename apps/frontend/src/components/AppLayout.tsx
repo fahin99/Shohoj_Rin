@@ -40,6 +40,13 @@ interface SidebarItem {
   badge?: number;
   section?: string;
 }
+
+interface NotificationItem {
+  unread: boolean;
+  title: string;
+  msg: string;
+  time: string;
+}
 const borrowerNav: SidebarItem[] = [
   {
     label: "Dashboard",
@@ -346,7 +353,7 @@ export function AppLayout({
                   </span>
                 </div>
                 <div className="max-h-72 overflow-y-auto flex flex-col gap-px p-2">
-                  {([] as any[]).map((n, i) => (
+                  {([] as NotificationItem[]).map((n, i) => (
                     <div
                       key={i}
                       className={`px-3 py-2.5 rounded-[4px] ${n.unread ? "bg-teal-light" : "hover:bg-stone-50"}`}

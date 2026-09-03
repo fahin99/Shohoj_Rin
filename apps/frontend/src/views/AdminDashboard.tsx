@@ -10,6 +10,8 @@ import { Alert } from "../components/Alert";
 import { formatTaka, formatDate } from "../lib/format";
 import { getApplications } from "../lib/api/applications";
 import { getPlatformStats, getUsers, reviewApplication } from "../lib/api/admin";
+import type { AdminUser } from "../lib/api/admin";
+import type { ApplicationRecord } from "../lib/api/applications";
 import type { PageName } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
 
@@ -28,10 +30,18 @@ interface PendingApplication {
   status: "pending" | "approved" | "rejected";
 }
 
+interface ProviderRecord {
+  id: string;
+  name: string;
+  products: number;
+  activeLoans: number;
+  status: string;
+}
+
 export default function AdminDashboard({ onNavigate, user }: Props) {
-  const [liveApplications, setLiveApplications] = useState<any[]>([]);
-  const [usersList, setUsersList] = useState<any[]>([]);
-  const [providers, setProviders] = useState<any[]>([]);
+  const [liveApplications, setLiveApplications] = useState<ApplicationRecord[]>([]);
+  const [usersList, setUsersList] = useState<AdminUser[]>([]);
+  const [providers, setProviders] = useState<ProviderRecord[]>([]);
   const [stats, setStats] = useState({
     applicationsToday: 27,
     approvalRate: 82,
@@ -135,14 +145,14 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
 
   const queue = useMemo(() => {
     const liveMapped: PendingApplication[] = liveApplications.map((a) => ({
-      id: a.id,
+      id: a.id ?? "",
       applicant: a.phone ? `Borrower (${a.phone})` : "Borrower Application",
       product: a.product || "Standard Loan",
       amount: a.amount || a.requestedAmount || 0,
       submitted: a.submitted || a.createdAt || new Date().toISOString().split("T")[0],
       riskScore: "Low" as const,
       status:
-        localDecisions[a.id] ||
+        localDecisions[a.id ?? ""] ||
         (a.status === "disbursed" || a.status === "approved"
           ? ("approved" as const)
           : a.status === "rejected"
@@ -317,7 +327,7 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
                   key: "joined",
                   header: "Joined",
                   hideBelow: "sm",
-                  render: (r) => formatDate(r.joined || r.createdAt),
+                  render: (r) => formatDate(r.joined || r.createdAt || ""),
                 },
                 {
                   key: "status",

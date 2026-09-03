@@ -1,5 +1,27 @@
 import { apiRequest } from "../api";
 import type { LoanProduct } from "@shohojrin/shared";
+import type { ActiveLoan, RepaymentScheduleRow, Transaction } from "../../types";
+
+interface RawLoanData {
+  principalAmount?: number | string;
+  interestRate?: number | string;
+  tenureMonths?: number | string;
+  loanId?: string;
+  productName?: string;
+  purpose?: string;
+  partnerName?: string;
+  expectedEndDate?: string;
+}
+
+interface RepaymentScheduleEntry extends RepaymentScheduleRow {
+  scheduleId: string;
+  outstandingAmount: number;
+}
+
+interface RepaymentResult {
+  receiptId?: string;
+  loan?: { status: string };
+}
 
 export async function getLoanProducts(params?: {
   category?: string;
@@ -25,12 +47,12 @@ export async function getLoansCountByStatus(status?: string) {
   if (status) searchParams.set("status", status);
   searchParams.set("limit", "1");
   const qs = searchParams.toString();
-  const data = await apiRequest<{ loans: any[]; total: number }>(`/loans?${qs}`);
+  const data = await apiRequest<{ loans: unknown[]; total: number }>(`/loans?${qs}`);
   return data.total;
 }
 
-export async function getActiveLoans() {
-  const data = await apiRequest<{ loans: any[] }>("/loans?status=active");
+export async function getActiveLoans(): Promise<ActiveLoan[]> {
+  const data = await apiRequest<{ loans: RawLoanData[] }>("/loans?status=active");
   return data.loans.map((loan) => {
     const principal = Number(loan.principalAmount ?? 0);
     const interestRate = Number(loan.interestRate ?? 0);
@@ -39,7 +61,7 @@ export async function getActiveLoans() {
 
     return {
       ...loan,
-      id: loan.loanId,
+      id: loan.loanId ?? "",
       name: loan.productName ?? loan.purpose ?? "Loan",
       provider: loan.partnerName ?? "Shohoj Rin",
       principal,
@@ -52,21 +74,23 @@ export async function getActiveLoans() {
       interestPaid: 0,
       feesPaid: 0,
       monthlyPayment: totalRepayable / durationMonths,
-      nextPaymentDate: loan.expectedEndDate,
+      nextPaymentDate: loan.expectedEndDate ?? "",
     };
   });
 }
 
 export async function getLoan(id: string) {
-  return apiRequest<any>(`/loans/${id}`);
+  return apiRequest<unknown>(`/loans/${id}`);
 }
 
 export async function getLoanTransactions(loanId: string) {
-  return apiRequest<any[]>(`/loans/${loanId}/transactions`);
+  return apiRequest<Transaction[]>(`/loans/${loanId}/transactions`);
 }
 
 export async function getRepaymentSchedule(loanId: string) {
-  const data = await apiRequest<{ schedules: any[] }>(`/repayments/loans/${loanId}/schedules`);
+  const data = await apiRequest<{ schedules: RepaymentScheduleEntry[] }>(
+    `/repayments/loans/${loanId}/schedules`,
+  );
   return data.schedules;
 }
 
@@ -84,7 +108,7 @@ export async function createRepayment(loanId: string, amount: number, method: st
         ? "mobile_money"
         : "other";
 
-  return apiRequest<any>(`/repayments/payments`, {
+  return apiRequest<RepaymentResult>(`/repayments/payments`, {
     method: "POST",
     body: JSON.stringify({
       scheduleId: nextSchedule.scheduleId,

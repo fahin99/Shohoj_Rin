@@ -8,7 +8,8 @@ import { Card, CardBody, CardHeader } from "../components/Card";
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
 import { loansApi, applicationsApi } from "../lib/api/index";
 import { formatDate, formatPercent, formatTaka } from "../lib/format";
-import type { PageName, Transaction } from "../types";
+import type { ApplicationRecord } from "../lib/api/applications";
+import type { PageName, ActiveLoan, Transaction } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
 
 interface BorrowerDashboardProps {
@@ -51,8 +52,8 @@ function TransactionIcon({ type }: { type: Transaction["type"] }) {
 }
 
 export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboardProps) {
-  const [activeLoan, setActiveLoan] = useState<any>(null);
-  const [applications, setApplications] = useState<any[]>([]);
+  const [activeLoan, setActiveLoan] = useState<ActiveLoan | null>(null);
+  const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -373,7 +374,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                         </Badge>
                       </div>
                       <p className="mt-1.5 text-xs text-stone-500">
-                        {formatTaka(app.amount)} · submitted {formatDate(app.submitted)}
+                        {formatTaka(app.amount || 0)} · submitted {formatDate(app.submitted || "")}
                       </p>
                     </button>
                   ))
