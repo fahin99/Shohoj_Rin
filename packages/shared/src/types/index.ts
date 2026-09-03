@@ -70,14 +70,15 @@ export interface InvestorProfile {
   userId: string;
   displayName: string | null;
   verificationStatus: VerificationStatus;
-  fundingCapacity: number | null;
-  preferredCategories: string[];
+  fundingCapacity: number | string | null;
+  preferredCategories: string[] | null;
   riskPreference: "conservative" | "moderate" | "aggressive" | null;
-  maxExposure: number | null;
+  maxExposure: number | string | null;
   accountStatus: AccountStatus;
   kycStatus: ProfileCompletionStatus;
   createdAt: string;
   updatedAt: string;
+  company: LenderCompany | null;
 }
 
 export type LenderMatchStatus = "pending" | "viewed" | "accepted" | "rejected" | "expired";

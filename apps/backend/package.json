@@ -11,6 +11,7 @@
     "seed:institutions": "tsx src/scripts/seed-institutions.ts",
     "seed:loan-products": "tsx src/scripts/seed-loan-products.ts",
     "seed:demo-marketplace": "tsx src/scripts/seed-demo-marketplace.ts",
+    "dev:workflow": "tsx src/scripts/dev-workflow.ts",
     "test": "vitest run",
     "start": "node dist/app.js"
   },

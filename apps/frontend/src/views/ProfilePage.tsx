@@ -4,7 +4,7 @@ import { PageHeader } from "../components/PageHeader";
 import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
-import { TextInput, Select, CurrencyInput } from "../components/Input";
+import { TextInput, Select, CurrencyInput, Checkbox } from "../components/Input";
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
 import { Alert } from "../components/Alert";
 import InstitutionCombobox from "../components/InstitutionCombobox";
@@ -12,7 +12,7 @@ import { profileApi, loansApi, trustApi, investorApi } from "../lib/api/index";
 import { formatDate, formatTaka } from "../lib/format";
 import type { PageName } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
-import type { ProfileCompletionItem } from "@shohojrin/shared";
+import type { InvestorProfile, ProfileCompletionItem } from "@shohojrin/shared";
 import type { TrustScoreData } from "../lib/api/trust";
 
 interface Props {
@@ -67,33 +67,16 @@ interface FormState {
   enrollmentYear: string;
 }
 
-/** Lender / investor profile — sourced from GET/PUT /investor/profile. */
-interface LenderCompany {
-  partnerId: string | null;
-  name: string | null;
-  type: string | null;
-  address: string | null;
-  branch: string | null;
-  goal: string | null;
-  contactEmail: string | null;
-  contactPhone: string | null;
-  isActive: boolean | null;
-}
-
-interface InvestorProfileRecord {
-  investorProfileId: string;
-  userId: string;
-  displayName: string | null;
-  verificationStatus: string | null;
-  fundingCapacity: number | string | null;
-  preferredCategories: string[] | null;
-  riskPreference: string | null;
-  maxExposure: number | string | null;
-  accountStatus: string | null;
-  kycStatus: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-  company: LenderCompany | null;
+interface LenderFormState {
+  displayName: string;
+  companyName: string;
+  companyAddress: string;
+  companyBranch: string;
+  companyGoal: string;
+  fundingCapacity: string;
+  maxExposure: string;
+  riskPreference: string;
+  preferredCategories: string[];
 }
 
 const completionStatusLabel: Record<string, string> = {
@@ -159,6 +142,20 @@ const loanCategoryLabel: Record<string, string> = {
   development: "Skills / Development",
 };
 
+const supportedCategories = [
+  { value: "education", label: "Education" },
+  { value: "emergency", label: "Emergency / Medical" },
+  { value: "business", label: "Business" },
+  { value: "personal", label: "Personal" },
+  { value: "development", label: "Skills / Development" },
+] as const;
+
+const riskPreferenceOptions = [
+  { value: "conservative", label: "Conservative" },
+  { value: "moderate", label: "Moderate" },
+  { value: "aggressive", label: "Aggressive" },
+];
+
 const genderOptions = [
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
@@ -200,9 +197,15 @@ export default function ProfilePage({ onNavigate, user }: Props) {
   const [lenderStatsLoading, setLenderStatsLoading] = useState(false);
   const [lenderStatsError, setLenderStatsError] = useState<string | null>(null);
 
-  const [investorProfile, setInvestorProfile] = useState<InvestorProfileRecord | null>(null);
+  const [investorProfile, setInvestorProfile] = useState<InvestorProfile | null>(null);
   const [investorLoading, setInvestorLoading] = useState(isLender);
   const [investorError, setInvestorError] = useState<string | null>(null);
+
+  const [lenderIsEditing, setLenderIsEditing] = useState(false);
+  const [lenderForm, setLenderForm] = useState<LenderFormState | null>(null);
+  const [lenderSaving, setLenderSaving] = useState(false);
+  const [lenderSaveError, setLenderSaveError] = useState<string | null>(null);
+  const [lenderSaveSuccess, setLenderSaveSuccess] = useState(false);
 
   async function loadProfile() {
     setLoadingProfile(true);
@@ -257,7 +260,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
       setInvestorLoading(true);
       setInvestorError(null);
       try {
-        const data = (await investorApi.getInvestorProfile()) as unknown as InvestorProfileRecord;
+        const data = await investorApi.getInvestorProfile();
         if (!cancelled) setInvestorProfile(data);
       } catch (e) {
         if (!cancelled) {
@@ -291,6 +294,75 @@ export default function ProfilePage({ onNavigate, user }: Props) {
       }
     })();
   }, [isLender]);
+
+  function startLenderEdit() {
+    if (!investorProfile) return;
+    setLenderForm({
+      displayName: toFormValue(investorProfile.displayName),
+      companyName: toFormValue(investorProfile.company?.name),
+      companyAddress: toFormValue(investorProfile.company?.address),
+      companyBranch: toFormValue(investorProfile.company?.branch),
+      companyGoal: toFormValue(investorProfile.company?.goal),
+      fundingCapacity: toFormValue(investorProfile.fundingCapacity),
+      maxExposure: toFormValue(investorProfile.maxExposure),
+      riskPreference: toFormValue(investorProfile.riskPreference),
+      preferredCategories: investorProfile.preferredCategories ?? [],
+    });
+    setLenderSaveError(null);
+    setLenderSaveSuccess(false);
+    setLenderIsEditing(true);
+  }
+
+  function cancelLenderEdit() {
+    setLenderIsEditing(false);
+    setLenderForm(null);
+    setLenderSaveError(null);
+  }
+
+  function updateLenderForm<K extends keyof LenderFormState>(key: K, value: LenderFormState[K]) {
+    setLenderForm((f) => (f ? { ...f, [key]: value } : f));
+  }
+
+  function togglePreferredCategory(category: string) {
+    setLenderForm((f) =>
+      f
+        ? {
+            ...f,
+            preferredCategories: f.preferredCategories.includes(category)
+              ? f.preferredCategories.filter((c) => c !== category)
+              : [...f.preferredCategories, category],
+          }
+        : f,
+    );
+  }
+
+  async function handleLenderSave() {
+    if (!lenderForm) return;
+    setLenderSaving(true);
+    setLenderSaveError(null);
+    try {
+      const data = await investorApi.updateInvestorProfile({
+        displayName: lenderForm.displayName.trim() || undefined,
+        companyName: lenderForm.companyName.trim() || undefined,
+        companyAddress: lenderForm.companyAddress.trim() || undefined,
+        companyBranch: lenderForm.companyBranch.trim() || undefined,
+        companyGoal: lenderForm.companyGoal.trim() || undefined,
+        fundingCapacity:
+          lenderForm.fundingCapacity !== "" ? Number(lenderForm.fundingCapacity) : undefined,
+        maxExposure: lenderForm.maxExposure !== "" ? Number(lenderForm.maxExposure) : undefined,
+        riskPreference: lenderForm.riskPreference || undefined,
+        preferredCategories: lenderForm.preferredCategories,
+      });
+      setInvestorProfile(data);
+      setLenderIsEditing(false);
+      setLenderForm(null);
+      setLenderSaveSuccess(true);
+    } catch (e) {
+      setLenderSaveError(e instanceof Error ? e.message : "Failed to save profile");
+    } finally {
+      setLenderSaving(false);
+    }
+  }
 
   function startEdit() {
     if (!profile) return;
@@ -410,6 +482,12 @@ export default function ProfilePage({ onNavigate, user }: Props) {
           </Alert>
         )}
 
+        {isLender && lenderSaveSuccess && !lenderIsEditing && (
+          <Alert variant="success" title="Profile updated" dismissible className="mb-5">
+            Your profile changes have been saved.
+          </Alert>
+        )}
+
         {isLender ? (
           investorLoading ? (
             <Card>
@@ -463,8 +541,100 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       </Badge>
                     </div>
                   </div>
+                  {!lenderIsEditing && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={startLenderEdit}
+                      className="shrink-0"
+                    >
+                      Edit profile
+                    </Button>
+                  )}
                 </CardBody>
               </Card>
+
+              {lenderSaveError && (
+                <Alert variant="error" title="Couldn't save your profile">
+                  {lenderSaveError}
+                </Alert>
+              )}
+
+              {lenderIsEditing && lenderForm ? (
+                <Card>
+                  <CardHeader
+                    title="Edit profile"
+                    description="Update your details below, then save your changes."
+                  />
+                  <CardBody className="flex flex-col gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <TextInput
+                        label="Display name"
+                        value={lenderForm.displayName}
+                        onChange={(e) => updateLenderForm("displayName", e.target.value)}
+                      />
+                      <TextInput
+                        label="Company / organization name"
+                        value={lenderForm.companyName}
+                        onChange={(e) => updateLenderForm("companyName", e.target.value)}
+                      />
+                      <TextInput
+                        label="Company address"
+                        value={lenderForm.companyAddress}
+                        onChange={(e) => updateLenderForm("companyAddress", e.target.value)}
+                      />
+                      <TextInput
+                        label="Branch"
+                        value={lenderForm.companyBranch}
+                        onChange={(e) => updateLenderForm("companyBranch", e.target.value)}
+                      />
+                      <TextInput
+                        label="Lending goal"
+                        value={lenderForm.companyGoal}
+                        onChange={(e) => updateLenderForm("companyGoal", e.target.value)}
+                      />
+                    </div>
+                    <div className="border-t border-stone-200 pt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <CurrencyInput
+                        label="Funding capacity"
+                        value={lenderForm.fundingCapacity}
+                        onChange={(e) => updateLenderForm("fundingCapacity", e.target.value)}
+                      />
+                      <CurrencyInput
+                        label="Maximum exposure"
+                        value={lenderForm.maxExposure}
+                        onChange={(e) => updateLenderForm("maxExposure", e.target.value)}
+                      />
+                      <Select
+                        label="Risk preference"
+                        value={lenderForm.riskPreference}
+                        onChange={(e) => updateLenderForm("riskPreference", e.target.value)}
+                        options={riskPreferenceOptions}
+                        placeholder="Select"
+                      />
+                    </div>
+                    <div className="border-t border-stone-200 pt-5 flex flex-col gap-2">
+                      <p className="text-sm font-medium text-navy">Preferred loan purposes</p>
+                      {supportedCategories.map((category) => (
+                        <Checkbox
+                          key={category.value}
+                          label={category.label}
+                          checked={lenderForm.preferredCategories.includes(category.value)}
+                          onChange={() => togglePreferredCategory(category.value)}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-end gap-2 border-t border-stone-200 pt-5">
+                      <Button variant="ghost" onClick={cancelLenderEdit} disabled={lenderSaving}>
+                        Cancel
+                      </Button>
+                      <Button variant="primary" onClick={handleLenderSave} loading={lenderSaving}>
+                        Save changes
+                      </Button>
+                    </div>
+                  </CardBody>
+                </Card>
+              ) : null}
 
               <Card>
                 <CardHeader

@@ -13,6 +13,8 @@ import applicationsRouter from "./applications.js";
 import loansRouter from "./loans.js";
 import investorRouter from "./investor.js";
 import adminRouter from "./admin.js";
+import loanDisbursementsRouter from "./loan-disbursements.js";
+import repaymentSchedulesRouter from "./repayment-schedules.js";
 
 const router = Router();
 router.use("/health", healthRouter);
@@ -29,5 +31,7 @@ router.use("/applications", applicationsRouter);
 router.use("/loans", loansRouter);
 router.use("/investor", investorRouter);
 router.use("/admin", adminRouter);
+router.use("/loan-disbursements", loanDisbursementsRouter);
+router.use("/repayment-schedules", repaymentSchedulesRouter);
 
 export default router;

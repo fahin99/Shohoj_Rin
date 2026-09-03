@@ -1,8 +1,170 @@
 import { Router } from "express";
+import { z } from "zod";
 import { pool } from "../lib/db.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
+import { calculateReducingBalanceSchedule } from "../services/interest.service.js";
 
 const router = Router();
+
+// POST /api/v1/loans — create loan from application
+router.post("/", requireAuth, async (req, res) => {
+  const authReq = req as RequestWithAuth;
+  const userId = authReq.auth!.userId;
+  const role = authReq.auth!.role;
+
+  const parsed = z.object({ applicationId: z.string().uuid() }).safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      success: false,
+      error: { message: "Invalid request", details: parsed.error.flatten() },
+    });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const appResult = await client.query(
+      `SELECT
+        la.application_id,
+        la.user_id,
+        la.partner_id,
+        la.product_id,
+        la.requested_amount,
+        la.status AS application_status,
+        lp.interest_rate,
+        lp.duration_months
+       FROM loan_applications la
+       LEFT JOIN loan_products lp ON lp.product_id = la.product_id
+       WHERE la.application_id = $1`,
+      [parsed.data.applicationId],
+    );
+
+    if (appResult.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ success: false, error: { message: "Application not found" } });
+    }
+
+    const app = appResult.rows[0] as any;
+
+    if (role === "borrower" && app.user_id !== userId) {
+      await client.query("ROLLBACK");
+      return res.status(403).json({ success: false, error: { message: "Access denied" } });
+    }
+
+    if (!["submitted", "under_review", "approved"].includes(app.application_status)) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ success: false, error: { message: "Application is not eligible for loan creation" } });
+    }
+
+    const existingLoan = await client.query(
+      `SELECT loan_id FROM loans WHERE application_id = $1`,
+      [parsed.data.applicationId],
+    );
+    if (Number(existingLoan.rowCount) > 0) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ success: false, error: { message: "Loan already created for this application" } });
+    }
+
+    const partnerId = app.partner_id ?? await getDefaultPartner(client);
+
+    const interestRate = typeof app.interest_rate === "number" ? app.interest_rate : Number(app.interest_rate ?? 12.0);
+    const tenureMonths = typeof app.duration_months === "number" ? app.duration_months : Number(app.duration_months ?? 12);
+    const principal = typeof app.requested_amount === "number" ? app.requested_amount : Number(app.requested_amount);
+
+    const offerResult = await client.query(
+      `INSERT INTO loan_offers
+        (application_id, partner_id, offered_amount, interest_rate, tenure_months, conditions, status, offered_at)
+       VALUES ($1, $2, $3, $4, $5, $6, 'accepted', NOW())
+       RETURNING offer_id`,
+      [
+        parsed.data.applicationId,
+        partnerId,
+        principal,
+        interestRate,
+        tenureMonths,
+        "Standard terms",
+      ],
+    );
+    const offerId = offerResult.rows[0].offer_id;
+
+    const startDate = new Date();
+    const expectedEndDate = new Date(startDate);
+    expectedEndDate.setMonth(expectedEndDate.getMonth() + tenureMonths);
+
+    const loanResult = await client.query(
+      `INSERT INTO loans
+        (application_id, offer_id, user_id, partner_id, principal_amount, interest_rate, tenure_months, status, start_date, expected_end_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', $8, $9)
+       RETURNING
+         loan_id AS "loanId",
+         application_id AS "applicationId",
+         user_id AS "userId",
+         partner_id AS "partnerId",
+         principal_amount AS "principalAmount",
+         interest_rate AS "interestRate",
+         tenure_months AS "tenureMonths",
+         status,
+         start_date AS "startDate",
+         expected_end_date AS "expectedEndDate",
+         created_at AS "createdAt"`,
+      [
+        parsed.data.applicationId,
+        offerId,
+        app.user_id,
+        partnerId,
+        principal,
+        interestRate,
+        tenureMonths,
+        startDate.toISOString().split("T")[0],
+        expectedEndDate.toISOString().split("T")[0],
+      ],
+    );
+
+    await client.query(
+      `UPDATE loan_applications SET status = 'disbursed', updated_at = NOW() WHERE application_id = $1`,
+      [parsed.data.applicationId],
+    );
+
+    await client.query(
+      `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, after_state)
+       VALUES ($1, 'loan_created', 'loan', $2, jsonb_build_object('applicationId', $3::uuid, 'principalAmount', $4::numeric, 'tenureMonths', $5::integer))`,
+      [userId, loanResult.rows[0].loanId, parsed.data.applicationId, principal, tenureMonths],
+    );
+
+    await client.query("COMMIT");
+
+    const loan = loanResult.rows[0] as any;
+    return res.status(201).json({
+      success: true,
+      data: {
+        ...loan,
+        principalAmount: parseFloat(loan.principalAmount),
+        interestRate: parseFloat(loan.interestRate),
+      },
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Failed to create loan:", message);
+    return res.status(500).json({
+      success: false,
+      error: { message: `Failed to create loan: ${message}` },
+    });
+  } finally {
+    client.release();
+  }
+});
+
+async function getDefaultPartner(client: Pick<any, "query">): Promise<string> {
+  const result = await client.query(`SELECT partner_id FROM funding_partners LIMIT 1`);
+  if (result.rowCount > 0) return result.rows[0].partner_id;
+  const insert = await client.query(
+    `INSERT INTO funding_partners (name, type, address, branch, goal) VALUES ($1, 'other', $2, $3, $4) RETURNING partner_id`,
+    ["Default Partner", "N/A", "N/A", "N/A"],
+  );
+  return insert.rows[0].partner_id;
+}
 
 // GET /api/v1/loans — list user's loans
 router.get("/", requireAuth, async (req, res) => {
