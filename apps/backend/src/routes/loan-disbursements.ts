@@ -27,7 +27,7 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
     await client.query("BEGIN");
 
     const loanResult = await client.query(
-      `SELECT user_id, principal_amount, status FROM loans WHERE loan_id = $1 FOR UPDATE`,
+      `SELECT user_id, application_id, principal_amount, status FROM loans WHERE loan_id = $1 FOR UPDATE`,
       [parsed.data.loanId],
     );
 
@@ -37,9 +37,16 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
     }
 
     const loan = loanResult.rows[0];
-    if (loan.user_id !== req.user!.userId && req.user!.role !== "admin") {
-      await client.query("ROLLBACK");
-      return res.status(403).json({ success: false, error: { message: "Access denied" } });
+    if (req.user!.role !== "admin") {
+      const funderCheck = await client.query(
+        `SELECT 1 FROM funding_commitments
+         WHERE application_id = $1 AND lender_user_id = $2 AND status = 'committed'`,
+        [loan.application_id, req.user!.userId],
+      );
+      if (funderCheck.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(403).json({ success: false, error: { message: "Access denied" } });
+      }
     }
 
     const disbResult = await client.query(
