@@ -446,10 +446,8 @@ async function runStage(name: string, fn: () => Promise<void>) {
       const bb = ctx.borrowers.bb;
       const appA = await createApplication(ba.token, eduProduct.id, 180000, "education", "Higher education tuition support");
       const appB1 = await createApplication(bb.token, bizProduct.id, 200000, "business", "Working capital for retail business");
-      const appB2 = await createApplication(bb.token, bizProduct.id, 90000, "business", "Equipment purchase");
       ctx.applications.appA = { applicationId: appA.applicationId, borrowerKey: "ba", purpose: "education", amount: 180000 };
       ctx.applications.appB1 = { applicationId: appB1.applicationId, borrowerKey: "bb", purpose: "business", amount: 200000 };
-      ctx.applications.appB2 = { applicationId: appB2.applicationId, borrowerKey: "bb", purpose: "business", amount: 90000 };
       const dbAppA = await dbRows(`SELECT status FROM loan_applications WHERE application_id = $1`, [appA.applicationId]);
       check("application_in_db_submitted", dbAppA[0]?.status === "submitted", `application persisted in PostgreSQL (status=${dbAppA[0]?.status})`);
       const myApps = await getApplications(ba.token);
@@ -514,15 +512,17 @@ async function runStage(name: string, fn: () => Promise<void>) {
       const prematureB = await api("/loans", { method: "POST", token: lb.token, body: { applicationId: ctx.applications.appB1.applicationId } });
       check("rule_a_partial_second_app", prematureB.status === 400, `lenderB loan creation on partially funded appB1 → ${prematureB.status}`);
 
-      // Rule F: a rejected (ineligible) application cannot become a loan.
+      // Rule F: a rejected (ineligible) application cannot become a loan. appB1 is
+      // rejected through the real admin API while lenderB is already a funder of
+      // it, so the eligibility guard (not the participation guard) is what blocks.
       if (!ctx.admin) throw new Error("Admin setup did not complete — cannot run rule F");
-      await adminReviewApplication(ctx.admin.token, ctx.applications.appB2.applicationId, "rejected");
-      const appB2Detail = await getApplication(ctx.borrowers.bb.token, ctx.applications.appB2.applicationId);
-      check("app_b2_rejected", appB2Detail.status === "rejected", "appB2 rejected through real admin API");
-      const loanFromRejected = await api("/loans", { method: "POST", token: lb.token, body: { applicationId: ctx.applications.appB2.applicationId } });
+      await adminReviewApplication(ctx.admin.token, ctx.applications.appB1.applicationId, "rejected");
+      const appB1Detail = await getApplication(ctx.borrowers.bb.token, ctx.applications.appB1.applicationId);
+      check("app_b1_rejected", appB1Detail.status === "rejected", "appB1 rejected through real admin API");
+      const loanFromRejected = await api("/loans", { method: "POST", token: lb.token, body: { applicationId: ctx.applications.appB1.applicationId } });
       check("rule_f_rejected_app_blocked", loanFromRejected.status === 400, `loan creation from rejected app → ${loanFromRejected.status} (${loanFromRejected.payload?.error?.message ?? ""})`);
-      const dbB2 = await dbRows(`SELECT status FROM loan_applications WHERE application_id = $1`, [ctx.applications.appB2.applicationId]);
-      check("app_b2_status_in_db", dbB2[0]?.status === "rejected", `rejected state persisted in PostgreSQL (${dbB2[0]?.status})`);
+      const dbB1 = await dbRows(`SELECT status FROM loan_applications WHERE application_id = $1`, [ctx.applications.appB1.applicationId]);
+      check("app_b1_status_in_db", dbB1[0]?.status === "rejected", `rejected state persisted in PostgreSQL (${dbB1[0]?.status})`);
     });
 
     await runStage("Loan creation (positive & cross-tenant guards)", async () => {
