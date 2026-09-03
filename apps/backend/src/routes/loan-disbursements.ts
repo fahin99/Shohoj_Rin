@@ -59,6 +59,16 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
       [parsed.data.loanId],
     );
 
+    // A real disbursement row now exists for this loan: the application has
+    // actually been paid out, so it leaves 'approved' and enters 'disbursed'.
+    await client.query(
+      `UPDATE loan_applications la
+       SET status = 'disbursed', updated_at = NOW()
+       FROM loans l
+       WHERE l.loan_id = $1 AND l.application_id = la.application_id`,
+      [parsed.data.loanId],
+    );
+
     await client.query(
       `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, after_state)
        VALUES ($1, 'disbursement_created', 'loan_disbursement', $2, jsonb_build_object('loanId', $3::uuid, 'amount', $4::numeric))`,

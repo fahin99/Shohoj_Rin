@@ -52,6 +52,24 @@ router.post("/", requireAuth, async (req, res) => {
       return res.status(403).json({ success: false, error: { message: "Access denied" } });
     }
 
+    // A lender may only convert an application they actually committed funding to.
+    // This prevents arbitrary lenders from instating loans on applications they
+    // never funded (marketplace opportunity privacy).
+    if (role === "lender") {
+      const funderCheck = await client.query(
+        `SELECT 1 FROM funding_commitments
+         WHERE application_id = $1 AND lender_user_id = $2 AND status = 'committed'`,
+        [parsed.data.applicationId, userId],
+      );
+      if (Number(funderCheck.rowCount) === 0) {
+        await client.query("ROLLBACK");
+        return res.status(403).json({
+          success: false,
+          error: { message: "You have not committed funding to this application" },
+        });
+      }
+    }
+
     if (!["submitted", "under_review", "approved"].includes(app.application_status)) {
       await client.query("ROLLBACK");
       return res.status(400).json({ success: false, error: { message: "Application is not eligible for loan creation" } });
@@ -64,6 +82,27 @@ router.post("/", requireAuth, async (req, res) => {
     if (Number(existingLoan.rowCount) > 0) {
       await client.query("ROLLBACK");
       return res.status(409).json({ success: false, error: { message: "Loan already created for this application" } });
+    }
+
+    // A loan may only be created once the application is fully funded by
+    // committed lender commitments. This is the acceptance condition between
+    // "application submitted/approved" and "loan originates".
+    const fundingResult = await client.query(
+      `SELECT COALESCE(SUM(amount), 0) AS committed_amount
+       FROM funding_commitments
+       WHERE application_id = $1 AND status = 'committed'`,
+      [parsed.data.applicationId],
+    );
+    const committedAmount = Number(fundingResult.rows[0].committed_amount);
+    const requestedAmount = Number(app.requested_amount);
+    if (committedAmount < requestedAmount) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: `Application is not fully funded (${committedAmount} committed of ${requestedAmount} requested)`,
+        },
+      });
     }
 
     const partnerId = app.partner_id ?? await getDefaultPartner(client);
@@ -121,8 +160,11 @@ router.post("/", requireAuth, async (req, res) => {
       ],
     );
 
+    // Loan creation ≠ money transferred. The application moves to 'approved'
+    // here; it only becomes 'disbursed' when a real loan_disbursements row is
+    // recorded via POST /loan-disbursements.
     await client.query(
-      `UPDATE loan_applications SET status = 'disbursed', updated_at = NOW() WHERE application_id = $1`,
+      `UPDATE loan_applications SET status = 'approved', updated_at = NOW() WHERE application_id = $1`,
       [parsed.data.applicationId],
     );
 
