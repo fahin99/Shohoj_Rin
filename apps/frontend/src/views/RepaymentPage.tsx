@@ -11,7 +11,7 @@ import { DataTable } from "../components/DataTable";
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
 import { loansApi } from "../lib/api/index";
 import { formatTaka, formatDate } from "../lib/format";
-import type { PageName, Transaction } from "../types";
+import type { PageName, Transaction, ActiveLoan } from "../types";
 
 interface Props {
   onNavigate: (page: PageName) => void;
@@ -42,8 +42,8 @@ const methodInfo: Record<
 };
 
 export default function RepaymentPage({ onNavigate }: Props) {
-  const [activeLoan, setActiveLoan] = useState<any>(null);
-  const [allTransactions, setAllTransactions] = useState<any[]>([]);
+  const [activeLoan, setActiveLoan] = useState<ActiveLoan | null>(null);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [amountOption, setAmountOption] = useState<AmountOption>("full");

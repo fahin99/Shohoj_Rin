@@ -10,7 +10,12 @@ import { CurrencyInput } from "../components/Input";
 import { formatTaka, formatPercent, formatDate } from "../lib/format";
 import type { PageName, LoanStatus } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
-import { getPortfolio, getOpportunities, fundOpportunity, rejectOpportunity } from "../lib/api/investor";
+import {
+  getPortfolio,
+  getOpportunities,
+  fundOpportunity,
+  rejectOpportunity,
+} from "../lib/api/investor";
 
 interface Props {
   onNavigate: (page: PageName) => void;
@@ -361,141 +366,143 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
             </p>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {opportunities.filter((op) => !rejectedIds.has(op.applicationId)).map((op) => {
-                const isFunded = funded.has(op.applicationId);
-                const remaining = Math.max(0, op.requestedAmount - (op.committedAmount ?? 0));
-                const bandMeta = op.trustBand ? trustBandDisplay[op.trustBand] : null;
-                const showFactors = expandedFactors.has(op.applicationId);
-                return (
-                  <div
-                    key={op.applicationId}
-                    className="border-[1.5px] border-stone-200 rounded-[6px] p-4 flex flex-col gap-3 min-w-0"
-                  >
-                    <div className="flex items-start justify-between gap-3 min-w-0">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-navy truncate">
-                          {op.borrowerName ?? "Borrower"} · {op.purpose ?? "loan"}
-                        </p>
-                        <p className="text-xs text-stone-500 mt-0.5 truncate">
-                          {op.productName ?? "Loan product"}
-                          {op.partnerName ? ` · ${op.partnerName}` : ""}
-                        </p>
-                        {op.purposeDescription && (
-                          <p className="text-xs text-stone-500 mt-1 line-clamp-2">
-                            {op.purposeDescription}
+              {opportunities
+                .filter((op) => !rejectedIds.has(op.applicationId))
+                .map((op) => {
+                  const isFunded = funded.has(op.applicationId);
+                  const remaining = Math.max(0, op.requestedAmount - (op.committedAmount ?? 0));
+                  const bandMeta = op.trustBand ? trustBandDisplay[op.trustBand] : null;
+                  const showFactors = expandedFactors.has(op.applicationId);
+                  return (
+                    <div
+                      key={op.applicationId}
+                      className="border-[1.5px] border-stone-200 rounded-[6px] p-4 flex flex-col gap-3 min-w-0"
+                    >
+                      <div className="flex items-start justify-between gap-3 min-w-0">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-navy truncate">
+                            {op.borrowerName ?? "Borrower"} · {op.purpose ?? "loan"}
                           </p>
+                          <p className="text-xs text-stone-500 mt-0.5 truncate">
+                            {op.productName ?? "Loan product"}
+                            {op.partnerName ? ` · ${op.partnerName}` : ""}
+                          </p>
+                          {op.purposeDescription && (
+                            <p className="text-xs text-stone-500 mt-1 line-clamp-2">
+                              {op.purposeDescription}
+                            </p>
+                          )}
+                        </div>
+                        {bandMeta && (
+                          <Badge variant={bandMeta.tone} size="sm" dot>
+                            {bandMeta.label}
+                          </Badge>
                         )}
                       </div>
-                      {bandMeta && (
-                        <Badge variant={bandMeta.tone} size="sm" dot>
-                          {bandMeta.label}
-                        </Badge>
-                      )}
-                    </div>
 
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <p className="text-stone-400">Requested</p>
-                        <p className="tabular-nums font-medium text-navy">
-                          {formatTaka(op.requestedAmount)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-stone-400">Remaining</p>
-                        <p className="tabular-nums font-medium text-navy">
-                          {formatTaka(remaining)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-stone-400">Rate · Tenure</p>
-                        <p className="tabular-nums font-medium text-navy">
-                          {op.interestRate != null ? formatPercent(op.interestRate) : "—"}
-                          {op.durationMonths ? ` · ${op.durationMonths} mo` : ""}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="bg-stone-50 rounded-[4px] p-2.5 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-stone-500">Trust score</span>
-                        <span className="tabular-nums font-semibold text-navy">
-                          {op.trustScore != null ? `${Math.round(op.trustScore)} / 100` : "—"}
-                        </span>
-                      </div>
-                      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-stone-600">
-                        <span>Identity: {op.identityVerified ? "Verified" : "Pending"}</span>
-                        <span>Address: {op.addressVerified ? "Verified" : "Pending"}</span>
-                        <span>Income: {op.incomeVerified ? "Verified" : "Pending"}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => toggleFactors(op.applicationId)}
-                        className="mt-2 text-[11px] font-medium text-teal hover:underline"
-                      >
-                        {showFactors ? "Hide" : "Show"} trust-factor breakdown
-                      </button>
-                      {showFactors && op.trustFactors.length > 0 && (
-                        <ul className="mt-2 space-y-1 text-[11px] text-stone-600">
-                          {op.trustFactors.map((f) => (
-                            <li
-                              key={`${op.applicationId}-${f.name}`}
-                              className="flex items-center justify-between gap-2"
-                            >
-                              <span className="truncate">{f.name}</span>
-                              <span className="tabular-nums text-stone-500">
-                                {Math.round(f.score)}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-
-                    {!isFunded && (
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 mt-auto pt-2 border-t border-stone-100">
-                        <div className="flex-1 min-w-0">
-                          <CurrencyInput
-                            label="Fund amount"
-                            value={fundAmounts[op.applicationId] ?? Math.round(remaining)}
-                            min={1}
-                            max={remaining}
-                            onChange={(e) =>
-                              setFundAmounts((prev) => ({
-                                ...prev,
-                                [op.applicationId]: Number(e.target.value),
-                              }))
-                            }
-                            hint={`Up to ${formatTaka(remaining)}`}
-                          />
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <p className="text-stone-400">Requested</p>
+                          <p className="tabular-nums font-medium text-navy">
+                            {formatTaka(op.requestedAmount)}
+                          </p>
                         </div>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          loading={rejectingId === op.applicationId}
-                          onClick={() => handleReject(op)}
-                          disabled={fundingId !== null || rejectingId !== null}
-                        >
-                          Not now
-                        </Button>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          loading={fundingId === op.applicationId}
-                          onClick={() => handleFund(op)}
-                          disabled={fundingId !== null || rejectingId !== null}
-                        >
-                          Fund
-                        </Button>
+                        <div>
+                          <p className="text-stone-400">Remaining</p>
+                          <p className="tabular-nums font-medium text-navy">
+                            {formatTaka(remaining)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-stone-400">Rate · Tenure</p>
+                          <p className="tabular-nums font-medium text-navy">
+                            {op.interestRate != null ? formatPercent(op.interestRate) : "—"}
+                            {op.durationMonths ? ` · ${op.durationMonths} mo` : ""}
+                          </p>
+                        </div>
                       </div>
-                    )}
-                    {isFunded && (
-                      <p className="text-xs text-emerald font-medium pt-2 border-t border-stone-100">
-                        Funding commitment recorded.
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
+
+                      <div className="bg-stone-50 rounded-[4px] p-2.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-stone-500">Trust score</span>
+                          <span className="tabular-nums font-semibold text-navy">
+                            {op.trustScore != null ? `${Math.round(op.trustScore)} / 100` : "—"}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-stone-600">
+                          <span>Identity: {op.identityVerified ? "Verified" : "Pending"}</span>
+                          <span>Address: {op.addressVerified ? "Verified" : "Pending"}</span>
+                          <span>Income: {op.incomeVerified ? "Verified" : "Pending"}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => toggleFactors(op.applicationId)}
+                          className="mt-2 text-[11px] font-medium text-teal hover:underline"
+                        >
+                          {showFactors ? "Hide" : "Show"} trust-factor breakdown
+                        </button>
+                        {showFactors && op.trustFactors.length > 0 && (
+                          <ul className="mt-2 space-y-1 text-[11px] text-stone-600">
+                            {op.trustFactors.map((f) => (
+                              <li
+                                key={`${op.applicationId}-${f.name}`}
+                                className="flex items-center justify-between gap-2"
+                              >
+                                <span className="truncate">{f.name}</span>
+                                <span className="tabular-nums text-stone-500">
+                                  {Math.round(f.score)}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      {!isFunded && (
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 mt-auto pt-2 border-t border-stone-100">
+                          <div className="flex-1 min-w-0">
+                            <CurrencyInput
+                              label="Fund amount"
+                              value={fundAmounts[op.applicationId] ?? Math.round(remaining)}
+                              min={1}
+                              max={remaining}
+                              onChange={(e) =>
+                                setFundAmounts((prev) => ({
+                                  ...prev,
+                                  [op.applicationId]: Number(e.target.value),
+                                }))
+                              }
+                              hint={`Up to ${formatTaka(remaining)}`}
+                            />
+                          </div>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            loading={rejectingId === op.applicationId}
+                            onClick={() => handleReject(op)}
+                            disabled={fundingId !== null || rejectingId !== null}
+                          >
+                            Not now
+                          </Button>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            loading={fundingId === op.applicationId}
+                            onClick={() => handleFund(op)}
+                            disabled={fundingId !== null || rejectingId !== null}
+                          >
+                            Fund
+                          </Button>
+                        </div>
+                      )}
+                      {isFunded && (
+                        <p className="text-xs text-emerald font-medium pt-2 border-t border-stone-100">
+                          Funding commitment recorded.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
             </div>
           )}
         </div>

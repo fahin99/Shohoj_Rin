@@ -208,8 +208,8 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
                     <p className="text-sm font-semibold text-navy">Company / organization</p>
                     <p className="text-xs text-stone-500">
                       We link your lender account to a company record so borrowers can see who is
-                      funding their loan. If this company already exists on Shohoj Rin, we link
-                      your account to it instead of creating a duplicate.
+                      funding their loan. If this company already exists on Shohoj Rin, we link your
+                      account to it instead of creating a duplicate.
                     </p>
                   </div>
                   <div className="grid grid-cols-1 gap-5">

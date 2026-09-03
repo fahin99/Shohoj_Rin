@@ -8,8 +8,8 @@ import { TextInput, Select, CurrencyInput } from "../components/Input";
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
 import { Alert } from "../components/Alert";
 import InstitutionCombobox from "../components/InstitutionCombobox";
-import { profileApi, loansApi, trustApi } from "../lib/api/index";
-import { formatDate } from "../lib/format";
+import { profileApi, loansApi, trustApi, investorApi } from "../lib/api/index";
+import { formatDate, formatTaka } from "../lib/format";
 import type { PageName } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
 import type { ProfileCompletionItem } from "@shohojrin/shared";
@@ -67,6 +67,35 @@ interface FormState {
   enrollmentYear: string;
 }
 
+/** Lender / investor profile — sourced from GET/PUT /investor/profile. */
+interface LenderCompany {
+  partnerId: string | null;
+  name: string | null;
+  type: string | null;
+  address: string | null;
+  branch: string | null;
+  goal: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  isActive: boolean | null;
+}
+
+interface InvestorProfileRecord {
+  investorProfileId: string;
+  userId: string;
+  displayName: string | null;
+  verificationStatus: string | null;
+  fundingCapacity: number | string | null;
+  preferredCategories: string[] | null;
+  riskPreference: string | null;
+  maxExposure: number | string | null;
+  accountStatus: string | null;
+  kycStatus: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  company: LenderCompany | null;
+}
+
 const completionStatusLabel: Record<string, string> = {
   incomplete: "Incomplete",
   pending_verification: "Pending verification",
@@ -104,6 +133,32 @@ const trustBandVariant: Record<string, "success" | "warning" | "error"> = {
   very_high_risk: "error",
 };
 
+const verificationStatusLabel: Record<string, string> = {
+  pending: "Pending",
+  approved: "Approved",
+  rejected: "Rejected",
+};
+
+const verificationStatusVariant: Record<string, "success" | "warning" | "error" | "neutral"> = {
+  pending: "warning",
+  approved: "success",
+  rejected: "error",
+};
+
+const riskPreferenceLabel: Record<string, string> = {
+  conservative: "Conservative",
+  moderate: "Moderate",
+  aggressive: "Aggressive",
+};
+
+const loanCategoryLabel: Record<string, string> = {
+  education: "Education",
+  emergency: "Emergency / Medical",
+  business: "Business",
+  personal: "Personal",
+  development: "Skills / Development",
+};
+
 const genderOptions = [
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
@@ -124,9 +179,11 @@ function toFormValue(value: string | number | null | undefined) {
 }
 
 export default function ProfilePage({ onNavigate, user }: Props) {
+  const isLender = user.role === "lender";
+
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [completionItems, setCompletionItems] = useState<ProfileCompletionItem[]>([]);
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(!isLender);
   const [profileError, setProfileError] = useState<string | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -136,16 +193,16 @@ export default function ProfilePage({ onNavigate, user }: Props) {
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const [trustScore, setTrustScore] = useState<TrustScoreData | null>(null);
-  const [trustLoading, setTrustLoading] = useState(true);
+  const [trustLoading, setTrustLoading] = useState(!isLender);
   const [trustError, setTrustError] = useState<string | null>(null);
 
-  const [lenderStats, setLenderStats] = useState<{ total: number; completed: number } | null>(
-    null,
-  );
+  const [lenderStats, setLenderStats] = useState<{ total: number; completed: number } | null>(null);
   const [lenderStatsLoading, setLenderStatsLoading] = useState(false);
   const [lenderStatsError, setLenderStatsError] = useState<string | null>(null);
 
-  const isLender = user.role === "lender";
+  const [investorProfile, setInvestorProfile] = useState<InvestorProfileRecord | null>(null);
+  const [investorLoading, setInvestorLoading] = useState(isLender);
+  const [investorError, setInvestorError] = useState<string | null>(null);
 
   async function loadProfile() {
     setLoadingProfile(true);
@@ -161,11 +218,22 @@ export default function ProfilePage({ onNavigate, user }: Props) {
     }
   }
 
+  // Borrower profile (personal / financial / education) only applies to borrowers.
   useEffect(() => {
+    if (isLender) {
+      setLoadingProfile(false);
+      return;
+    }
     loadProfile();
-  }, []);
+  }, [isLender]);
 
+  // Trust scores are calculated from borrower repayment/verification history and
+  // are not meaningful for lender accounts.
   useEffect(() => {
+    if (isLender) {
+      setTrustLoading(false);
+      return;
+    }
     async function loadTrust() {
       setTrustLoading(true);
       setTrustError(null);
@@ -179,7 +247,31 @@ export default function ProfilePage({ onNavigate, user }: Props) {
       }
     }
     loadTrust();
-  }, []);
+  }, [isLender]);
+
+  // Lender / investor profile — company, funding capacity, preferences, KYC status.
+  useEffect(() => {
+    if (!isLender) return;
+    let cancelled = false;
+    async function loadInvestorProfile() {
+      setInvestorLoading(true);
+      setInvestorError(null);
+      try {
+        const data = (await investorApi.getInvestorProfile()) as unknown as InvestorProfileRecord;
+        if (!cancelled) setInvestorProfile(data);
+      } catch (e) {
+        if (!cancelled) {
+          setInvestorError(e instanceof Error ? e.message : "Failed to load investor profile");
+        }
+      } finally {
+        if (!cancelled) setInvestorLoading(false);
+      }
+    }
+    loadInvestorProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLender]);
 
   useEffect(() => {
     if (!isLender) return;
@@ -260,8 +352,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
         incomeSource: form.incomeSource || undefined,
         institutionId: form.institutionId ?? null,
         studentId: form.studentId || undefined,
-        enrollmentYear:
-          form.enrollmentYear !== "" ? parseInt(form.enrollmentYear, 10) : undefined,
+        enrollmentYear: form.enrollmentYear !== "" ? parseInt(form.enrollmentYear, 10) : undefined,
       };
       await profileApi.updateProfile(payload);
       await loadProfile();
@@ -277,7 +368,13 @@ export default function ProfilePage({ onNavigate, user }: Props) {
 
   const userName = getDisplayName(user, user.username ?? "Account");
   const username = user.username?.trim() || "Not set";
-  const avatarInitials = (profile?.full_name || user.username || user.email || "?")
+  const avatarInitials = (
+    (isLender ? investorProfile?.displayName : null) ||
+    profile?.full_name ||
+    user.username ||
+    user.email ||
+    "?"
+  )
     .split(" ")
     .map((w) => w[0])
     .filter(Boolean)
@@ -301,19 +398,181 @@ export default function ProfilePage({ onNavigate, user }: Props) {
           description="Review and update the information used across your loan applications."
         />
 
-        {profileError && (
+        {!isLender && profileError && (
           <Alert variant="error" title="Couldn't load your profile" className="mb-5">
             {profileError}
           </Alert>
         )}
 
-        {saveSuccess && !isEditing && (
+        {!isLender && saveSuccess && !isEditing && (
           <Alert variant="success" title="Profile updated" dismissible className="mb-5">
             Your profile changes have been saved.
           </Alert>
         )}
 
-        {loadingProfile ? (
+        {isLender ? (
+          investorLoading ? (
+            <Card>
+              <CardBody>
+                <p className="text-sm text-stone-500">Loading your profile…</p>
+              </CardBody>
+            </Card>
+          ) : investorError ? (
+            <Alert variant="error" title="Couldn't load your profile">
+              {investorError}
+            </Alert>
+          ) : investorProfile ? (
+            <div className="flex flex-col gap-5">
+              <Card variant="raised">
+                <CardBody className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-teal text-white flex items-center justify-center text-lg font-semibold border-[1.5px] border-navy shrink-0">
+                    {avatarInitials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-lg font-semibold text-navy truncate">@{username}</p>
+                    <p className="text-sm text-stone-500 truncate">
+                      {investorProfile.displayName || "Display name not set"}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      <Badge variant="teal" size="sm">
+                        Lender / Investor
+                      </Badge>
+                      <Badge
+                        variant={
+                          verificationStatusVariant[
+                            investorProfile.verificationStatus ?? "pending"
+                          ] ?? "neutral"
+                        }
+                        size="sm"
+                        dot
+                      >
+                        {verificationStatusLabel[investorProfile.verificationStatus ?? "pending"] ??
+                          "Pending"}
+                      </Badge>
+                      <Badge
+                        variant={
+                          completionStatusVariant[investorProfile.kycStatus ?? "incomplete"] ??
+                          "neutral"
+                        }
+                        size="sm"
+                        dot
+                      >
+                        KYC:{" "}
+                        {completionStatusLabel[investorProfile.kycStatus ?? "incomplete"] ??
+                          "Incomplete"}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              <Card>
+                <CardHeader
+                  title="Company / organization"
+                  description="Borrowers see this company as the source of their funding."
+                />
+                <CardBody>
+                  <DataRow label="Company name" value={investorProfile.company?.name || "—"} />
+                  <DataRow label="Address" value={investorProfile.company?.address || "—"} />
+                  <DataRow label="Branch" value={investorProfile.company?.branch || "—"} />
+                  <DataRow label="Lending goal" value={investorProfile.company?.goal || "—"} />
+                  <DataRow
+                    label="Contact email"
+                    value={investorProfile.company?.contactEmail || "—"}
+                  />
+                  <DataRow
+                    label="Contact phone"
+                    value={investorProfile.company?.contactPhone || "—"}
+                  />
+                </CardBody>
+              </Card>
+
+              <Card>
+                <CardHeader title="Investment profile" />
+                <CardBody>
+                  <DataRow
+                    label="Funding capacity"
+                    value={
+                      investorProfile.fundingCapacity != null
+                        ? formatTaka(Number(investorProfile.fundingCapacity))
+                        : "—"
+                    }
+                  />
+                  <DataRow
+                    label="Maximum exposure"
+                    value={
+                      investorProfile.maxExposure != null
+                        ? formatTaka(Number(investorProfile.maxExposure))
+                        : "—"
+                    }
+                  />
+                  <DataRow
+                    label="Risk preference"
+                    value={
+                      investorProfile.riskPreference
+                        ? (riskPreferenceLabel[investorProfile.riskPreference] ??
+                          investorProfile.riskPreference)
+                        : "—"
+                    }
+                  />
+                  <DataRow
+                    label="Preferred loan purposes"
+                    value={
+                      investorProfile.preferredCategories &&
+                      investorProfile.preferredCategories.length > 0
+                        ? investorProfile.preferredCategories
+                            .map((c) => loanCategoryLabel[c] ?? c)
+                            .join(", ")
+                        : "—"
+                    }
+                  />
+                </CardBody>
+              </Card>
+
+              <Card>
+                <CardHeader title="Lending statistics" />
+                {lenderStatsLoading ? (
+                  <CardBody>
+                    <p className="text-sm text-stone-500">Loading loan statistics…</p>
+                  </CardBody>
+                ) : lenderStatsError ? (
+                  <CardBody>
+                    <Alert variant="error" title="Couldn't load loan statistics">
+                      {lenderStatsError}
+                    </Alert>
+                  </CardBody>
+                ) : (
+                  <CardBody>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-stone-500 uppercase tracking-wide">
+                          Total loans funded
+                        </p>
+                        <p className="tabular-nums text-2xl font-semibold text-navy mt-1">
+                          {lenderStats?.total ?? 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-stone-500 uppercase tracking-wide">
+                          Completed loans
+                        </p>
+                        <p className="tabular-nums text-2xl font-semibold text-navy mt-1">
+                          {lenderStats?.completed ?? 0}
+                        </p>
+                      </div>
+                    </div>
+                  </CardBody>
+                )}
+              </Card>
+            </div>
+          ) : (
+            <EmptyState
+              icon={EmptyIcons.error}
+              title="Profile not found"
+              description="We couldn't find an investor profile for your account."
+            />
+          )
+        ) : loadingProfile ? (
           <Card>
             <CardBody>
               <p className="text-sm text-stone-500">Loading your profile…</p>
@@ -324,7 +583,6 @@ export default function ProfilePage({ onNavigate, user }: Props) {
             <Card variant="raised">
               <CardBody className="flex flex-col sm:flex-row sm:items-center gap-4">
                 {profile.profile_photo_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={profile.profile_photo_url}
                     alt=""
@@ -446,7 +704,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       placeholder="Select"
                     />
                     <TextInput
-                      label="Employer / business name"
+                      label="Employer / business"
                       value={form.employerName}
                       onChange={(e) => updateForm("employerName", e.target.value)}
                     />
@@ -603,9 +861,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                             </span>
                             <span className="tabular-nums text-sm text-stone-500">
                               {Math.round(factor.score)}
-                              {factor.weight
-                                ? ` · ${Math.round(factor.weight * 100)}% weight`
-                                : ""}
+                              {factor.weight ? ` · ${Math.round(factor.weight * 100)}% weight` : ""}
                             </span>
                           </div>
                           {factor.description && (
@@ -627,44 +883,6 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                 </CardBody>
               )}
             </Card>
-
-            {isLender && (
-              <Card>
-                <CardHeader title="Lending statistics" />
-                {lenderStatsLoading ? (
-                  <CardBody>
-                    <p className="text-sm text-stone-500">Loading loan statistics…</p>
-                  </CardBody>
-                ) : lenderStatsError ? (
-                  <CardBody>
-                    <Alert variant="error" title="Couldn't load loan statistics">
-                      {lenderStatsError}
-                    </Alert>
-                  </CardBody>
-                ) : (
-                  <CardBody>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-stone-500 uppercase tracking-wide">
-                          Total loans funded
-                        </p>
-                        <p className="tabular-nums text-2xl font-semibold text-navy mt-1">
-                          {lenderStats?.total ?? 0}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-stone-500 uppercase tracking-wide">
-                          Completed loans
-                        </p>
-                        <p className="tabular-nums text-2xl font-semibold text-navy mt-1">
-                          {lenderStats?.completed ?? 0}
-                        </p>
-                      </div>
-                    </div>
-                  </CardBody>
-                )}
-              </Card>
-            )}
           </div>
         ) : (
           <EmptyState
