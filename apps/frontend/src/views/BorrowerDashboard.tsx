@@ -68,7 +68,17 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
 
         const loan = loansRes[0] || null;
         setActiveLoan(loan);
-        setApplications(appsRes.applications || []);
+        // API returns applicationId/productName/requestedAmount/submittedAt;
+        // normalize to the id/product/amount/submitted shape used below.
+        setApplications(
+          (appsRes.applications || []).map((a) => ({
+            ...a,
+            id: a.applicationId ?? a.id,
+            product: a.productName || a.purpose || a.product || "Loan Application",
+            amount: a.requestedAmount ?? a.amount ?? 0,
+            submitted: a.submittedAt || a.createdAt || a.submitted || "",
+          })),
+        );
 
         if (loan) {
           const txs = await loansApi.getLoanTransactions(loan.id);
