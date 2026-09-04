@@ -51,7 +51,7 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
       `SELECT COALESCE(SUM(amount), 0) AS total_disbursed FROM loan_disbursements WHERE loan_id = $1`,
       [parsed.data.loanId],
     );
-    const alreadyDisbursed = Number(disbursedResult.rows[0].total_disbursed);
+    const alreadyDisbursed = Number(disbursedResult.rows[0]?.total_disbursed || 0);
     const principalAmount = Number(loan.principal_amount);
 
     if (alreadyDisbursed + parsed.data.amount > principalAmount) {
@@ -83,13 +83,15 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
       [parsed.data.loanId, loanStatusAfterDisbursement],
     );
 
-    await client.query(
-      `UPDATE loan_applications la
-       SET status = 'disbursed', updated_at = NOW()
-       FROM loans l
-       WHERE l.loan_id = $1 AND l.application_id = la.application_id`,
-      [parsed.data.loanId],
-    );
+    if (totalDisbursedAfter >= principalAmount) {
+      await client.query(
+        `UPDATE loan_applications la
+         SET status = 'disbursed', updated_at = NOW()
+         FROM loans l
+         WHERE l.loan_id = $1 AND l.application_id = la.application_id`,
+        [parsed.data.loanId],
+      );
+    }
 
     await client.query(
       `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, after_state)

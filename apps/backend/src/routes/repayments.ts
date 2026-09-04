@@ -22,14 +22,22 @@ router.get("/loans/:loanId/schedules", async (req: RequestWithAuth, res) => {
   }
   const client = await pool.connect();
   try {
-    const loanCheck = await client.query("SELECT user_id FROM loans WHERE loan_id = $1", [
+    const loanCheck = await client.query("SELECT user_id, application_id FROM loans WHERE loan_id = $1", [
       parsed.data.loanId,
     ]);
     if (loanCheck.rowCount === 0) {
       return res.status(404).json({ success: false, error: { message: "Loan not found" } });
     }
-    if (loanCheck.rows[0].user_id !== req.user!.userId && req.user!.role !== "admin") {
-      return res.status(403).json({ success: false, error: { message: "Forbidden" } });
+    const loan = loanCheck.rows[0];
+    if (loan.user_id !== req.user!.userId && req.user!.role !== "admin") {
+      const funderCheck = await client.query(
+        `SELECT 1 FROM funding_commitments
+         WHERE application_id = $1 AND lender_user_id = $2 AND status = 'committed'`,
+        [loan.application_id, req.user!.userId],
+      );
+      if (funderCheck.rowCount === 0) {
+        return res.status(403).json({ success: false, error: { message: "Forbidden" } });
+      }
     }
 
     const schedules = await getRepaymentSchedulesForLoan(client, parsed.data.loanId);
