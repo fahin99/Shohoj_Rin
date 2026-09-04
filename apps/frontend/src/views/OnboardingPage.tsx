@@ -435,7 +435,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                         label="Employer / Business name"
                         placeholder="XYZ Company Ltd."
                         value={data.employerName}
-                        onChange={(e) => update("Employer", e.target.value)}
+                        onChange={(e) => update("employerName", e.target.value)}
                       />
                       <TextInput
                         label="Occupation / Job title"
