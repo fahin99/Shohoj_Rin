@@ -66,11 +66,17 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
         );
         onNavigate(result.user.role === "lender" ? "investor-onboarding" : "onboarding");
       } else {
-        await apiRequest("/auth/login", {
+        const result = await apiRequest<{ user: { role: "borrower" | "lender" | "admin" } }>("/auth/login", {
           method: "POST",
           body: JSON.stringify({ identifier: form.email.trim(), password: form.password }),
         });
-        onNavigate("borrower-dashboard");
+        if (result.user.role === "admin") {
+          onNavigate("admin");
+        } else if (result.user.role === "lender") {
+          onNavigate("lender-dashboard");
+        } else {
+          onNavigate("borrower-dashboard");
+        }
       }
       router.refresh();
     } catch (error) {

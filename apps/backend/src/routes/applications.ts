@@ -248,6 +248,21 @@ router.get("/:id", requireAuth, async (req, res) => {
       });
     }
 
+    if (role === "lender") {
+      const accessCheck = await pool.query(
+        `SELECT 1 FROM lender_application_matches WHERE application_id = $1 AND lender_user_id = $2
+         UNION
+         SELECT 1 FROM funding_commitments WHERE application_id = $1 AND lender_user_id = $2`,
+        [req.params.id, userId]
+      );
+      if (accessCheck.rowCount === 0) {
+        return res.status(403).json({
+          success: false,
+          error: { message: "Access denied" },
+        });
+      }
+    }
+
     return res.status(200).json({
       success: true,
       data: {
