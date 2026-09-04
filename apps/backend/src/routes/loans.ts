@@ -47,7 +47,7 @@ router.post("/", requireAuth, async (req, res) => {
 
     const app = appResult.rows[0] as any;
 
-    if (role === "borrower" && app.user_id !== userId) {
+    if (role === "borrower") {
       await client.query("ROLLBACK");
       return res.status(403).json({ success: false, error: { message: "Access denied" } });
     }

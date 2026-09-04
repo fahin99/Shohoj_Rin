@@ -9,8 +9,6 @@ const router = Router();
 const generateScheduleSchema = z.object({
   loanId: z.string().uuid(),
 });
-
-// POST /api/v1/repayment-schedules — generate repayment schedules for a loan
 router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
   const parsed = generateScheduleSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -38,10 +36,14 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
     }
 
     const loan = loanResult.rows[0] as any;
-    const isBorrower = loan.user_id === req.user!.userId;
     const isAdmin = req.user!.role === "admin";
 
-    if (!isBorrower && !isAdmin) {
+    if (req.user!.role === "borrower") {
+      await client.query("ROLLBACK");
+      return res.status(403).json({ success: false, error: { message: "Access denied" } });
+    }
+
+    if (!isAdmin) {
       const fundingCheck = await client.query(
         `SELECT 1
          FROM loan_applications la
@@ -53,6 +55,14 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
         await client.query("ROLLBACK");
         return res.status(403).json({ success: false, error: { message: "Access denied" } });
       }
+    }
+
+    if (loan.status !== "active") {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        success: false,
+        error: { message: "Loan must be active before generating repayment schedules" },
+      });
     }
 
     const existing = await client.query(
