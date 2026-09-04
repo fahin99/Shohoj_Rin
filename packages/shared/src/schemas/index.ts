@@ -54,6 +54,7 @@ export const profileUpdateSchema = z.object({
   employmentType: z.string().optional(),
   employerName: z.string().optional(),
   monthlyIncome: z.number().optional(),
+  monthlySavings: z.number().optional(),
   incomeSource: z.string().optional(),
   institutionId: z.string().uuid().optional().nullable(),
   studentId: z.string().optional(),

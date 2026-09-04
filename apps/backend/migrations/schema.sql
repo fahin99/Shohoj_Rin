@@ -53,6 +53,7 @@ CREATE TABLE user_profiles (
   employment_type VARCHAR(50),
   employer_name VARCHAR(255),
   monthly_income DECIMAL(12,2),
+  monthly_savings DECIMAL(12,2),
   income_source VARCHAR(100),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

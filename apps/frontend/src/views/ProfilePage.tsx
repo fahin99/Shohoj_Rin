@@ -40,6 +40,7 @@ interface ProfileRecord {
   employment_type: string | null;
   employer_name: string | null;
   monthly_income: number | string | null;
+  monthly_savings: number | string | null;
   income_source: string | null;
   email: string;
   phone: string | null;
@@ -60,6 +61,7 @@ interface FormState {
   employmentType: string;
   employerName: string;
   monthlyIncome: string;
+  monthlySavings: string;
   incomeSource: string;
   institutionId: string | null;
   institutionName: string;
@@ -380,6 +382,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
       employmentType: toFormValue(profile.employment_type),
       employerName: toFormValue(profile.employer_name),
       monthlyIncome: toFormValue(profile.monthly_income),
+      monthlySavings: toFormValue(profile.monthly_savings),
       incomeSource: toFormValue(profile.income_source),
       institutionId: profile.institution_id,
       institutionName: toFormValue(profile.institution_name),
@@ -421,6 +424,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
         employmentType: form.employmentType || undefined,
         employerName: form.employerName || undefined,
         monthlyIncome: form.monthlyIncome !== "" ? Number(form.monthlyIncome) : undefined,
+        monthlySavings: form.monthlySavings !== "" ? Number(form.monthlySavings) : undefined,
         incomeSource: form.incomeSource || undefined,
         institutionId: form.institutionId ?? null,
         studentId: form.studentId || undefined,
@@ -883,6 +887,11 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       value={form.monthlyIncome}
                       onChange={(e) => updateForm("monthlyIncome", e.target.value)}
                     />
+                    <CurrencyInput
+                      label="Monthly savings"
+                      value={form.monthlySavings}
+                      onChange={(e) => updateForm("monthlySavings", e.target.value)}
+                    />
                     <TextInput
                       label="Income source"
                       value={form.incomeSource}
@@ -962,6 +971,14 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       value={
                         profile.monthly_income != null
                           ? `৳${Number(profile.monthly_income).toLocaleString("en-IN")}`
+                          : "—"
+                      }
+                    />
+                    <DataRow
+                      label="Monthly savings"
+                      value={
+                        profile.monthly_savings != null
+                          ? `৳${Number(profile.monthly_savings).toLocaleString("en-IN")}`
                           : "—"
                       }
                     />

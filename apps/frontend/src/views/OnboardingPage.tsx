@@ -70,14 +70,8 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     }
     init();
   }, []);
-  const update = (k: string, v: string | boolean | string[] | null) => setData((d) => ({ ...d, [k]: v }));
-  // Build a payload using only the canonical profile fields shared with the
-  // profileUpdateSchema / ProfilePage contract. Numeric fields are coerced to
-  // numbers and empty values are omitted so the shared schema does not reject
-  // the request ("" is not a valid uuid, a string is not a valid number).
-  // Onboarding-only fields that have no persistent profile column (monthly
-  // savings, existing loans, goals, notification/language preferences, upload
-  // flags) are intentionally not sent to the profile API.
+  const update = (k: string, v: string | boolean | string[] | null) =>
+    setData((d) => ({ ...d, [k]: v }));
   const buildProfilePayload = (d: typeof data) => {
     const payload: Record<string, unknown> = {};
     if (d.fullName.trim()) payload.fullName = d.fullName.trim();
@@ -88,6 +82,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     if (d.city) payload.city = d.city;
     if (d.district) payload.district = d.district;
     if (d.monthlyIncome !== "") payload.monthlyIncome = Number(d.monthlyIncome);
+    if (d.savingsAmount !== "") payload.monthlySavings = Number(d.savingsAmount);
     if (d.employmentType) payload.employmentType = d.employmentType;
     if (d.employerName) payload.employerName = d.employerName;
     if (d.occupation) payload.occupation = d.occupation;

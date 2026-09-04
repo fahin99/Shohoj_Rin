@@ -21,6 +21,7 @@ export interface ProfileData {
   employment_type: string | null;
   employer_name: string | null;
   monthly_income: number | string | null;
+  monthly_savings: number | string | null;
   income_source: string | null;
   email: string;
   phone: string | null;

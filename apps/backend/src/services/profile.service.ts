@@ -16,6 +16,7 @@ const profileColumnByField = {
   employmentType: "employment_type",
   employerName: "employer_name",
   monthlyIncome: "monthly_income",
+  monthlySavings: "monthly_savings",
   incomeSource: "income_source",
   institutionId: "institution_id",
   studentId: "student_id",

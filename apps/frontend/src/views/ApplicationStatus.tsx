@@ -279,7 +279,10 @@ export default function ApplicationStatus({ onNavigate }: Props) {
           title={selected ? `${selected.product} — timeline` : ""}
           footer={
             <div className="flex items-center justify-between w-full">
-              {selected && selected.status !== "disbursed" && selected.status !== "approved" && isPrivilegedUser ? (
+              {selected &&
+              selected.status !== "disbursed" &&
+              selected.status !== "approved" &&
+              isPrivilegedUser ? (
                 <Button
                   variant="primary"
                   size="sm"
@@ -291,7 +294,8 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                 >
                   Verify &amp; Disburse Now
                 </Button>
-              ) : selected && (selected.status === "disbursed" || selected.status === "approved") ? (
+              ) : selected &&
+                (selected.status === "disbursed" || selected.status === "approved") ? (
                 <Button
                   variant="primary"
                   size="sm"
