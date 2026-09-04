@@ -51,10 +51,6 @@ router.post("/", requireAuth, async (req, res) => {
       await client.query("ROLLBACK");
       return res.status(403).json({ success: false, error: { message: "Access denied" } });
     }
-
-    // A lender may only convert an application they actually committed funding to.
-    // This prevents arbitrary lenders from instating loans on applications they
-    // never funded (marketplace opportunity privacy).
     if (role === "lender") {
       const funderCheck = await client.query(
         `SELECT 1 FROM funding_commitments
@@ -83,10 +79,6 @@ router.post("/", requireAuth, async (req, res) => {
       await client.query("ROLLBACK");
       return res.status(409).json({ success: false, error: { message: "Loan already created for this application" } });
     }
-
-    // A loan may only be created once the application is fully funded by
-    // committed lender commitments. This is the acceptance condition between
-    // "application submitted/approved" and "loan originates".
     const fundingResult = await client.query(
       `SELECT COALESCE(SUM(amount), 0) AS committed_amount
        FROM funding_commitments
@@ -134,7 +126,7 @@ router.post("/", requireAuth, async (req, res) => {
     const loanResult = await client.query(
       `INSERT INTO loans
         (application_id, offer_id, user_id, partner_id, principal_amount, interest_rate, tenure_months, status, start_date, expected_end_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', $8, $9)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending_disbursement', $8, $9)
        RETURNING
          loan_id AS "loanId",
          application_id AS "applicationId",
@@ -159,10 +151,6 @@ router.post("/", requireAuth, async (req, res) => {
         expectedEndDate.toISOString().split("T")[0],
       ],
     );
-
-    // Loan creation ≠ money transferred. The application moves to 'approved'
-    // here; it only becomes 'disbursed' when a real loan_disbursements row is
-    // recorded via POST /loan-disbursements.
     await client.query(
       `UPDATE loan_applications SET status = 'approved', updated_at = NOW() WHERE application_id = $1`,
       [parsed.data.applicationId],

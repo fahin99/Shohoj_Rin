@@ -379,7 +379,7 @@ ALTER TABLE loan_applications ADD CONSTRAINT chk_loan_app_status CHECK (status I
 ALTER TABLE funding_commitments ADD CONSTRAINT chk_funding_commitments_status CHECK (status IN ('committed', 'cancelled'));
 ALTER TABLE lender_application_matches ADD CONSTRAINT chk_lender_match_status CHECK (status IN ('pending', 'viewed', 'accepted', 'rejected', 'expired'));
 ALTER TABLE loan_offers ADD CONSTRAINT chk_loan_offer_status CHECK (status IN ('pending', 'accepted', 'declined', 'expired'));
-ALTER TABLE loans ADD CONSTRAINT chk_loans_status CHECK (status IN ('active', 'completed', 'overdue', 'delinquent', 'defaulted'));
+ALTER TABLE loans ADD CONSTRAINT chk_loans_status CHECK (status IN ('pending_disbursement', 'active', 'completed', 'overdue', 'delinquent', 'defaulted'));
  
 ALTER TABLE repayment_schedules ADD CONSTRAINT chk_repayment_schedule_status CHECK (status IN ('pending', 'paid', 'partially_paid', 'overdue', 'defaulted'));
 ALTER TABLE repayments ADD CONSTRAINT chk_repayments_status CHECK (status IN ('completed', 'failed', 'reversed'));
