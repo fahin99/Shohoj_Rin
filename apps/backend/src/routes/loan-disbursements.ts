@@ -12,7 +12,6 @@ const createDisbursementSchema = z.object({
   referenceNumber: z.string().trim().max(100).optional(),
 });
 
-// POST /api/v1/loan-disbursements — record disbursement
 router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
   const parsed = createDisbursementSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -48,10 +47,6 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
         return res.status(403).json({ success: false, error: { message: "Access denied" } });
       }
     }
-
-    // The loans row is locked FOR UPDATE above, so concurrent disbursement
-    // requests for the same loan will block here until this transaction
-    // commits or rolls back, keeping this total safe against races.
     const disbursedResult = await client.query(
       `SELECT COALESCE(SUM(amount), 0) AS total_disbursed FROM loan_disbursements WHERE loan_id = $1`,
       [parsed.data.loanId],
@@ -79,13 +74,15 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
       ],
     );
 
+    const totalDisbursedAfter = alreadyDisbursed + parsed.data.amount;
+    const loanStatusAfterDisbursement =
+      totalDisbursedAfter >= principalAmount ? "active" : "pending_disbursement";
+
     await client.query(
-      `UPDATE loans SET status = 'active', updated_at = NOW() WHERE loan_id = $1`,
-      [parsed.data.loanId],
+      `UPDATE loans SET status = $2, updated_at = NOW() WHERE loan_id = $1`,
+      [parsed.data.loanId, loanStatusAfterDisbursement],
     );
 
-    // A real disbursement row now exists for this loan: the application has
-    // actually been paid out, so it leaves 'approved' and enters 'disbursed'.
     await client.query(
       `UPDATE loan_applications la
        SET status = 'disbursed', updated_at = NOW()

@@ -188,6 +188,28 @@ export async function recordRepayment(
     const schedule = scheduleResult.rows[0];
     const repaymentAmount = Math.round(input.amountPaid * 100) / 100;
     const expectedAmount = toNumber(schedule.expected_amount);
+
+    // Reject a repayment that would exceed the schedule's remaining outstanding
+    // amount, computed from completed repayments recorded so far.
+    const existingPaidResult = await client.query<{ total_paid: string | number }>(
+      `SELECT COALESCE(SUM(amount_paid), 0) AS total_paid
+       FROM repayments
+       WHERE schedule_id = $1 AND status = 'completed'`,
+      [input.scheduleId],
+    );
+    const alreadyPaid = toNumber(existingPaidResult.rows[0].total_paid);
+    const outstandingBeforePayment = Math.max(
+      0,
+      Math.round((expectedAmount - alreadyPaid) * 100) / 100,
+    );
+    if (repaymentAmount > outstandingBeforePayment) {
+      await client.query("ROLLBACK");
+      throw Object.assign(new Error("Repayment amount exceeds the outstanding balance"), {
+        statusCode: 400,
+        isOperational: true,
+      });
+    }
+
     const repaymentResult = await client.query<RepaymentRow>(
       `INSERT INTO repayments (schedule_id, amount_paid, payment_method, transaction_reference, provider_reference, status)
        VALUES ($1, $2, $3, $4, $5, $6)
