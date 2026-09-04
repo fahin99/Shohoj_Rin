@@ -97,7 +97,14 @@ router.post("/", requireAuth, async (req, res) => {
       });
     }
 
-    const partnerId = app.partner_id ?? await getDefaultPartner(client);
+    const partnerId = app.partner_id ?? (await getFunderPartnerId(client, parsed.data.applicationId));
+    if (!partnerId) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        success: false,
+        error: { message: "Unable to determine a funding partner for this application" },
+      });
+    }
 
     const interestRate = typeof app.interest_rate === "number" ? app.interest_rate : Number(app.interest_rate ?? 12.0);
     const tenureMonths = typeof app.duration_months === "number" ? app.duration_months : Number(app.duration_months ?? 12);
@@ -186,14 +193,20 @@ router.post("/", requireAuth, async (req, res) => {
   }
 });
 
-async function getDefaultPartner(client: Pick<any, "query">): Promise<string> {
-  const result = await client.query(`SELECT partner_id FROM funding_partners LIMIT 1`);
-  if (result.rowCount > 0) return result.rows[0].partner_id;
-  const insert = await client.query(
-    `INSERT INTO funding_partners (name, type, address, branch, goal) VALUES ($1, 'other', $2, $3, $4) RETURNING partner_id`,
-    ["Default Partner", "N/A", "N/A", "N/A"],
+async function getFunderPartnerId(
+  client: Pick<any, "query">,
+  applicationId: string,
+): Promise<string | null> {
+  const result = await client.query(
+    `SELECT u.partner_id
+     FROM funding_commitments fc
+     JOIN users u ON u.user_id = fc.lender_user_id
+     WHERE fc.application_id = $1 AND fc.status = 'committed' AND u.partner_id IS NOT NULL
+     ORDER BY fc.created_at ASC
+     LIMIT 1`,
+    [applicationId],
   );
-  return insert.rows[0].partner_id;
+  return result.rowCount > 0 ? result.rows[0].partner_id : null;
 }
 
 // GET /api/v1/loans — list user's loans
