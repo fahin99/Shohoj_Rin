@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { PageHeader } from "../components/PageHeader";
 import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
@@ -14,6 +13,7 @@ import type { PageName } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
 import type { InvestorProfile, ProfileCompletionItem } from "@shohojrin/shared";
 import type { TrustScoreData } from "../lib/api/trust";
+import { useCallback, useEffect, useState } from "react";
 
 interface Props {
   onNavigate: (page: PageName) => void;
@@ -209,31 +209,30 @@ export default function ProfilePage({ onNavigate, user }: Props) {
   const [lenderSaveError, setLenderSaveError] = useState<string | null>(null);
   const [lenderSaveSuccess, setLenderSaveSuccess] = useState(false);
 
-  async function loadProfile() {
-    setLoadingProfile(true);
-    setProfileError(null);
-    try {
-      const data = await profileApi.getProfile();
-      setProfile(data.profile);
-      setCompletionItems(data.completionItems ?? []);
-    } catch (e) {
-      setProfileError(e instanceof Error ? e.message : "Failed to load profile");
-    } finally {
-      setLoadingProfile(false);
-    }
+  const loadProfile = useCallback(async () => {
+  setLoadingProfile(true);
+  setProfileError(null);
+
+  try {
+    const data = await profileApi.getProfile();
+    setProfile(data.profile);
+    setCompletionItems(data.completionItems ?? []);
+  } catch (e) {
+    setProfileError(e instanceof Error ? e.message : "Failed to load profile");
+  } finally {
+    setLoadingProfile(false);
+  }
+}, []);
+
+  useEffect(() => {
+  if (isLender) {
+    setLoadingProfile(false);
+    return;
   }
 
-  // Borrower profile (personal / financial / education) only applies to borrowers.
-  useEffect(() => {
-    if (isLender) {
-      setLoadingProfile(false);
-      return;
-    }
-    loadProfile();
-  }, [isLender]);
+  loadProfile();
+}, [isLender, loadProfile]);
 
-  // Trust scores are calculated from borrower repayment/verification history and
-  // are not meaningful for lender accounts.
   useEffect(() => {
     if (isLender) {
       setTrustLoading(false);
