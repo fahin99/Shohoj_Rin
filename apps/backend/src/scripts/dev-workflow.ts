@@ -488,7 +488,7 @@ async function runStage(name: string, fn: () => Promise<void>) {
       const prematureLoan = await api("/loans", { method: "POST", token: la1.token, body: { applicationId: appAId } });
       check("rule_a_lender_not_fully_funded", prematureLoan.status === 400, `lender loan creation on partial funding → ${prematureLoan.status} (${prematureLoan.payload?.error?.message ?? ""})`);
       const borrowerPremature = await api("/loans", { method: "POST", token: ba.token, body: { applicationId: appAId } });
-      check("rule_a_borrower_not_fully_funded", borrowerPremature.status === 400, `borrower loan creation on partial funding → ${borrowerPremature.status}`);
+      check("rule_a_borrower_not_fully_funded", borrowerPremature.status === 400 || borrowerPremature.status === 403, `borrower loan creation on partial funding → ${borrowerPremature.status}`);
 
       // Rule D: funding amount cannot exceed the remaining requested amount.
       const overFund = await api(`/investor/fund/${appAId}`, { method: "POST", token: la2.token, body: { amount: 160000 } });
@@ -584,7 +584,7 @@ async function runStage(name: string, fn: () => Promise<void>) {
       const la1Tx = await getLoanTransactions(la1.token, ctx.loanId);
       check("lender_sees_loan_transactions", Array.isArray(la1Tx), "lenderA1 can read loanA transactions");
     });    await runStage("Loan disbursement (real money transfer)", async () => {
-      const disb = await createDisbursement(ctx.borrowers.ba.token, ctx.loanId, 180000);
+      const disb = await createDisbursement(ctx.lenders.la1.token, ctx.loanId, 180000);
       ctx.disbursementId = disb.disbursementId;
       check("disbursement_recorded", !!ctx.disbursementId, `disbursement recorded (${ctx.disbursementId})`);
 

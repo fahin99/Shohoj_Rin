@@ -13,7 +13,7 @@ interface OnboardingPageProps {
 const steps = [
   { label: "Personal & ID", sublabel: "Identity" },
   { label: "Financial", sublabel: "Profile" },
-  { label: "employmentType", sublabel: "Status" },
+  { label: "Employment", sublabel: "Status" },
   { label: "Goals", sublabel: "" },
   { label: "Preferences", sublabel: "" },
 ];
@@ -36,6 +36,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     nidNumber: "",
     addressLine: "",
     city: "",
+    district: "",
     nidFrontUploaded: false,
     nidBackUploaded: false,
     utilityBillUploaded: false,
@@ -47,8 +48,8 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     existingLoans: "no",
     employmentType: "",
     employerName: "",
-    jobTitle: "",
-    incomeType: "",
+    occupation: "",
+    incomeSource: "",
     institutionId: null as string | null,
     institutionName: "",
     studentId: "",
@@ -70,6 +71,31 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     init();
   }, []);
   const update = (k: string, v: string | boolean | string[]) => setData((d) => ({ ...d, [k]: v }));
+  // Build a payload using only the canonical profile fields shared with the
+  // profileUpdateSchema / ProfilePage contract. Numeric fields are coerced to
+  // numbers and empty values are omitted so the shared schema does not reject
+  // the request ("" is not a valid uuid, a string is not a valid number).
+  // Onboarding-only fields that have no persistent profile column (monthly
+  // savings, existing loans, goals, notification/language preferences, upload
+  // flags) are intentionally not sent to the profile API.
+  const buildProfilePayload = (d: typeof data) => {
+    const payload: Record<string, unknown> = {};
+    if (d.fullName.trim()) payload.fullName = d.fullName.trim();
+    if (d.dateOfBirth) payload.dateOfBirth = d.dateOfBirth;
+    if (d.gender) payload.gender = d.gender;
+    if (d.nidNumber) payload.nidNumber = d.nidNumber;
+    if (d.addressLine) payload.addressLine = d.addressLine;
+    if (d.city) payload.city = d.city;
+    if (d.district) payload.district = d.district;
+    if (d.monthlyIncome !== "") payload.monthlyIncome = Number(d.monthlyIncome);
+    if (d.employmentType) payload.employmentType = d.employmentType;
+    if (d.employerName) payload.employerName = d.employerName;
+    if (d.occupation) payload.occupation = d.occupation;
+    if (d.incomeSource) payload.incomeSource = d.incomeSource;
+    if (d.institutionId) payload.institutionId = d.institutionId;
+    if (d.studentId) payload.studentId = d.studentId;
+    return payload;
+  };
   const toggleGoal = (g: string) => {
     setData((d) => ({
       ...d,
@@ -131,7 +157,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
   };
   const next = async () => {
     try {
-      await profileApi.updateProfile(data);
+      await profileApi.updateProfile(buildProfilePayload(data));
     } catch (e) {
       console.error("Failed to update profile", e);
     }
@@ -152,7 +178,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
   const saveAndContinueLater = async () => {
     setSaving(true);
     try {
-      await profileApi.updateProfile(data);
+      await profileApi.updateProfile(buildProfilePayload(data));
     } catch (e) {
       console.error("Failed to save profile", e);
     } finally {
@@ -225,7 +251,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   hint="Your 10 or 17 digit NID number"
                 />
                 <TextInput
-                  label="addressLine"
+                  label="Address"
                   placeholder="House 12, Road 5, Block C"
                   value={data.addressLine}
                   onChange={(e) => update("addressLine", e.target.value)}
@@ -234,7 +260,10 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                 <Select
                   label="City / District"
                   value={data.city}
-                  onChange={(e) => update("city", e.target.value)}
+                  onChange={(e) => {
+                    update("city", e.target.value);
+                    update("district", e.target.value);
+                  }}
                   options={[
                     { value: "dhaka", label: "Dhaka" },
                     { value: "chittagong", label: "Chittagong" },
@@ -363,7 +392,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
               </p>
               <div className="grid grid-cols-1 gap-5">
                 <Select
-                  label="employmentType status"
+                  label="Employment status"
                   value={data.employmentType}
                   onChange={(e) => update("employmentType", e.target.value)}
                   options={[
@@ -403,23 +432,23 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   data.employmentType !== "unemployed" && (
                     <>
                       <TextInput
-                        label="employerName / Business name"
+                        label="Employer / Business name"
                         placeholder="XYZ Company Ltd."
                         value={data.employerName}
                         onChange={(e) => update("employerName", e.target.value)}
                       />
                       <TextInput
-                        label="Job title / Role"
+                        label="Occupation / Job title"
                         placeholder="Software Engineer"
-                        value={data.jobTitle}
-                        onChange={(e) => update("jobTitle", e.target.value)}
+                        value={data.occupation}
+                        onChange={(e) => update("occupation", e.target.value)}
                       />
                     </>
                   )}
                 <Select
-                  label="Primary income type"
-                  value={data.incomeType}
-                  onChange={(e) => update("incomeType", e.target.value)}
+                  label="Primary income source"
+                  value={data.incomeSource}
+                  onChange={(e) => update("incomeSource", e.target.value)}
                   options={[
                     { value: "salary", label: "Monthly salary" },
                     { value: "business", label: "Business income" },
@@ -428,7 +457,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     { value: "parental", label: "Parental support" },
                     { value: "other", label: "Other" },
                   ]}
-                  placeholder="Select income type"
+                  placeholder="Select income source"
                 />
                 {data.employmentType === "student" && (
                   <FileUpload
