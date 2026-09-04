@@ -70,7 +70,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     }
     init();
   }, []);
-  const update = (k: string, v: string | boolean | string[]) => setData((d) => ({ ...d, [k]: v }));
+  const update = (k: string, v: string | boolean | string[] | null) => setData((d) => ({ ...d, [k]: v }));
   // Build a payload using only the canonical profile fields shared with the
   // profileUpdateSchema / ProfilePage contract. Numeric fields are coerced to
   // numbers and empty values are omitted so the shared schema does not reject
@@ -92,7 +92,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     if (d.employerName) payload.employerName = d.employerName;
     if (d.occupation) payload.occupation = d.occupation;
     if (d.incomeSource) payload.incomeSource = d.incomeSource;
-    if (d.institutionId) payload.institutionId = d.institutionId;
+    if (d.institutionId !== null) payload.institutionId = d.institutionId;
     if (d.studentId) payload.studentId = d.studentId;
     return payload;
   };
@@ -296,12 +296,12 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     />
                     <FileUpload
                       label="NID Back Photo"
-                      hint="Back side with addressLine"
+                      hint="Back side with address"
                       onChange={(files) => handleFileUpload("nid_back", files, "nidBackUploaded")}
                     />
                     <FileUpload
                       label="Utility Bill"
-                      hint="Optional proof of addressLine"
+                      hint="Optional proof of address"
                       onChange={(files) =>
                         handleFileUpload("utility_bill", files, "utilityBillUploaded")
                       }
@@ -386,7 +386,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {}
           {step === 2 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">employmentType & income</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">Employment & income</h2>
               <p className="text-sm text-stone-500 mb-6">
                 Tell us about your current work or study status.
               </p>
@@ -413,7 +413,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                       value={data.institutionName}
                       institutionId={data.institutionId}
                       onChange={({ id, name }) => {
-                        update("institutionId", id || "");
+                        update("institutionId", id || null);
                         update("institutionName", name);
                       }}
                       required
@@ -435,7 +435,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                         label="Employer / Business name"
                         placeholder="XYZ Company Ltd."
                         value={data.employerName}
-                        onChange={(e) => update("employerName", e.target.value)}
+                        onChange={(e) => update("Employer", e.target.value)}
                       />
                       <TextInput
                         label="Occupation / Job title"
