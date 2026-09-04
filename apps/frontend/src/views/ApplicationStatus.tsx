@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { AppLayout } from "../components/AppLayout";
+import { useCurrentUser } from "../lib/user-context";
 import { PageHeader } from "../components/PageHeader";
 import { Card } from "../components/Card";
 import { Tabs } from "../components/Tabs";
@@ -81,6 +82,9 @@ export default function ApplicationStatus({ onNavigate }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
   const [verifiedAlert, setVerifiedAlert] = useState<string | null>(null);
+  const currentUser = useCurrentUser();
+  const currentUserRole = currentUser?.role;
+  const isPrivilegedUser = currentUserRole === "lender" || currentUserRole === "admin";
 
   const fetchApplications = useCallback(async () => {
     try {
@@ -237,7 +241,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
 
                   <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between">
                     <div>
-                      {!isDisbursed ? (
+                      {!isDisbursed && isPrivilegedUser ? (
                         <Button
                           variant="primary"
                           size="xs"
@@ -246,7 +250,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                         >
                           Verify &amp; Disburse Loan
                         </Button>
-                      ) : (
+                      ) : isDisbursed ? (
                         <Button
                           variant="secondary"
                           size="xs"
@@ -254,7 +258,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                         >
                           View in My Loans →
                         </Button>
-                      )}
+                      ) : null}
                     </div>
                     <button
                       type="button"
@@ -275,7 +279,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
           title={selected ? `${selected.product} — timeline` : ""}
           footer={
             <div className="flex items-center justify-between w-full">
-              {selected && selected.status !== "disbursed" && selected.status !== "approved" ? (
+              {selected && selected.status !== "disbursed" && selected.status !== "approved" && isPrivilegedUser ? (
                 <Button
                   variant="primary"
                   size="sm"
@@ -287,7 +291,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                 >
                   Verify &amp; Disburse Now
                 </Button>
-              ) : (
+              ) : selected && (selected.status === "disbursed" || selected.status === "approved") ? (
                 <Button
                   variant="primary"
                   size="sm"
@@ -298,7 +302,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                 >
                   Go to My Loans
                 </Button>
-              )}
+              ) : null}
               <Button variant="secondary" size="sm" onClick={() => setSelectedId(null)}>
                 Close
               </Button>
