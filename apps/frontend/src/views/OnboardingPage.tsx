@@ -318,7 +318,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     <span className="text-sm text-sky font-bold mt-0.5">ℹ</span>
                     <p className="text-xs text-stone-600 leading-relaxed">
                       Your identity verification is saved securely. When applying for loans in the
-                      future, you will not need to provide your NID photo, full name, or addressLine
+                      future, you will not need to provide your NID photo, full name, or address
                       again.
                     </p>
                   </div>
