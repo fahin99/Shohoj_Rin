@@ -1,9 +1,12 @@
+"use client";
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { Logo } from "./Logo";
 import { Badge } from "./Badge";
 import { IconButton } from "./Button";
 import type { PageName } from "../types";
+import { apiRequest } from "../lib/api";
 interface AppLayoutProps {
   children: ReactNode;
   onNavigate: (page: PageName) => void;
@@ -189,8 +192,24 @@ export function AppLayout({
   userType = "borrower",
   userName = "Riya Ahmed",
 }: AppLayoutProps) {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await apiRequest("/auth/logout", { method: "POST" });
+    } catch {
+      // ignore logout failure
+    } finally {
+      router.replace("/auth");
+      router.refresh();
+    }
+  };
+
   const navItems =
     userType === "admin" ? adminNav : userType === "lender" ? lenderNav : borrowerNav;
   const sidebar = (
@@ -224,6 +243,29 @@ export function AppLayout({
             <p className="text-xs font-medium text-navy truncate">{userName}</p>
             <p className="text-[10px] text-stone-500 capitalize">{userType}</p>
           </div>
+          <button
+            type="button"
+            title="Log out"
+            aria-label="Log out"
+            disabled={loggingOut}
+            onClick={() => void handleLogout()}
+            className="p-1.5 rounded-[4px] text-stone-400 hover:text-coral hover:bg-stone-100 transition-colors disabled:opacity-50"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
         </div>
       </div>
     </aside>
@@ -339,17 +381,56 @@ export function AppLayout({
               </div>
             )}
           </div>
-          <button
-            type="button"
-            aria-label={`Account menu for ${userName}`}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-teal text-xs font-semibold text-white"
-          >
-            {userName
-              .split(" ")
-              .map((w) => w[0])
-              .join("")
-              .slice(0, 2)}
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              aria-label={`Account menu for ${userName}`}
+              aria-expanded={userMenuOpen}
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-teal text-xs font-semibold text-white hover:opacity-90 transition-opacity"
+            >
+              {userName
+                .split(" ")
+                .map((w) => w[0])
+                .join("")
+                .slice(0, 2)}
+            </button>
+            {userMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white border-[1.5px] border-navy shadow-nb rounded-[8px] overflow-hidden z-20">
+                <div className="px-3 py-2.5 border-b border-stone-200">
+                  <p className="text-xs font-semibold text-navy truncate">{userName}</p>
+                  <p className="text-[10px] text-stone-500 capitalize">{userType}</p>
+                </div>
+                <div className="p-1">
+                  <button
+                    type="button"
+                    disabled={loggingOut}
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      void handleLogout();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-coral hover:bg-coral-light/30 rounded-[4px] transition-colors text-left disabled:opacity-50"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    {loggingOut ? "Logging out..." : "Log out"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </header>
         {}
         <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">{children}</div>

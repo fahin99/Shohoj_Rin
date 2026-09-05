@@ -8,11 +8,13 @@ import {
   createAccessToken,
   createRefreshToken,
   generateSessionId,
+  getAuthTokenFromCookiesOrHeaders,
   hashPassword,
   hashToken,
   normalizeEmail,
   normalizePhone,
   setAuthCookies,
+  verifyAccessToken,
   verifyRefreshToken,
 } from "../lib/auth.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
@@ -364,25 +366,51 @@ router.post("/refresh", async (req, res) => {
   }
 });
 router.post("/logout", async (req, res) => {
+  let sessionId: string | null = null;
   const refreshToken =
     typeof req.cookies?.shohojrin_refresh_token === "string"
       ? req.cookies.shohojrin_refresh_token
       : typeof req.body?.refreshToken === "string"
         ? req.body.refreshToken
         : null;
+
   if (refreshToken) {
     try {
       const claims = verifyRefreshToken(refreshToken) as { jti?: string };
-      if (claims.jti) {
-        await pool.query(
-          `UPDATE login_sessions
-           SET is_revoked = TRUE
-           WHERE session_id = $1`,
-          [claims.jti],
-        );
+      if (claims?.jti) {
+        sessionId = claims.jti;
       }
     } catch {}
   }
+
+  if (!sessionId) {
+    const accessToken = getAuthTokenFromCookiesOrHeaders(
+      req.cookies ?? {},
+      req.header("authorization"),
+    );
+    if (accessToken) {
+      try {
+        const claims = verifyAccessToken(accessToken) as { jti?: string };
+        if (claims?.jti) {
+          sessionId = claims.jti;
+        }
+      } catch {}
+    }
+  }
+
+  if (sessionId) {
+    try {
+      await pool.query(
+        `UPDATE login_sessions
+         SET is_revoked = TRUE
+         WHERE session_id = $1`,
+        [sessionId],
+      );
+    } catch (err) {
+      console.error("Failed to revoke session on logout:", err);
+    }
+  }
+
   clearAuthCookies(res);
   return res.status(200).json({
     success: true,
