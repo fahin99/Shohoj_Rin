@@ -6,7 +6,69 @@ import { Tabs } from "../components/Tabs";
 import { SearchInput, TextInput } from "../components/Input";
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
 import { formatTaka } from "../lib/format";
-import { educationArticles } from "../lib/mock-data";
+
+// Static educational content — not financial data, safe to keep client-side
+const educationArticles = [
+  {
+    id: "ea-01",
+    title: "Understanding Microloans: A Beginner's Guide",
+    category: "Basics",
+    readTime: "5 min",
+    summary:
+      "Learn what microloans are, how they work in Bangladesh, and whether they're right for your financial needs.",
+    content:
+      "Microloans are small loans typically ranging from ৳10,000 to ৳5,00,000, designed for individuals who may not qualify for traditional bank loans...",
+  },
+  {
+    id: "ea-02",
+    title: "How to Improve Your Trust Score",
+    category: "Credit",
+    readTime: "4 min",
+    summary:
+      "Your Trust Score determines your loan eligibility and interest rates. Here's how to build and maintain a strong score.",
+    content:
+      "Your Shohoj Rin Trust Score is calculated based on five key factors: repayment history (35%), financial capacity (25%)...",
+  },
+  {
+    id: "ea-03",
+    title: "Smart Repayment Strategies",
+    category: "Repayment",
+    readTime: "6 min",
+    summary: "Practical strategies to manage your loan repayments effectively and avoid late fees.",
+    content:
+      "Managing loan repayments requires planning and discipline. Here are proven strategies used by successful borrowers...",
+  },
+  {
+    id: "ea-04",
+    title: "Building a Personal Budget",
+    category: "Planning",
+    readTime: "7 min",
+    summary:
+      "Create a realistic budget that accounts for loan repayments while meeting your daily needs.",
+    content:
+      "A well-structured budget is your best tool for financial health. Start by tracking your income and expenses for one month...",
+  },
+  {
+    id: "ea-05",
+    title: "Emergency Funds: Why and How",
+    category: "Planning",
+    readTime: "4 min",
+    summary:
+      "Learn why having an emergency fund matters and how to start building one even with limited income.",
+    content:
+      "An emergency fund is money set aside for unexpected expenses — medical bills, urgent repairs, or sudden job loss...",
+  },
+  {
+    id: "ea-06",
+    title: "Getting Help When You Can't Repay",
+    category: "Support",
+    readTime: "3 min",
+    summary:
+      "If you're struggling with repayments, don't wait. Here are the steps you can take and support available.",
+    content:
+      "Financial difficulties can happen to anyone. If you're struggling to make your loan repayments, the worst thing you can do is ignore the situation...",
+  },
+];
 import type { PageName } from "../types";
 import type { StoredUserProfile } from "../lib/session";
 interface Props {
@@ -61,11 +123,11 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
   const [months, setMonths] = useState(24);
   const filtered = useMemo(() => {
     return educationArticles.filter((a) => {
-      const matchesCat = category === "All" || a.tag === category;
+      const matchesCat = category === "All" || a.category === category;
       const matchesQuery =
         query.trim() === "" ||
         a.title.toLowerCase().includes(query.toLowerCase()) ||
-        a.desc.toLowerCase().includes(query.toLowerCase());
+        a.summary.toLowerCase().includes(query.toLowerCase());
       return matchesCat && matchesQuery;
     });
   }, [query, category]);
@@ -128,7 +190,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
             </span>
             <div className="min-w-0">
               <h2 className="text-2xl font-semibold text-white mb-2">{featured.title}</h2>
-              <p className="text-teal-light/90 leading-relaxed mb-4 max-w-xl">{featured.desc}</p>
+              <p className="text-teal-light/90 leading-relaxed mb-4 max-w-xl">{featured.summary}</p>
               <div className="flex items-center gap-3">
                 <Button
                   variant="secondary"
@@ -137,7 +199,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
                 >
                   Read guide
                 </Button>
-                <span className="text-xs text-white/80">{featured.read}</span>
+                <span className="text-xs text-white/80">{featured.readTime}</span>
               </div>
             </div>
           </div>
@@ -160,12 +222,14 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
               >
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-xs bg-teal-light text-teal px-2 py-0.5 rounded-[3px] font-medium border border-teal/20 shrink-0">
-                    {a.tag}
+                    {a.category}
                   </span>
-                  <span className="text-xs text-stone-400">{a.read}</span>
+                  <span className="text-xs text-stone-400">{a.readTime}</span>
                 </div>
                 <h3 className="font-semibold text-navy text-sm mb-2">{a.title}</h3>
-                <p className="text-sm text-stone-500 leading-relaxed line-clamp-2-sr">{a.desc}</p>
+                <p className="text-sm text-stone-500 leading-relaxed line-clamp-2-sr">
+                  {a.summary}
+                </p>
               </div>
             ))}
           </div>

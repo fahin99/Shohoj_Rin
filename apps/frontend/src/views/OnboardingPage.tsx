@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "../components/Logo";
 import { Button } from "../components/Button";
 import { TextInput, Select, Radio, Checkbox, FileUpload } from "../components/Input";
 import { Stepper } from "../components/Progress";
 import InstitutionCombobox from "../components/InstitutionCombobox";
+import { profileApi, documentsApi, verificationApi } from "../lib/api/index";
 import type { PageName } from "../types";
 interface OnboardingPageProps {
   onNavigate: (page: PageName) => void;
 }
+
 const steps = [
   { label: "Personal & ID", sublabel: "Identity" },
   { label: "Financial", sublabel: "Profile" },
@@ -26,22 +28,28 @@ const goalOptions = [
 export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [doc_verif_req_id, set_doc_verif_req_id] = useState<string | null>(null);
   const [data, setData] = useState({
     fullName: "",
-    dob: "",
+    dateOfBirth: "",
     gender: "",
-    nid: "",
-    address: "",
+    nidNumber: "",
+    addressLine: "",
     city: "",
+    district: "",
     nidFrontUploaded: false,
     nidBackUploaded: false,
+    utilityBillUploaded: false,
+    incomeProofUploaded: false,
+    studentIdUploaded: false,
+    businessEvidenceUploaded: false,
     monthlyIncome: "",
     savingsAmount: "",
     existingLoans: "no",
-    employment: "",
-    employer: "",
-    jobTitle: "",
-    incomeType: "",
+    employmentType: "",
+    employerName: "",
+    occupation: "",
+    incomeSource: "",
     institutionId: null as string | null,
     institutionName: "",
     studentId: "",
@@ -50,26 +58,128 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     notifSms: true,
     language: "en",
   });
-  const update = (k: string, v: string | boolean | string[]) => setData((d) => ({ ...d, [k]: v }));
+  useEffect(() => {
+    async function init() {
+      try {
+        const res = await profileApi.getProfileCompletion();
+        // Here you might set step based on completion status if needed
+        // console.log("Profile completion:", res.status);
+      } catch (e) {
+        console.error("Failed to load profile completion", e);
+      }
+    }
+    init();
+  }, []);
+  const update = (k: string, v: string | boolean | string[] | null) =>
+    setData((d) => ({ ...d, [k]: v }));
+  const buildProfilePayload = (d: typeof data) => {
+    const payload: Record<string, unknown> = {};
+    if (d.fullName.trim()) payload.fullName = d.fullName.trim();
+    if (d.dateOfBirth) payload.dateOfBirth = d.dateOfBirth;
+    if (d.gender) payload.gender = d.gender;
+    if (d.nidNumber) payload.nidNumber = d.nidNumber;
+    if (d.addressLine) payload.addressLine = d.addressLine;
+    if (d.city) payload.city = d.city;
+    if (d.district) payload.district = d.district;
+    if (d.monthlyIncome !== "") payload.monthlyIncome = Number(d.monthlyIncome);
+    if (d.savingsAmount !== "") payload.monthlySavings = Number(d.savingsAmount);
+    if (d.employmentType) payload.employmentType = d.employmentType;
+    if (d.employerName) payload.employerName = d.employerName;
+    if (d.occupation) payload.occupation = d.occupation;
+    if (d.incomeSource) payload.incomeSource = d.incomeSource;
+    if (d.institutionId !== null) payload.institutionId = d.institutionId;
+    if (d.studentId) payload.studentId = d.studentId;
+    return payload;
+  };
   const toggleGoal = (g: string) => {
     setData((d) => ({
       ...d,
       goals: d.goals.includes(g) ? d.goals.filter((x) => x !== g) : [...d.goals, g],
     }));
   };
-  const next = () => {
-    if (step < steps.length - 1) setStep((s) => s + 1);
-    else onNavigate("borrower-dashboard");
+  const handleFileUpload = async (type: string, files: FileList | null, key: string) => {
+    if (!files || files.length === 0) {
+      update(key, false);
+      return;
+    }
+
+    const file = files[0];
+
+    try {
+      let requestId = doc_verif_req_id;
+
+      if (!requestId) {
+        const response = await verificationApi.createVerificationRequest("document");
+        requestId = response.request_id ?? response.id ?? null;
+
+        if (!requestId) {
+          throw new Error("Failed to create verification request");
+        }
+
+        set_doc_verif_req_id(requestId);
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = async (e) => {
+        try {
+          const result = e.target?.result;
+
+          if (typeof result !== "string") {
+            throw new Error("Failed to read file");
+          }
+
+          const base64 = result.split(",")[1];
+
+          await documentsApi.uploadDocument({
+            documentType: type,
+            verificationRequestId: requestId!,
+            fileName: file.name,
+            mimeType: file.type,
+            fileData: base64,
+          });
+
+          update(key, true);
+        } catch (err) {
+          console.error("Upload failed", err);
+        }
+      };
+
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Failed to create verification request", err);
+    }
+  };
+  const next = async () => {
+    try {
+      await profileApi.updateProfile(buildProfilePayload(data));
+    } catch (e) {
+      console.error("Failed to update profile", e);
+    }
+    if (step < steps.length - 1) {
+      setStep((s) => s + 1);
+    } else {
+      try {
+        await profileApi.submitForVerification();
+      } catch (e) {
+        console.error("Failed to submit verification", e);
+      }
+      onNavigate("borrower-dashboard");
+    }
   };
   const back = () => {
     if (step > 0) setStep((s) => s - 1);
   };
-  const saveAndContinueLater = () => {
+  const saveAndContinueLater = async () => {
     setSaving(true);
-    setTimeout(() => {
+    try {
+      await profileApi.updateProfile(buildProfilePayload(data));
+    } catch (e) {
+      console.error("Failed to save profile", e);
+    } finally {
       setSaving(false);
       onNavigate("landing");
-    }, 1000);
+    }
   };
   return (
     <div className="min-h-screen bg-offwhite flex flex-col">
@@ -112,8 +222,8 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   <TextInput
                     label="Date of birth"
                     type="date"
-                    value={data.dob}
-                    onChange={(e) => update("dob", e.target.value)}
+                    value={data.dateOfBirth}
+                    onChange={(e) => update("dateOfBirth", e.target.value)}
                     required
                   />
                   <Select
@@ -131,21 +241,24 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                 <TextInput
                   label="National ID Number"
                   placeholder="1234567890"
-                  value={data.nid}
-                  onChange={(e) => update("nid", e.target.value)}
+                  value={data.nidNumber}
+                  onChange={(e) => update("nidNumber", e.target.value)}
                   hint="Your 10 or 17 digit NID number"
                 />
                 <TextInput
                   label="Address"
                   placeholder="House 12, Road 5, Block C"
-                  value={data.address}
-                  onChange={(e) => update("address", e.target.value)}
+                  value={data.addressLine}
+                  onChange={(e) => update("addressLine", e.target.value)}
                   required
                 />
                 <Select
                   label="City / District"
                   value={data.city}
-                  onChange={(e) => update("city", e.target.value)}
+                  onChange={(e) => {
+                    update("city", e.target.value);
+                    update("district", e.target.value);
+                  }}
                   options={[
                     { value: "dhaka", label: "Dhaka" },
                     { value: "chittagong", label: "Chittagong" },
@@ -174,12 +287,26 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     <FileUpload
                       label="NID Front Photo"
                       hint="Front side with photo and NID no"
-                      onChange={(files) => update("nidFrontUploaded", !!files && files.length > 0)}
+                      onChange={(files) => handleFileUpload("nid_front", files, "nidFrontUploaded")}
                     />
                     <FileUpload
                       label="NID Back Photo"
                       hint="Back side with address"
-                      onChange={(files) => update("nidBackUploaded", !!files && files.length > 0)}
+                      onChange={(files) => handleFileUpload("nid_back", files, "nidBackUploaded")}
+                    />
+                    <FileUpload
+                      label="Utility Bill"
+                      hint="Optional proof of address"
+                      onChange={(files) =>
+                        handleFileUpload("utility_bill", files, "utilityBillUploaded")
+                      }
+                    />
+                    <FileUpload
+                      label="Income Proof (salary slip, bank statement, or pay-stub)"
+                      hint="Used for all future loan applications — uploaded once"
+                      onChange={(files) =>
+                        handleFileUpload("income_proof", files, "incomeProofUploaded")
+                      }
                     />
                   </div>
                   <div className="bg-sky-light/60 border border-sky/30 rounded-[6px] p-3 mt-3 flex items-start gap-2.5">
@@ -261,8 +388,8 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
               <div className="grid grid-cols-1 gap-5">
                 <Select
                   label="Employment status"
-                  value={data.employment}
-                  onChange={(e) => update("employment", e.target.value)}
+                  value={data.employmentType}
+                  onChange={(e) => update("employmentType", e.target.value)}
                   options={[
                     { value: "employed-full", label: "Employed (Full-time)" },
                     { value: "employed-part", label: "Employed (Part-time)" },
@@ -274,14 +401,14 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   placeholder="Select status"
                   required
                 />
-                {data.employment === "student" && (
+                {data.employmentType === "student" && (
                   <>
                     <InstitutionCombobox
                       label="Institution"
                       value={data.institutionName}
                       institutionId={data.institutionId}
                       onChange={({ id, name }) => {
-                        update("institutionId", id || "");
+                        update("institutionId", id || null);
                         update("institutionName", name);
                       }}
                       required
@@ -295,28 +422,28 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     />
                   </>
                 )}
-                {data.employment &&
-                  data.employment !== "student" &&
-                  data.employment !== "unemployed" && (
+                {data.employmentType &&
+                  data.employmentType !== "student" &&
+                  data.employmentType !== "unemployed" && (
                     <>
                       <TextInput
                         label="Employer / Business name"
                         placeholder="XYZ Company Ltd."
-                        value={data.employer}
-                        onChange={(e) => update("employer", e.target.value)}
+                        value={data.employerName}
+                        onChange={(e) => update("employerName", e.target.value)}
                       />
                       <TextInput
-                        label="Job title / Role"
+                        label="Occupation / Job title"
                         placeholder="Software Engineer"
-                        value={data.jobTitle}
-                        onChange={(e) => update("jobTitle", e.target.value)}
+                        value={data.occupation}
+                        onChange={(e) => update("occupation", e.target.value)}
                       />
                     </>
                   )}
                 <Select
-                  label="Primary income type"
-                  value={data.incomeType}
-                  onChange={(e) => update("incomeType", e.target.value)}
+                  label="Primary income source"
+                  value={data.incomeSource}
+                  onChange={(e) => update("incomeSource", e.target.value)}
                   options={[
                     { value: "salary", label: "Monthly salary" },
                     { value: "business", label: "Business income" },
@@ -325,8 +452,24 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     { value: "parental", label: "Parental support" },
                     { value: "other", label: "Other" },
                   ]}
-                  placeholder="Select income type"
+                  placeholder="Select income source"
                 />
+                {data.employmentType === "student" && (
+                  <FileUpload
+                    label="Student ID / enrollment evidence"
+                    hint="Required for student loan applications"
+                    onChange={(files) => handleFileUpload("student_id", files, "studentIdUploaded")}
+                  />
+                )}
+                {data.employmentType === "business" && (
+                  <FileUpload
+                    label="Business / trade evidence"
+                    hint="Trade license, business registration, or similar"
+                    onChange={(files) =>
+                      handleFileUpload("business_evidence", files, "businessEvidenceUploaded")
+                    }
+                  />
+                )}
               </div>
             </div>
           )}

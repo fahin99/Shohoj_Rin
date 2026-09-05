@@ -11,11 +11,14 @@ export type PageName =
   | "repayment"
   | "education"
   | "lender-dashboard"
+  | "lender-opportunities"
   | "admin"
-  | "system-states";
+  | "system-states"
+  | "investor-onboarding"
+  | "profile"
+  | "settings";
 
-export type LoanStatus =
-  "active" | "pending" | "approved" | "rejected" | "disbursed" | "closed" | "overdue";
+export type LoanStatus = "active" | "completed" | "overdue" | "delinquent" | "defaulted";
 export type AppStatus =
   "submitted" | "under-review" | "info-required" | "approved" | "rejected" | "disbursed";
 export type TransactionType = "payment" | "repayment" | "disbursement" | "fee" | "refund";

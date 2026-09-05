@@ -1,12 +1,31 @@
-"use client";
 import { useState } from "react";
-import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import { Logo } from "./Logo";
 import { Badge } from "./Badge";
 import { IconButton } from "./Button";
 import type { PageName } from "../types";
+import { useCurrentUser } from "../lib/user-context";
+import { getDisplayName } from "../lib/session";
 import { apiRequest } from "../lib/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 interface AppLayoutProps {
   children: ReactNode;
   onNavigate: (page: PageName) => void;
@@ -20,6 +39,13 @@ interface SidebarItem {
   icon: ReactNode;
   badge?: number;
   section?: string;
+}
+
+interface NotificationItem {
+  unread: boolean;
+  title: string;
+  msg: string;
+  time: string;
 }
 const borrowerNav: SidebarItem[] = [
   {
@@ -120,7 +146,7 @@ const lenderNav: SidebarItem[] = [
   },
   {
     label: "Opportunities",
-    page: "loan-marketplace",
+    page: "lender-opportunities",
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.5" />
@@ -171,9 +197,7 @@ function NavItem({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-[6px] transition-colors text-left ${
-        active ? "bg-teal text-white" : "text-stone-600 hover:bg-stone-100 hover:text-navy"
-      }`}
+      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-[6px] transition-colors text-left ${active ? "bg-teal text-white" : "text-stone-600 hover:bg-stone-100 hover:text-navy"}`}
     >
       <span className={active ? "text-white" : "text-stone-500"}>{item.icon}</span>
       <span className="flex-1">{item.label}</span>
@@ -189,29 +213,45 @@ export function AppLayout({
   children,
   onNavigate,
   currentPage,
-  userType = "borrower",
-  userName = "Riya Ahmed",
+  userType,
+  userName,
 }: AppLayoutProps) {
+  const currentUser = useCurrentUser();
   const router = useRouter();
+  const currentUserRole = currentUser?.role;
+  const resolvedUserType: "borrower" | "lender" | "admin" =
+    userType ??
+    (currentUserRole === "lender" || currentUserRole === "admin" ? currentUserRole : "borrower");
+  const resolvedUserName = userName || getDisplayName(currentUser, "Account");
+  const username = currentUser?.username?.trim() || "Username not set";
+  const avatarText = username === "Username not set" ? "?" : username.slice(0, 2).toUpperCase();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
-
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+  const navItems =
+    resolvedUserType === "admin"
+      ? adminNav
+      : resolvedUserType === "lender"
+        ? lenderNav
+        : borrowerNav;
   const handleLogout = async () => {
-    setLoggingOut(true);
+    setLogoutLoading(true);
+    setLogoutError(null);
     try {
       await apiRequest("/auth/logout", { method: "POST" });
-    } catch {
-      // ignore logout failure
-    } finally {
-      router.replace("/auth");
+      setLogoutOpen(false);
+      router.replace("/");
       router.refresh();
+    } catch (error) {
+      setLogoutError(
+        error instanceof Error ? error.message : "Unable to log out. Please try again.",
+      );
+    } finally {
+      setLogoutLoading(false);
     }
   };
-
-  const navItems =
-    userType === "admin" ? adminNav : userType === "lender" ? lenderNav : borrowerNav;
   const sidebar = (
     <aside className="w-56 shrink-0 flex flex-col border-r border-stone-200 bg-offwhite h-full">
       <div className="px-4 py-4 border-b border-stone-200">
@@ -220,7 +260,7 @@ export function AppLayout({
       <nav className="flex-1 overflow-y-auto px-3 py-4 flex flex-col gap-1">
         {navItems.map((item) => (
           <NavItem
-            key={item.page}
+            key={`${item.page}-${item.label}`}
             item={item}
             active={currentPage === item.page}
             onClick={() => {
@@ -233,48 +273,23 @@ export function AppLayout({
       <div className="px-3 py-4 border-t border-stone-200">
         <div className="flex items-center gap-2.5 px-2 py-2">
           <div className="w-8 h-8 rounded-full bg-teal text-white flex items-center justify-center text-xs font-semibold border border-teal/30">
-            {userName
+            {resolvedUserName
               .split(" ")
               .map((w) => w[0])
               .join("")
               .slice(0, 2)}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-navy truncate">{userName}</p>
-            <p className="text-[10px] text-stone-500 capitalize">{userType}</p>
+            <p className="text-xs font-medium text-navy truncate">{resolvedUserName}</p>
+            <p className="text-[10px] text-stone-500 capitalize">{resolvedUserType}</p>
           </div>
-          <button
-            type="button"
-            title="Log out"
-            aria-label="Log out"
-            disabled={loggingOut}
-            onClick={() => void handleLogout()}
-            className="p-1.5 rounded-[4px] text-stone-400 hover:text-coral hover:bg-stone-100 transition-colors disabled:opacity-50"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-          </button>
         </div>
       </div>
     </aside>
   );
   return (
     <div className="flex h-dvh overflow-hidden bg-offwhite">
-      {/* Desktop sidebar */}
       <div className="hidden md:flex h-full">{sidebar}</div>
-      {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <button
@@ -287,15 +302,12 @@ export function AppLayout({
             className="relative z-10 h-full w-[15rem] max-w-[85vw]"
             role="dialog"
             aria-label="Main navigation"
-            onClick={() => setSidebarOpen(false)}
           >
             {sidebar}
           </div>
         </div>
       )}
-      {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top bar */}
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-stone-200 bg-offwhite/95 px-4 backdrop-blur-sm md:px-6">
           <button
             type="button"
@@ -341,26 +353,7 @@ export function AppLayout({
                   </span>
                 </div>
                 <div className="max-h-72 overflow-y-auto flex flex-col gap-px p-2">
-                  {[
-                    {
-                      title: "Repayment due in 3 days",
-                      msg: "Your EMI of ৳4,500 is due on Dec 15.",
-                      time: "2h ago",
-                      unread: true,
-                    },
-                    {
-                      title: "Application update",
-                      msg: "Your loan application SR-2025-4812 is under review.",
-                      time: "1d ago",
-                      unread: true,
-                    },
-                    {
-                      title: "Payment confirmed",
-                      msg: "Your repayment of ৳4,500 was received successfully.",
-                      time: "3d ago",
-                      unread: false,
-                    },
-                  ].map((n, i) => (
+                  {([] as NotificationItem[]).map((n, i) => (
                     <div
                       key={i}
                       className={`px-3 py-2.5 rounded-[4px] ${n.unread ? "bg-teal-light" : "hover:bg-stone-50"}`}
@@ -381,60 +374,72 @@ export function AppLayout({
               </div>
             )}
           </div>
-          <div className="relative">
-            <button
-              type="button"
-              aria-label={`Account menu for ${userName}`}
-              aria-expanded={userMenuOpen}
-              onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-teal text-xs font-semibold text-white hover:opacity-90 transition-opacity"
-            >
-              {userName
-                .split(" ")
-                .map((w) => w[0])
-                .join("")
-                .slice(0, 2)}
-            </button>
-            {userMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white border-[1.5px] border-navy shadow-nb rounded-[8px] overflow-hidden z-20">
-                <div className="px-3 py-2.5 border-b border-stone-200">
-                  <p className="text-xs font-semibold text-navy truncate">{userName}</p>
-                  <p className="text-[10px] text-stone-500 capitalize">{userType}</p>
-                </div>
-                <div className="p-1">
-                  <button
-                    type="button"
-                    disabled={loggingOut}
-                    onClick={() => {
-                      setUserMenuOpen(false);
-                      void handleLogout();
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-coral hover:bg-coral-light/30 rounded-[4px] transition-colors text-left disabled:opacity-50"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                      <polyline points="16 17 21 12 16 7" />
-                      <line x1="21" y1="12" x2="9" y2="12" />
-                    </svg>
-                    {loggingOut ? "Logging out..." : "Log out"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label={`Account menu for ${username}`}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-teal text-xs font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2"
+              >
+                {avatarText}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={8} className="w-56">
+              <DropdownMenuLabel className="px-3 py-2 text-sm font-semibold text-navy truncate">
+                @{username}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => router.push("/profile")} className="px-3 py-2.5">
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => router.push("/settings")} className="px-3 py-2.5">
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => {
+                  setLogoutError(null);
+                  setLogoutOpen(true);
+                }}
+                className="px-3 py-2.5 text-coral focus:text-coral"
+              >
+                Log Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
-        {}
         <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">{children}</div>
       </div>
+      <AlertDialog
+        open={logoutOpen}
+        onOpenChange={(open) => {
+          if (!logoutLoading) setLogoutOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log Out?</AlertDialogTitle>
+            <AlertDialogDescription>Are you sure you want to log out?</AlertDialogDescription>
+          </AlertDialogHeader>
+          {logoutError && (
+            <p role="alert" className="text-sm text-coral">
+              {logoutError}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={logoutLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={logoutLoading}
+              onClick={(event) => {
+                event.preventDefault();
+                void handleLogout();
+              }}
+            >
+              {logoutLoading ? "Logging out..." : "Log Out"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

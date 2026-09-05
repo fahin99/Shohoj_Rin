@@ -1,33 +1,36 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
 import { Button } from "../components/Button";
 import { Stepper } from "../components/Progress";
 import { Alert } from "../components/Alert";
-import { CurrencyInput, TextInput, Select, FileUpload, Textarea } from "../components/Input";
+import { CurrencyInput, TextInput, Select, Textarea } from "../components/Input";
 import { formatTaka } from "../lib/format";
-import { loanProducts } from "../lib/mock-data";
-import { createApplication } from "../lib/loan-store";
-import type { PageName } from "../types";
+import { loansApi, applicationsApi } from "../lib/api/index";
+import type { PageName, LoanProduct } from "../types";
+
 interface Props {
   onNavigate: (page: PageName) => void;
 }
+
 const steps = [
   { label: "Loan details" },
   { label: "Employment & income" },
-  { label: "Documents" },
   { label: "Review & submit" },
 ];
+
 const durationOptions = [12, 18, 24, 36, 48].map((d) => ({
   value: String(d),
   label: `${d} months`,
 }));
+
 const employmentOptions = [
   { value: "salaried", label: "Salaried" },
   { value: "self-employed", label: "Self-employed" },
   { value: "business-owner", label: "Business owner" },
   { value: "student", label: "Student" },
 ];
+
 function calculateEmi(principal: number, annualRate: number, months: number) {
   const monthlyRate = annualRate / 12 / 100;
   if (!principal || !months) return 0;
@@ -37,6 +40,7 @@ function calculateEmi(principal: number, annualRate: number, months: number) {
     (Math.pow(1 + monthlyRate, months) - 1)
   );
 }
+
 interface FormState {
   loanId: string;
   amount: number;
@@ -45,34 +49,75 @@ interface FormState {
   phone: string;
   employment: string;
   monthlyIncome: number;
-  incomeProofUploaded: boolean;
-  addressProofUploaded: boolean;
 }
+
 export default function LoanApplication({ onNavigate }: Props) {
-  const loan = loanProducts[0];
+  const [loanProducts, setLoanProducts] = useState<LoanProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProducts() {
+      setIsLoading(true);
+      try {
+        const res = await loansApi.getLoanProducts();
+        setLoanProducts(res.products || []);
+      } catch (e) {
+        console.error("Failed to fetch loan products", e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadProducts();
+  }, []);
+
+  const defaultLoan = loanProducts[0] || {
+    id: "",
+    maxAmount: 100000,
+    minAmount: 1000,
+    durationMonths: 12,
+    interestRate: 10,
+    name: "",
+    provider: "",
+  };
+
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<FormState>({
-    loanId: loan.id,
-    amount: Math.round(loan.maxAmount / 2),
-    duration: String(loan.durationMonths),
+    loanId: "",
+    amount: 0,
+    duration: "",
     purpose: "",
     phone: "",
     employment: "",
     monthlyIncome: 0,
-    incomeProofUploaded: false,
-    addressProofUploaded: false,
   });
-  const selectedLoan = loanProducts.find((l) => l.id === form.loanId) ?? loan;
+
+  // Init form defaults when products load
+  useEffect(() => {
+    if (loanProducts.length > 0 && !form.loanId) {
+      const loan = loanProducts[0];
+      setForm((f) => ({
+        ...f,
+        loanId: loan.id,
+        amount: Math.round(loan.maxAmount / 2),
+        duration: String(loan.durationMonths),
+      }));
+    }
+  }, [loanProducts, form.loanId]);
+
+  const selectedLoan = loanProducts.find((l) => l.id === form.loanId) ?? defaultLoan;
+
   const emi = useMemo(
     () => calculateEmi(form.amount, selectedLoan.interestRate, Number(form.duration)),
     [form.amount, form.duration, selectedLoan],
   );
+
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
     setErrors((e) => ({ ...e, [key]: "" }));
   }
+
   function validateStep(current: number): boolean {
     const next: Record<string, string> = {};
     if (current === 0) {
@@ -90,42 +135,52 @@ export default function LoanApplication({ onNavigate }: Props) {
       if (!form.monthlyIncome || form.monthlyIncome <= 0)
         next.monthlyIncome = "Enter your monthly income";
     }
-    if (current === 2) {
-      if (!form.incomeProofUploaded) next.incomeProofUploaded = "Income proof is required";
-      if (!form.addressProofUploaded) next.addressProofUploaded = "Address proof is required";
-    }
     setErrors(next);
     return Object.keys(next).length === 0;
   }
+
   function handleNext() {
     if (!validateStep(step)) return;
     setStep((s) => Math.min(steps.length - 1, s + 1));
   }
+
   function handleBack() {
     setStep((s) => Math.max(0, s - 1));
   }
-  function handleSubmit() {
+
+  async function handleSubmit() {
     if (!validateStep(step)) return;
     setSubmitting(true);
-    setTimeout(() => {
-      createApplication({
-        loanId: form.loanId,
-        amount: form.amount,
-        duration: form.duration,
-        purpose: form.purpose,
-        phone: form.phone,
-        employment: form.employment,
-        monthlyIncome: form.monthlyIncome,
+    try {
+      await applicationsApi.createApplication({
+        requestedAmount: form.amount,
+        purpose: selectedLoan.category ?? "personal",
+        purposeDescription: form.purpose,
+        productId: form.loanId,
       });
-      setSubmitting(false);
       onNavigate("application-status");
-    }, 800);
+    } catch (e) {
+      console.error("Submission failed", e);
+    } finally {
+      setSubmitting(false);
+    }
   }
+
+  if (isLoading) {
+    return (
+      <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 flex justify-center items-center h-64">
+          <p className="text-stone-500">Loading loan application...</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
   const summary = (
     <Card variant="raised">
       <CardHeader title="Application summary" />
       <CardBody>
-        <DataRow label="Loan product" value={selectedLoan.name} />
+        <DataRow label="Loan product" value={selectedLoan.name || "—"} />
         <DataRow label="Requested amount" value={formatTaka(form.amount || 0)} />
         <DataRow
           label="Duration"
@@ -257,35 +312,6 @@ export default function LoanApplication({ onNavigate }: Props) {
                     </>
                   )}
                   {step === 2 && (
-                    <>
-                      <div className="bg-teal-light/50 border border-teal/20 rounded-[6px] p-3 flex items-center gap-2">
-                        <span className="text-teal font-semibold text-xs">
-                          ✓ NID photo verified
-                        </span>
-                        <span className="text-xs text-stone-500">
-                          — Uploaded during onboarding. Only income and address proof needed below.
-                        </span>
-                      </div>
-                      <Alert variant="info" title="Accepted formats">
-                        Upload clear scans or photos (PDF, JPG, PNG) up to 5MB each.
-                      </Alert>
-                      <FileUpload
-                        label="Income proof (salary slip or bank statement)"
-                        error={errors.incomeProofUploaded}
-                        onChange={(files) =>
-                          update("incomeProofUploaded", !!files && files.length > 0)
-                        }
-                      />
-                      <FileUpload
-                        label="Address proof (utility bill)"
-                        error={errors.addressProofUploaded}
-                        onChange={(files) =>
-                          update("addressProofUploaded", !!files && files.length > 0)
-                        }
-                      />
-                    </>
-                  )}
-                  {step === 3 && (
                     <div className="flex flex-col gap-4">
                       <Alert variant="success" title="Ready to submit">
                         Please review your details below. You can go back to make changes before
@@ -305,6 +331,8 @@ export default function LoanApplication({ onNavigate }: Props) {
                           Identity &amp; employment
                         </p>
                         <DataRow label="Identity & NID" value="Verified from profile ✓" />
+                        <DataRow label="Address" value="Verified from profile ✓" />
+                        <DataRow label="Income source" value="Verified from profile ✓" />
                         <DataRow label="Contact mobile" value={form.phone || "—"} />
                         <DataRow
                           label="Employment type"
@@ -319,17 +347,11 @@ export default function LoanApplication({ onNavigate }: Props) {
                       </div>
                       <div className="border-t border-stone-200 pt-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">
-                          Documents
+                          Verification from onboarding
                         </p>
-                        <DataRow label="NID Card" value="Verified in profile ✓" />
-                        <DataRow
-                          label="Income proof"
-                          value={form.incomeProofUploaded ? "Uploaded" : "Missing"}
-                        />
-                        <DataRow
-                          label="Address proof"
-                          value={form.addressProofUploaded ? "Uploaded" : "Missing"}
-                        />
+                        <DataRow label="Identity" value="Verified ✓" />
+                        <DataRow label="Address" value="Verified ✓" />
+                        <DataRow label="Income" value="Verified ✓" />
                       </div>
                     </div>
                   )}

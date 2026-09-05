@@ -116,10 +116,10 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
       {}
       <section className="max-w-6xl mx-auto px-4 md:px-6 pt-16 pb-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-teal-light border border-teal/30 rounded-[4px] text-xs font-medium text-teal mb-6">
+          {/* <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-teal-light border border-teal/30 rounded-[4px] text-xs font-medium text-teal mb-6">
             <span className="w-1.5 h-1.5 bg-teal rounded-full" />
             Trusted by 50,000+ users across Bangladesh
-          </div>
+          </div> */}
           <h1 className="font-display text-5xl md:text-6xl text-navy leading-[1.1] mb-5">
             Finance made
             <br />

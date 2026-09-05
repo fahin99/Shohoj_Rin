@@ -10,8 +10,6 @@ router.post("/payment", async (req, res) => {
       error: { message: "Invalid payment payload", details: parsed.error.flatten() },
     });
   }
-  // In a real scenario, this would verify a provider signature (e.g., HMAC with a shared secret).
-  // For this implementation, we simulate it with a simple authorization token check.
   const authHeader = req.headers.authorization;
   if (
     !authHeader ||

@@ -34,7 +34,7 @@
   --color-stone-700: #43392f;
 
   --font-display: "Stack Sans Notch", sans-serif;
-  --font-sans: var(--font-space-grotesk), "Space Grotesk", sans-serif;
+  --font-sans: var(--font-comic-sans), "Comic Sans", sans-serif;
 }
 
 @theme inline {

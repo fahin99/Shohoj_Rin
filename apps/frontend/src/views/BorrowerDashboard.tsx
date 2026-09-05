@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { Button } from "../components/Button";
 import { Badge, LoanStatusBadge } from "../components/Badge";
@@ -5,20 +6,24 @@ import { ProgressBar } from "../components/Progress";
 import { StatCard } from "../components/StatCard";
 import { Card, CardBody, CardHeader } from "../components/Card";
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
-import { useActiveLoan, useApplications, useTransactions } from "../lib/loan-store";
+import { loansApi, applicationsApi } from "../lib/api/index";
 import { formatDate, formatPercent, formatTaka } from "../lib/format";
-import type { PageName, Transaction } from "../types";
+import type { ApplicationRecord } from "../lib/api/applications";
+import type { PageName, ActiveLoan, Transaction } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
+
 interface BorrowerDashboardProps {
   onNavigate: (page: PageName) => void;
   user: StoredUserProfile;
 }
+
 const quickActions: { label: string; page: PageName; icon: string }[] = [
   { label: "Explore loans", icon: "🔍", page: "loan-marketplace" },
   { label: "Make a payment", icon: "💳", page: "repayment" },
   { label: "Loan details", icon: "📋", page: "active-loan" },
   { label: "Learn finance", icon: "📚", page: "education" },
 ];
+
 const txDirection: Record<Transaction["type"], "in" | "out"> = {
   repayment: "out",
   payment: "out",
@@ -26,6 +31,7 @@ const txDirection: Record<Transaction["type"], "in" | "out"> = {
   disbursement: "in",
   refund: "in",
 };
+
 function TransactionIcon({ type }: { type: Transaction["type"] }) {
   const icons: Record<Transaction["type"], { bg: string; icon: string }> = {
     repayment: { bg: "bg-emerald-light", icon: "↑" },
@@ -44,18 +50,73 @@ function TransactionIcon({ type }: { type: Transaction["type"] }) {
     </span>
   );
 }
+
 export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboardProps) {
-  const activeLoan = useActiveLoan();
-  const applications = useApplications();
-  const transactions = useTransactions();
+  const [activeLoan, setActiveLoan] = useState<ActiveLoan | null>(null);
+  const [applications, setApplications] = useState<ApplicationRecord[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setIsLoading(true);
+        const [loansRes, appsRes] = await Promise.all([
+          loansApi.getActiveLoans(),
+          applicationsApi.getApplications(),
+        ]);
+
+        const loan = loansRes[0] || null;
+        setActiveLoan(loan);
+        // API returns applicationId/productName/requestedAmount/submittedAt;
+        // normalize to the id/product/amount/submitted shape used below.
+        setApplications(
+          (appsRes.applications || []).map((a) => ({
+            ...a,
+            id: a.applicationId ?? a.id,
+            product: a.productName || a.purpose || a.product || "Loan Application",
+            amount: a.requestedAmount ?? a.amount ?? 0,
+            submitted: a.submittedAt || a.createdAt || a.submitted || "",
+          })),
+        );
+
+        if (loan) {
+          const txs = await loansApi.getLoanTransactions(loan.id);
+          setTransactions(txs || []);
+        }
+      } catch (e) {
+        console.error("Failed to fetch dashboard data", e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
   const now = new Date();
   const hour = now.getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const openApplications = applications.filter(
     (a) => a.status === "under-review" || a.status === "info-required" || a.status === "submitted",
   );
-  const userName = getDisplayName(user, "Riya Ahmed");
+  const userName = getDisplayName(user, user?.profile?.fullName || "User");
   const firstName = userName.split(" ")[0] ?? userName;
+
+  if (isLoading) {
+    return (
+      <AppLayout
+        onNavigate={onNavigate}
+        currentPage="borrower-dashboard"
+        userType="borrower"
+        userName={userName}
+      >
+        <div className="mx-auto max-w-5xl px-4 py-6 md:px-6 flex justify-center items-center h-64">
+          <p className="text-stone-500">Loading dashboard...</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout
       onNavigate={onNavigate}
@@ -91,7 +152,11 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
           <StatCard
             label="Next repayment"
             value={formatTaka(activeLoan ? activeLoan.monthlyPayment : 0)}
-            hint={activeLoan ? `Due ${formatDate(activeLoan.nextPaymentDate)}` : "No payments due"}
+            hint={
+              activeLoan && activeLoan.nextPaymentDate
+                ? `Due ${formatDate(activeLoan.nextPaymentDate)}`
+                : "No payments due"
+            }
             tone={activeLoan ? "attention" : undefined}
           />
           <StatCard
@@ -319,7 +384,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                         </Badge>
                       </div>
                       <p className="mt-1.5 text-xs text-stone-500">
-                        {formatTaka(app.amount)} · submitted {formatDate(app.submitted)}
+                        {formatTaka(app.amount || 0)} · submitted {formatDate(app.submitted || "")}
                       </p>
                     </button>
                   ))

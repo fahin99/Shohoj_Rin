@@ -14,8 +14,12 @@ export const PAGE_ROUTES: Record<PageName, string> = {
   repayment: "/repayment",
   education: "/learn",
   "lender-dashboard": "/lender",
+  "lender-opportunities": "/lender/opportunities",
   admin: "/admin",
   "system-states": "/system-states",
+  "investor-onboarding": "/investor-onboarding",
+  profile: "/profile",
+  settings: "/settings",
 };
 export const PAGE_LABELS: Record<PageName, string> = {
   landing: "Home",
@@ -29,9 +33,13 @@ export const PAGE_LABELS: Record<PageName, string> = {
   "active-loan": "Active Loan",
   repayment: "Repayment",
   education: "Financial Education",
-  "lender-dashboard": "Lender Dashboard",
+  "lender-dashboard": "Lender Portfolio",
+  "lender-opportunities": "Funding Opportunities",
   admin: "Admin Dashboard",
   "system-states": "System States",
+  "investor-onboarding": "Investor Onboarding",
+  profile: "Profile",
+  settings: "Settings",
 };
 export function useAppNavigate() {
   const router = useRouter();
