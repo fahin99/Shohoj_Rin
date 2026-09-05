@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "../components/Logo";
 import { Button } from "../components/Button";
@@ -34,7 +34,8 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
     setErrors({});
     setSuccess(false);
   }, [initialMode]);
-  const handleSubmit = async () => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     const errs: Record<string, string> = {};
     if (mode !== "forgot" && !form.password) errs.password = "Password is required";
     if ((mode === "login" || mode === "forgot") && !form.email)
