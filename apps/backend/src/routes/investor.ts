@@ -253,6 +253,7 @@ router.get("/opportunities", requireAuth, requireLender, async (req, res) => {
        LEFT JOIN user_profiles up ON up.user_id = la.user_id
        WHERE lam.lender_user_id = $1
          AND lam.status IN ('pending', 'viewed')
+         AND la.status IN ('submitted', 'under_review', 'approved')
          AND la.requested_amount > COALESCE((
            SELECT SUM(fc.amount) FROM funding_commitments fc
            WHERE fc.application_id = la.application_id AND fc.status = 'committed'

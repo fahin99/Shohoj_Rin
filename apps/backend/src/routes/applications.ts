@@ -14,7 +14,6 @@ const createApplicationSchema = z.object({
   productId: z.string().uuid().optional(),
 });
 
-// POST /api/v1/applications — create loan application
 router.post("/", requireAuth, async (req, res) => {
   const authReq = req as RequestWithAuth;
   const userId = authReq.auth!.userId;
@@ -35,8 +34,6 @@ router.post("/", requireAuth, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-
-    // Check profile completion
     const profileResult = await client.query(
       `SELECT profile_completion_status FROM user_profiles WHERE user_id = $1`,
       [userId],
@@ -49,16 +46,12 @@ router.post("/", requireAuth, async (req, res) => {
         error: { message: "Profile not found. Please complete onboarding first." },
       });
     }
-
-    // Snapshot current trust score
     const trustResult = await client.query(
       `SELECT score_id FROM trust_scores WHERE user_id = $1 AND is_current = TRUE LIMIT 1`,
       [userId],
     );
     const trustScoreId = trustResult.rows[0]?.score_id ?? null;
 
-    // Marketplace applications are not pinned to a single lender: partner_id
-    // stays null unless the caller explicitly targets a partner.
     const resolvedPartnerId = partnerId ?? null;
 
     const appResult = await client.query(
@@ -240,7 +233,6 @@ router.get("/:id", requireAuth, async (req, res) => {
 
     const app = result.rows[0] as any;
 
-    // Ownership check: borrowers can only see their own
     if (role === "borrower" && app.userId !== userId) {
       return res.status(403).json({
         success: false,
@@ -279,5 +271,9 @@ router.get("/:id", requireAuth, async (req, res) => {
     });
   }
 });
+// router.post("/draft", requireAuth, async (req, res) => {
+//   const authReq = req as RequestWithAuth;
+//   const userId = authReq.auth!.userId;
+
 
 export default router;

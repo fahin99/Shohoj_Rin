@@ -1,13 +1,27 @@
 import { Router } from "express";
+import { z } from "zod";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
 import { requireRole } from "../middleware/authorize.js";
 import { pool } from "../lib/db.js";
 
 const router = Router();
 
+const createRequestSchema = z.object({
+  verificationType: z.enum(['identity', 'student', 'document', 'guarantor', 'income', 'address']),
+});
+
+const reviewRequestSchema = z.object({
+  status: z.enum(['approved', 'rejected', 'needs_review']),
+  reviewerNotes: z.string().trim().max(1000).optional().nullable(),
+});
+
 router.post("/requests", requireAuth, async (req, res) => {
   const authReq = req as RequestWithAuth;
-  const { verificationType } = req.body;
+  const parsed = createRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ success: false, error: { message: "Invalid verification data", details: parsed.error.flatten() } });
+  }
+  const { verificationType } = parsed.data;
   try {
     const result = await pool.query(
       `INSERT INTO verification_requests (user_id, verification_type)
@@ -75,7 +89,13 @@ router.put(
   async (req, res) => {
     const authReq = req as RequestWithAuth;
     const { id } = req.params;
-    const { status, reviewerNotes } = req.body;
+    
+    const parsed = reviewRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, error: { message: "Invalid review data", details: parsed.error.flatten() } });
+    }
+    
+    const { status, reviewerNotes } = parsed.data;
     try {
       const result = await pool.query(
         `UPDATE verification_requests 
