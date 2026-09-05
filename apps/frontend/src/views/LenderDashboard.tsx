@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
+import { Alert } from "../components/Alert";
 import { PageHeader } from "../components/PageHeader";
 import { StatCard } from "../components/StatCard";
 import { DataTable, type Column } from "../components/DataTable";
@@ -76,12 +77,21 @@ const trustBandDisplay: Record<string, { label: string; tone: "success" | "warni
   very_high_risk: { label: "Very High Risk", tone: "error" },
 };
 
+const roundTaka = (value: number): number => Math.round(value * 100) / 100;
+
+function remainingFor(opp: Opportunity): number {
+  const requested = Number(opp.requestedAmount) || 0;
+  const committed = Number(opp.committedAmount) || 0;
+  return Math.max(0, roundTaka(requested - committed));
+}
+
 export default function LenderDashboard({ onNavigate, user }: Props) {
   const [funded, setFunded] = useState<Set<string>>(new Set());
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [fundedLoans, setFundedLoans] = useState<FundedLoan[]>([]);
   const [expandedFactors, setExpandedFactors] = useState<Set<string>>(new Set());
-  const [fundAmounts, setFundAmounts] = useState<Record<string, number>>({});
+  const [fundAmounts, setFundAmounts] = useState<Record<string, string>>({});
+  const [fundError, setFundError] = useState<string | null>(null);
   const [fundingId, setFundingId] = useState<string | null>(null);
   const [statsState, setStatsState] = useState({
     totalDeployed: 0,
@@ -100,75 +110,96 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
   const userName = getDisplayName(user);
   const firstName = userName.split(" ")[0] ?? userName;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [portfolioRes, oppsRes] = await Promise.all([
-          getPortfolio().catch((error) => {
-            console.error("Failed to fetch portfolio", error);
-            return null;
-          }),
-          getOpportunities().catch((error) => {
-            console.error("Failed to fetch opportunities", error);
-            return [];
-          }),
-        ]);
+  const loadData = useCallback(async () => {
+    try {
+      const [portfolioRes, oppsRes] = await Promise.all([
+        getPortfolio().catch((error) => {
+          console.error("Failed to fetch portfolio", error);
+          return null;
+        }),
+        getOpportunities().catch((error) => {
+          console.error("Failed to fetch opportunities", error);
+          return [];
+        }),
+      ]);
 
-        if (portfolioRes && typeof portfolioRes === "object") {
-          const funded: FundedLoan[] = (
-            (portfolioRes.fundedLoans as Array<Record<string, unknown>>) ?? []
-          ).map((row) => ({
-            id: String(row.commitmentId ?? row.applicationId ?? ""),
-            borrowerAlias: String(row.borrowerName ?? "Borrower"),
-            product: String(row.productName ?? row.purpose ?? "Loan"),
-            amount: Number(row.fundedAmount ?? 0),
-            rate: Number(row.interestRate ?? 0),
-            tenure: Number(row.durationMonths ?? 0),
-            repaidPct: Number(row.repaidPct ?? 0),
-            remainingAmount: Number(row.remainingAmount ?? 0),
-            nextDueDate: (row.nextDueDate as string | null) ?? null,
-            status: (row.loanStatus as LoanStatus | undefined) ?? "active",
-          }));
-          setFundedLoans(funded);
+      if (portfolioRes && typeof portfolioRes === "object") {
+        const funded: FundedLoan[] = (
+          (portfolioRes.fundedLoans as Array<Record<string, unknown>>) ?? []
+        ).map((row) => ({
+          id: String(row.commitmentId ?? row.applicationId ?? ""),
+          borrowerAlias: String(row.borrowerName ?? "Borrower"),
+          product: String(row.productName ?? row.purpose ?? "Loan"),
+          amount: Number(row.fundedAmount ?? 0),
+          rate: Number(row.interestRate ?? 0),
+          tenure: Number(row.durationMonths ?? 0),
+          repaidPct: Number(row.repaidPct ?? 0),
+          remainingAmount: Number(row.remainingAmount ?? 0),
+          nextDueDate: (row.nextDueDate as string | null) ?? null,
+          status: (row.loanStatus as LoanStatus | undefined) ?? "active",
+        }));
+        setFundedLoans(funded);
 
-          const totalDeployed = funded.reduce((sum: number, l: FundedLoan) => sum + l.amount, 0);
-          const activeLoans = funded.filter((l: FundedLoan) => l.status === "active").length;
-          setStatsState({
-            totalDeployed: portfolioRes.totalDeployed ?? totalDeployed,
-            activeLoans: portfolioRes.activeLoans ?? activeLoans,
-            averageYield: portfolioRes.averageYield ?? 0,
-            repaymentRate: portfolioRes.repaymentRate ?? 0,
-            atRiskExposure: portfolioRes.atRiskExposure ?? 0,
-          });
-          setMonthlyPerformance(portfolioRes.monthlyPerformance ?? []);
-          setRiskBreakdown(
-            portfolioRes.riskBreakdown ?? [
-              { label: "Low risk", value: 58, color: "emerald" as const },
-              { label: "Medium risk", value: 32, color: "yellow" as const },
-              { label: "High risk", value: 10, color: "coral" as const },
-            ],
-          );
-        }
-
-        if (Array.isArray(oppsRes)) {
-          setOpportunities(oppsRes as Opportunity[]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch lender data", err);
+        const totalDeployed = funded.reduce((sum: number, l: FundedLoan) => sum + l.amount, 0);
+        const activeLoans = funded.filter((l: FundedLoan) => l.status === "active").length;
+        setStatsState({
+          totalDeployed: portfolioRes.totalDeployed ?? totalDeployed,
+          activeLoans: portfolioRes.activeLoans ?? activeLoans,
+          averageYield: portfolioRes.averageYield ?? 0,
+          repaymentRate: portfolioRes.repaymentRate ?? 0,
+          atRiskExposure: portfolioRes.atRiskExposure ?? 0,
+        });
+        setMonthlyPerformance(portfolioRes.monthlyPerformance ?? []);
+        setRiskBreakdown(
+          portfolioRes.riskBreakdown ?? [
+            { label: "Low risk", value: 58, color: "emerald" as const },
+            { label: "Medium risk", value: 32, color: "yellow" as const },
+            { label: "High risk", value: 10, color: "coral" as const },
+          ],
+        );
       }
-    };
-    fetchData();
+
+      if (Array.isArray(oppsRes)) {
+        setOpportunities(oppsRes as Opportunity[]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch lender data", err);
+    }
   }, []);
 
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
   const handleFund = async (opp: Opportunity) => {
-    const amount = fundAmounts[opp.applicationId] ?? Math.round(opp.requestedAmount);
-    if (!amount || amount <= 0) return;
+    const remaining = remainingFor(opp);
+    const entered = fundAmounts[opp.applicationId];
+    const amount = entered && entered.trim() !== "" ? roundTaka(Number(entered)) : remaining;
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setFundError("Enter a funding amount greater than ৳0.");
+      return;
+    }
+    if (amount > remaining) {
+      setFundError(`Only ${formatTaka(remaining)} remains available for this application.`);
+      return;
+    }
+
     try {
       setFundingId(opp.applicationId);
+      setFundError(null);
       await fundOpportunity(opp.applicationId, amount);
       setFunded((prev) => new Set(prev).add(opp.applicationId));
+      setFundAmounts((prev) => {
+        const next = { ...prev };
+        delete next[opp.applicationId];
+        return next;
+      });
+      await loadData();
     } catch (err) {
       console.error("Failed to fund opportunity", err);
+      setFundError(err instanceof Error ? err.message : "Failed to record funding commitment");
+      await loadData();
     } finally {
       setFundingId(null);
     }
@@ -243,6 +274,9 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
   ];
   const maxDeployed =
     monthlyPerformance.length > 0 ? Math.max(...monthlyPerformance.map((m) => m.deployed)) : 1;
+  const visibleOpportunities = opportunities.filter(
+    (op) => !rejectedIds.has(op.applicationId) && remainingFor(op) > 0,
+  );
   return (
     <AppLayout
       onNavigate={onNavigate}
@@ -358,19 +392,24 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                 Real borrower applications matched to your preferred categories.
               </p>
             </div>
-            <span className="text-xs text-stone-500">{opportunities.length} available</span>
+            <span className="text-xs text-stone-500">{visibleOpportunities.length} available</span>
           </div>
-          {opportunities.length === 0 ? (
+          {fundError && (
+            <Alert variant="error" title="Funding not recorded" className="mb-5">
+              {fundError}
+            </Alert>
+          )}
+          {visibleOpportunities.length === 0 ? (
             <p className="text-sm text-stone-500">
               No new opportunities match your preferences right now.
             </p>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {opportunities
-                .filter((op) => !rejectedIds.has(op.applicationId))
+                .filter((op) => !rejectedIds.has(op.applicationId) && remainingFor(op) > 0)
                 .map((op) => {
                   const isFunded = funded.has(op.applicationId);
-                  const remaining = Math.max(0, op.requestedAmount - (op.committedAmount ?? 0));
+                  const remaining = remainingFor(op);
                   const bandMeta = op.trustBand ? trustBandDisplay[op.trustBand] : null;
                   const showFactors = expandedFactors.has(op.applicationId);
                   return (
@@ -463,13 +502,13 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                           <div className="flex-1 min-w-0">
                             <CurrencyInput
                               label="Fund amount"
-                              value={fundAmounts[op.applicationId] ?? Math.round(remaining)}
+                              value={fundAmounts[op.applicationId] ?? String(remaining)}
                               min={1}
                               max={remaining}
                               onChange={(e) =>
                                 setFundAmounts((prev) => ({
                                   ...prev,
-                                  [op.applicationId]: Number(e.target.value),
+                                  [op.applicationId]: e.target.value,
                                 }))
                               }
                               hint={`Up to ${formatTaka(remaining)}`}

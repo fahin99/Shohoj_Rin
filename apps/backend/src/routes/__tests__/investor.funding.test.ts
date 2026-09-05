@@ -217,4 +217,20 @@ describe("investor funding commitments", () => {
     expect(portfolioSql).toContain("FROM funding_commitments fc");
     expect(portfolioSql).not.toContain("audit_logs");
   });
+
+  it("only exposes funding-eligible applications in the opportunities list", async () => {
+    const query = pool.query as unknown as ReturnType<typeof vi.fn>;
+    query.mockReset();
+    query.mockResolvedValue({ rowCount: 0, rows: [] });
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/opportunities`);
+      expect(response.status).toBe(200);
+    });
+
+    const opportunitiesSql = query.mock.calls[0][0] as string;
+    expect(opportunitiesSql).toContain("FROM lender_application_matches lam");
+    expect(opportunitiesSql).toContain("lam.status IN ('pending', 'viewed')");
+    expect(opportunitiesSql).toContain("la.status IN ('submitted', 'under_review', 'approved')");
+  });
 });
