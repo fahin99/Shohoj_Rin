@@ -55,13 +55,20 @@ export async function requireAuth(req: RequestWithAuth, res: Response, next: Nex
         p.employer_name AS "employerName", p.monthly_income AS "monthlyIncome",
         p.income_source AS "incomeSource", p.student_id AS "studentId",
         p.enrollment_year AS "enrollmentYear", p.institution_id AS "institutionId",
-        p.profile_photo_url AS "profilePhotoUrl"
-      FROM users u LEFT JOIN user_profiles p ON p.user_id = u.user_id
+        p.profile_photo_url AS "profilePhotoUrl",
+        s.is_revoked AS "isRevoked", s.expires_at AS "sessionExpiresAt"
+      FROM users u
+      LEFT JOIN user_profiles p ON p.user_id = u.user_id
+      LEFT JOIN login_sessions s ON s.session_id = $2
       WHERE u.user_id = $1 LIMIT 1`,
-      [decoded.sub],
+      [decoded.sub, decoded.jti],
     );
     const row = userResult.rows[0];
     if (!row) return res.status(401).json({ success: false, error: { message: "User not found" } });
+    if (row.isRevoked === true || new Date(row.sessionExpiresAt).getTime() < Date.now()) {
+      return res.status(401).json({ success: false, error: { message: "Session expired or revoked" } });
+    }
+
     req.auth = { userId: decoded.sub, sessionId: decoded.jti, role: decoded.role };
     req.user = {
       userId: row.userId,

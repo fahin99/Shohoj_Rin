@@ -36,6 +36,12 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
     }
 
     const loan = loanResult.rows[0];
+    
+    if (req.user!.role === "borrower") {
+      await client.query("ROLLBACK");
+      return res.status(403).json({ success: false, error: { message: "Access denied" } });
+    }
+
     if (req.user!.role !== "admin") {
       const funderCheck = await client.query(
         `SELECT 1 FROM funding_commitments

@@ -85,10 +85,6 @@ router.post("/skip-documents", requireAuth, requireRole("borrower"), async (req,
     );
 
     await client.query("COMMIT");
-
-    // Note: If you need to trigger trust score recalculation, do it here.
-    // await recalculateAndPersistTrustScore(userId);
-
     return res.json({ success: true, data: createdRecords });
   } catch (error) {
     await client.query("ROLLBACK");
