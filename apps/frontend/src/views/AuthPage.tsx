@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "../components/Logo";
 import { Button } from "../components/Button";
@@ -9,10 +9,11 @@ import { apiRequest } from "../lib/api";
 type AuthMode = "login" | "register" | "forgot";
 interface AuthPageProps {
   onNavigate: (page: PageName) => void;
+  initialMode?: "login" | "register";
 }
-export default function AuthPage({ onNavigate }: AuthPageProps) {
+export default function AuthPage({ onNavigate, initialMode = "register" }: AuthPageProps) {
   const router = useRouter();
-  const [mode, setMode] = useState<AuthMode>("register");
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -28,6 +29,11 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
     terms: false,
   });
   const update = (k: string, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
+  useEffect(() => {
+    setMode(initialMode);
+    setErrors({});
+    setSuccess(false);
+  }, [initialMode]);
   const handleSubmit = async () => {
     const errs: Record<string, string> = {};
     if (mode !== "forgot" && !form.password) errs.password = "Password is required";
