@@ -12,7 +12,7 @@ interface AuthPageProps {
 }
 export default function AuthPage({ onNavigate }: AuthPageProps) {
   const router = useRouter();
-  const [mode, setMode] = useState<AuthMode>("login");
+  const [mode, setMode] = useState<AuthMode>("register");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});

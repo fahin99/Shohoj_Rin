@@ -9,7 +9,7 @@ import { Tabs, TabPanel } from "../components/Tabs";
 import { Alert } from "../components/Alert";
 import { formatTaka, formatDate } from "../lib/format";
 import { getApplications } from "../lib/api/applications";
-import { getPlatformStats, getUsers, reviewApplication } from "../lib/api/admin";
+import { getPlatformStats, getUsers, getPartners, reviewApplication } from "../lib/api/admin";
 import type { AdminUser } from "../lib/api/admin";
 import type { ApplicationRecord } from "../lib/api/applications";
 import type { PageName } from "../types";
@@ -26,7 +26,6 @@ interface PendingApplication {
   product: string;
   amount: number;
   submitted: string;
-  riskScore: "Low" | "Medium" | "High";
   status: "pending" | "approved" | "rejected";
 }
 
@@ -34,7 +33,7 @@ interface ProviderRecord {
   id: string;
   name: string;
   products: number;
-  activeLoans: number;
+  applications: number;
   status: string;
 }
 
@@ -43,10 +42,12 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
   const [usersList, setUsersList] = useState<AdminUser[]>([]);
   const [providers, setProviders] = useState<ProviderRecord[]>([]);
   const [stats, setStats] = useState({
-    applicationsToday: 27,
-    approvalRate: 82,
-    disbursedThisMonth: 9400000,
-    overdueAccounts: 18,
+    applicationsToday: 0,
+    approvalRate: 0,
+    totalDisbursed: 0,
+    overdueLoans: 0,
+    activeLoans: 0,
+    pendingVerifications: 0,
   });
 
   const [localDecisions, setLocalDecisions] = useState<Record<string, "approved" | "rejected">>({});
@@ -61,81 +62,47 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
   useEffect(() => {
     const fetchAdminData = async () => {
       try {
-        const [appsRes, statsRes, usersRes] = await Promise.all([
-          getApplications({ status: "pending" }).catch(() => ({ applications: [], total: 0 })),
+        const [appsRes, statsRes, usersRes, partnersRes] = await Promise.all([
+          getApplications({ status: "pending" }).catch(() => ({
+            applications: [],
+            total: 0,
+          })),
           getPlatformStats().catch(() => null),
-          getUsers().catch(() => ({ users: [], total: 0 })),
+          getUsers().catch(() => ({
+            users: [],
+            total: 0,
+          })),
+          getPartners().catch(() => []),
         ]);
 
         if (appsRes?.applications) {
           setLiveApplications(appsRes.applications);
         }
 
-        if (statsRes) {
+        if (statsRes){
           setStats({
-            applicationsToday: statsRes.applicationsToday || 27,
-            approvalRate: statsRes.approvalRate || 82,
-            disbursedThisMonth: statsRes.disbursedThisMonth || 9400000,
-            overdueAccounts: statsRes.overdueAccounts || 18,
+            applicationsToday: statsRes.applicationsToday,
+            approvalRate: statsRes.approvalRate,
+            totalDisbursed: statsRes.totalDisbursed,
+            overdueLoans: statsRes.overdueLoans,
+            activeLoans: statsRes.activeLoans,
+            pendingVerifications: statsRes.pendingVerifications,
           });
         }
-
         if (usersRes?.users) {
-          setUsersList(
-            usersRes.users.length > 0
-              ? usersRes.users
-              : [
-                  {
-                    id: "U-2201",
-                    name: "Riya Ahmed",
-                    role: "Borrower",
-                    joined: "2025-09-28",
-                    status: "active",
-                  },
-                  {
-                    id: "U-1987",
-                    name: "Tanvir Hossain",
-                    role: "Lender",
-                    joined: "2025-06-10",
-                    status: "active",
-                  },
-                ],
-          );
-        } else {
-          setUsersList([
-            {
-              id: "U-2201",
-              name: "Riya Ahmed",
-              role: "Borrower",
-              joined: "2025-09-28",
-              status: "active",
-            },
-            {
-              id: "U-1987",
-              name: "Tanvir Hossain",
-              role: "Lender",
-              joined: "2025-06-10",
-              status: "active",
-            },
-          ]);
+          setUsersList(usersRes.users);
         }
-
-        setProviders([
-          {
-            id: "P-01",
-            name: "Bengal Microfinance Bank",
-            products: 2,
-            activeLoans: 142,
-            status: "active",
-          },
-          {
-            id: "P-02",
-            name: "Shohoj Care Finance",
-            products: 1,
-            activeLoans: 67,
-            status: "active",
-          },
-        ]);
+        if (partnersRes) {
+          setProviders(
+            partnersRes.map((partner) => ({
+              id: partner.partnerId,
+              name: partner.name,
+              products: partner.productCount,
+              applications: partner.applicationCount,
+              status: partner.isActive ? "active" : "inactive",
+            })),
+          );
+        }
       } catch (err) {
         console.error("Failed to fetch admin data", err);
       }
@@ -150,7 +117,6 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
       product: a.product || "Standard Loan",
       amount: a.amount || a.requestedAmount || 0,
       submitted: a.submitted || a.createdAt || new Date().toISOString().split("T")[0],
-      riskScore: "Low" as const,
       status:
         localDecisions[a.id ?? ""] ||
         (a.status === "disbursed" || a.status === "approved"
@@ -208,21 +174,6 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
       render: (r) => formatDate(r.submitted),
     },
     {
-      key: "risk",
-      header: "Risk score",
-      render: (r) => (
-        <Badge
-          variant={
-            r.riskScore === "Low" ? "success" : r.riskScore === "Medium" ? "warning" : "error"
-          }
-          size="sm"
-          dot
-        >
-          {r.riskScore}
-        </Badge>
-      ),
-    },
-    {
       key: "actions",
       header: "Actions",
       render: (r) =>
@@ -267,21 +218,16 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
           </div>
         )}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          <StatCard
-            label="Applications today"
-            value={String(stats.applicationsToday)}
-            hint="+4 vs yesterday"
-          />
           <StatCard label="Pending review" value={String(pendingCount)} tone="attention" />
           <StatCard label="Approval rate" value={`${stats.approvalRate}%`} tone="positive" />
           <StatCard
-            label="Disbursed this month"
-            value={formatTaka(stats.disbursedThisMonth)}
+            label="Total disbursed"
+            value={formatTaka(stats.totalDisbursed)}
             tone="info"
           />
           <StatCard
-            label="Overdue accounts"
-            value={String(stats.overdueAccounts)}
+            label="Overdue loans"
+            value={String(stats.overdueLoans)}
             tone="critical"
           />
         </div>
@@ -314,27 +260,27 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] mb-6">
             <DataTable
               caption="Users"
-              rowKey={(r) => r.id}
+              rowKey={(r) => r.userId}
               rows={usersList}
               columns={[
                 {
                   key: "name",
                   header: "Name",
-                  render: (r) => <span className="font-medium">{r.name || r.id}</span>,
+                  render: (r) => <span className="font-medium">{r.fullName || r.email}</span>,
                 },
                 { key: "role", header: "Role", render: (r) => r.role || "User" },
                 {
                   key: "joined",
                   header: "Joined",
                   hideBelow: "sm",
-                  render: (r) => formatDate(r.joined || r.createdAt || ""),
+                  render: (r) => formatDate(r.createdAt || ""),
                 },
                 {
                   key: "status",
                   header: "Status",
                   render: (r) => (
-                    <Badge variant={r.status === "active" ? "success" : "error"} size="sm" dot>
-                      {r.status || "active"}
+                    <Badge variant={r.accountStatus === "active" ? "success" : "error"} size="sm" dot>
+                      {r.accountStatus === "active" ? "Active" : "Inactive"}
                     </Badge>
                   ),
                 },
@@ -356,10 +302,10 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
                 },
                 { key: "products", header: "Products", numeric: true, render: (r) => r.products },
                 {
-                  key: "activeLoans",
-                  header: "Active loans",
+                  key: "applications",
+                  header: "Applications",
                   numeric: true,
-                  render: (r) => r.activeLoans,
+                  render: (r) => r.applications,
                 },
                 {
                   key: "status",
@@ -381,11 +327,6 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
             {[
               { label: "API uptime", value: "99.98%", status: "success" as const },
               { label: "Payment gateway", value: "Operational", status: "success" as const },
-              {
-                label: "Document verification queue",
-                value: "3 delayed",
-                status: "warning" as const,
-              },
             ].map((item) => (
               <div
                 key={item.label}

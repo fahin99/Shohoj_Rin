@@ -1,28 +1,39 @@
 import { apiRequest } from "../api";
 
 interface PlatformStats {
+  totalUsers: number;
+  totalBorrowers: number;
+  totalLenders: number;
   applicationsToday: number;
   approvalRate: number;
-  disbursedThisMonth: number;
-  overdueAccounts: number;
+  totalDisbursed: number;
+  overdueLoans: number;
+  activeLoans: number;
+  pendingVerifications: number;
 }
 
 export interface AdminUser {
-  id: string;
-  name: string;
+  userId: string;
+  email: string;
+  phone: string | null;
   role: string;
-  joined: string;
-  status: string;
-  createdAt?: string;
+  accountStatus: string;
+  emailVerified: boolean;
+  createdAt: string;
+  fullName: string | null;
+  profileCompletionStatus: string | null;
 }
 
 interface Partner {
-  id: string;
+  partnerId: string;
   name: string;
   type: string;
-  status: string;
-  activeLoans: number;
-  products?: number;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  isActive: boolean;
+  createdAt: string;
+  productCount: number;
+  applicationCount: number;
 }
 
 export async function getPlatformStats() {
