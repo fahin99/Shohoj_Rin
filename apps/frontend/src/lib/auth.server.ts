@@ -105,3 +105,11 @@ export async function requireAuthenticatedUser() {
   }
   return user;
 }
+
+export async function requireAdminUser() {
+  const user =await requireAuthenticatedUser();
+  if (user.role !== "admin") {
+    redirect("/dashboard");
+  }
+  return user;
+}

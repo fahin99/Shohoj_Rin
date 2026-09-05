@@ -1,9 +1,10 @@
-import bcrypt from "bcryptjs";
 import { pool, closePool } from "../lib/db.js";
 import { seedLoanProducts } from "./seed-loan-products.js";
 
-const API_BASE = process.env.SHOHOJRIN_API_BASE ?? "http://localhost:5000/api/v1";
+const api_base = process.env.SHOHOJRIN_API_BASE ?? "http://localhost:5000/api/v1";
 const PASSWORD = process.env.SHOHOJRIN_TEST_PASSWORD ?? "DevPass123!";
+const ADMIN_EMAIL = process.env.admin_email ?? "admin@admin.com";
+const ADMIN_PASSWORD = process.env.admin_password ?? "admin000";
 const TEST_EMAIL_DOMAIN = "wf-test.local";
 const RUN_TAG =
   process.env.SHOHOJRIN_TEST_RUN ??
@@ -76,7 +77,7 @@ async function api(path: string, opts: CallOpts = {}): Promise<ApiResult> {
     body = JSON.stringify(opts.body);
   }
   if (opts.token) headers["Authorization"] = `Bearer ${opts.token}`;
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${api_base}${path}`, {
     method: opts.method ?? "GET",
     headers,
     body,
@@ -160,6 +161,46 @@ async function loginUser(email: string) {
     token: extractToken(result.headers),
   };
 }
+async function loginAdmin() {
+  if (!ADMIN_EMAIL) {
+    throw new Error("admin_email is required");
+  }
+
+  if (!ADMIN_PASSWORD) {
+    throw new Error("admin_password is required");
+  }
+
+  const result = await api("/auth/login", {
+    method: "POST",
+    body: {
+      identifier: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD,
+    },
+  });
+
+  if (result.status !== 200) {
+    throw new Error(
+      `admin login failed (${result.status}): ${
+        result.payload?.error?.message ??
+        JSON.stringify(result.payload).slice(0, 300)
+      }`,
+    );
+  }
+
+  const user = result.payload.data.user;
+
+  if (user.role !== "admin") {
+    throw new Error(
+      `Configured admin account ${ADMIN_EMAIL} has role '${user.role}', not 'admin'`,
+    );
+  }
+
+  return {
+    email: ADMIN_EMAIL,
+    userId: user.userId as string,
+    token: extractToken(result.headers),
+  };
+}
 
 async function updateProfile(token: string, data: Record<string, unknown>) {
   return call("/profile", { method: "PUT", token, body: data }, [200], "update profile");
@@ -177,14 +218,14 @@ async function waitForBackend(maxMs = 30000): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < maxMs) {
     try {
-      const res = await fetch(`${API_BASE}/health`);
+      const res = await fetch(`${api_base}/health`);
       if (res.ok) return;
     } catch {
       // backend not up yet
     }
     await new Promise((r) => setTimeout(r, 500));
   }
-  throw new Error(`Backend at ${API_BASE} is not reachable after ${maxMs}ms`);
+  throw new Error(`Backend at ${api_base} is not reachable after ${maxMs}ms`);
 }
 
 async function ensureLoanProducts() {
@@ -306,23 +347,9 @@ async function adminReviewApplication(token: string, applicationId: string, deci
   );
 }
 
-async function createAndLoginAdmin() {
-  const username = `wf_admin_${RUN_TAG}`;
-  const email = `${username}@${TEST_EMAIL_DOMAIN}`;
-  const passwordHash = await bcrypt.hash(PASSWORD, 12);
-  await pool.query(
-    `INSERT INTO users (username, email, phone, password_hash, role, account_status, email_verified)
-     VALUES ($1, $2, $3, $4, 'admin', 'active', TRUE)
-     ON CONFLICT (email) DO NOTHING`,
-    [username, email, defaultPhone(username), passwordHash],
-  );
-  const session = await loginUser(email);
-  return { username, email, ...session };
-}
-
 interface WorkflowContext {
   products: any[];
-  admin: { username: string; email: string; userId: string; token: string } | null;
+  admin: { email: string; userId: string; token: string } | null;
   lenders: Record<string, { username: string; userId: string; token: string }>;
   borrowers: Record<string, { username: string; userId: string; token: string }>;
   applications: Record<string, { applicationId: string; borrowerKey: string; purpose: string; amount: number }>;
@@ -343,7 +370,7 @@ async function runStage(name: string, fn: () => Promise<void>) {
   }
 }async function main() {
   console.log("\n🚀 ShohojRin End-to-End Workflow Automation");
-  console.log(`   Run tag: ${RUN_TAG}  |  API: ${API_BASE}\n`);
+  console.log(`   Run tag: ${RUN_TAG}  |  API: ${api_base}\n`);
 
   const ctx: WorkflowContext = {
     products: [],
@@ -366,13 +393,12 @@ async function runStage(name: string, fn: () => Promise<void>) {
       if (ctx.products.length === 0) throw new Error("No loan products available after ensure");
       console.log(`  ✅ Loaded ${ctx.products.length} loan products`);
     });
+    await runStage("Login admin", async () => {
+      ctx.admin = await loginAdmin();
+      console.log(`  ✅ Admin ${ctx.admin.email} (${ctx.admin.userId}) — login completed`);
+    });
 
     const productByCategory = () => new Map(ctx.products.map((p: any) => [p.category, p]));
-
-    await runStage("Admin identity setup (DB prerequisite)", async () => {
-      ctx.admin = await createAndLoginAdmin();
-      console.log(`  ✅ Admin logged in: ${ctx.admin.email} (${ctx.admin.userId})`);
-    });
 
     await runStage("Register lenders + complete investor profiles", async () => {
       const defs: LenderDef[] = [

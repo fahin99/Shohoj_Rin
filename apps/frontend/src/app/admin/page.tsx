@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import AdminPageClient from "./page.client";
-import { requireAuthenticatedUser } from "../../lib/auth.server";
+import { requireAdminUser } from "../../lib/auth.server";
 export const metadata: Metadata = {
   title: "Admin console — Shohoj Rin",
   description:
@@ -11,6 +11,6 @@ export const metadata: Metadata = {
   },
 };
 export default async function Page() {
-  const user = await requireAuthenticatedUser();
+  const user = await requireAdminUser();
   return <AdminPageClient user={user} />;
 }
