@@ -24,12 +24,24 @@ export const config = {
     refreshExpiresIn: "7d",
   },
   database: {
-    url: process.env.DATABASE_URL || "postgresql://postgres:2405012@localhost:5432/shohoj_rin_db",
+    url: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/shohoj_rin_db",
   },
 } as const;
 
 export function validateConfig() {
   if (config.demoMode === true && config.nodeEnv === "production") {
     throw new Error("DEMO MODE cannot be enabled in production environments!");
+  }
+  
+  if (config.nodeEnv === "production") {
+    if (!process.env.JWT_ACCESS_SECRET || config.jwt.accessSecret === "dev-access-secret-change-me") {
+      throw new Error("Production environments MUST set a secure JWT_ACCESS_SECRET");
+    }
+    if (!process.env.JWT_REFRESH_SECRET || config.jwt.refreshSecret === "dev-refresh-secret-change-me") {
+      throw new Error("Production environments MUST set a secure JWT_REFRESH_SECRET");
+    }
+    if (!process.env.DATABASE_URL) {
+      throw new Error("Production environments MUST set DATABASE_URL");
+    }
   }
 }

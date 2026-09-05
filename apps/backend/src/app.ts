@@ -54,7 +54,7 @@ async function start() {
       }
       console.log(`  Health check: http://localhost:${config.port}/api/v1/health`);
       console.log(`  Environment: ${config.nodeEnv}`);
-      console.log("  PostgreSQL: connected to postgres@localhost:5432/shohoj_rin_db\n");
+      console.log("  PostgreSQL: connected successfully\n");
     });
   } catch (error) {
     console.error("Failed to start server or connect to PostgreSQL:", error);

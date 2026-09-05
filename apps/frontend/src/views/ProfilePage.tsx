@@ -253,7 +253,6 @@ export default function ProfilePage({ onNavigate, user }: Props) {
     loadTrust();
   }, [isLender]);
 
-  // Lender / investor profile — company, funding capacity, preferences, KYC status.
   useEffect(() => {
     if (!isLender) return;
     let cancelled = false;
