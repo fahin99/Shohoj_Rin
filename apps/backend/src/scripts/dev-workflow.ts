@@ -306,10 +306,6 @@ async function adminReviewApplication(token: string, applicationId: string, deci
   );
 }
 
-// Admin accounts cannot be created through the public API (there is no admin
-// registration endpoint). Creating the login identity directly in PostgreSQL is
-// the documented setup prerequisite; the real /auth/login and /admin routes are
-// used to exercise the workflow after it.
 async function createAndLoginAdmin() {
   const username = `wf_admin_${RUN_TAG}`;
   const email = `${username}@${TEST_EMAIL_DOMAIN}`;

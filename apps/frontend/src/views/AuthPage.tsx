@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "../components/Logo";
 import { Button } from "../components/Button";
@@ -25,10 +25,10 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
     password: "",
     confirm: "",
     remember: false,
+    terms: false,
   });
   const update = (k: string, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     const errs: Record<string, string> = {};
     if (mode !== "forgot" && !form.password) errs.password = "Password is required";
     if ((mode === "login" || mode === "forgot") && !form.email)
@@ -40,6 +40,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
       if (!form.email) errs.email = "Email address is required";
       if (form.password.length < 8) errs.password = "Password must be at least 8 characters";
       if (form.password !== form.confirm) errs.confirm = "Passwords do not match";
+      if (!form.terms) errs.terms = "You must agree to the terms to continue";
     }
     setErrors(errs);
     if (Object.keys(errs).length) return;
@@ -219,7 +220,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
                 required
                 autoComplete={mode === "register" ? "new-password" : "current-password"}
               />
-            )}{" "}
+            )}
             {mode === "register" && (
               <PasswordInput
                 label="Confirm password"
@@ -254,8 +255,9 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
             {mode === "register" && (
               <Checkbox
                 label={<span>I agree to the Terms of Service and Privacy Policy.</span>}
-                checked={form.remember}
-                onChange={(v) => update("remember", v)}
+                checked={form.terms}
+                onChange={(v) => update("terms", v)}
+                error={errors.terms}
               />
             )}
             <Button type="submit" variant="primary" size="lg" fullWidth loading={loading}>
