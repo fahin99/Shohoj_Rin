@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "../components/Logo";
 import { Button } from "../components/Button";
@@ -9,10 +9,11 @@ import { apiRequest } from "../lib/api";
 type AuthMode = "login" | "register" | "forgot";
 interface AuthPageProps {
   onNavigate: (page: PageName) => void;
+  initialMode?: "login" | "register";
 }
-export default function AuthPage({ onNavigate }: AuthPageProps) {
+export default function AuthPage({ onNavigate, initialMode = "register" }: AuthPageProps) {
   const router = useRouter();
-  const [mode, setMode] = useState<AuthMode>("login");
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -25,10 +26,16 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
     password: "",
     confirm: "",
     remember: false,
+    terms: false,
   });
   const update = (k: string, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  useEffect(() => {
+    setMode(initialMode);
+    setErrors({});
+    setSuccess(false);
+  }, [initialMode]);
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     const errs: Record<string, string> = {};
     if (mode !== "forgot" && !form.password) errs.password = "Password is required";
     if ((mode === "login" || mode === "forgot") && !form.email)
@@ -40,6 +47,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
       if (!form.email) errs.email = "Email address is required";
       if (form.password.length < 8) errs.password = "Password must be at least 8 characters";
       if (form.password !== form.confirm) errs.confirm = "Passwords do not match";
+      if (!form.terms) errs.terms = "You must agree to the terms to continue";
     }
     setErrors(errs);
     if (Object.keys(errs).length) return;
@@ -219,7 +227,7 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
                 required
                 autoComplete={mode === "register" ? "new-password" : "current-password"}
               />
-            )}{" "}
+            )}
             {mode === "register" && (
               <PasswordInput
                 label="Confirm password"
@@ -254,8 +262,9 @@ export default function AuthPage({ onNavigate }: AuthPageProps) {
             {mode === "register" && (
               <Checkbox
                 label={<span>I agree to the Terms of Service and Privacy Policy.</span>}
-                checked={form.remember}
-                onChange={(v) => update("remember", v)}
+                checked={form.terms}
+                onChange={(v) => update("terms", v)}
+                error={errors.terms}
               />
             )}
             <Button type="submit" variant="primary" size="lg" fullWidth loading={loading}>

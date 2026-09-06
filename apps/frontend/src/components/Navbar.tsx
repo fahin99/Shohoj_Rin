@@ -82,10 +82,14 @@ export function Navbar({ onNavigate, transparent = false, user = null }: NavbarP
             </>
           ) : (
             <>
-              <Button variant="ghost" size="sm" onClick={() => onNavigate("auth")}>
+              <Button variant="ghost" size="sm" onClick={() => router.push("/auth?mode=login")}>
                 Log in
               </Button>
-              <Button variant="primary" size="sm" onClick={() => onNavigate("auth")}>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => router.push("/auth?mode=register")}
+              >
                 Get Started
               </Button>
             </>
@@ -182,7 +186,7 @@ export function Navbar({ onNavigate, transparent = false, user = null }: NavbarP
                   fullWidth
                   onClick={() => {
                     setMenuOpen(false);
-                    onNavigate("auth");
+                    router.push("/auth?mode=login");
                   }}
                 >
                   Log in
@@ -193,7 +197,7 @@ export function Navbar({ onNavigate, transparent = false, user = null }: NavbarP
                   fullWidth
                   onClick={() => {
                     setMenuOpen(false);
-                    onNavigate("auth");
+                    router.push("/auth?mode=register");
                   }}
                 >
                   Get Started
