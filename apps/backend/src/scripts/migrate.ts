@@ -25,6 +25,10 @@ async function hasCanonicalSchema(client: PoolClient) {
       )
       AND EXISTS (
         SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'username'
+      )
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = 'user_profiles' AND column_name = 'profile_completion_status'
       )
       AND EXISTS (
@@ -42,6 +46,25 @@ async function hasCanonicalSchema(client: PoolClient) {
   `);
 
   return Boolean(rows[0].complete);
+}
+
+async function ensureAccountIdentitySchema(client: PoolClient) {
+  await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(50)`);
+  await client.query(`ALTER TABLE users ALTER COLUMN username DROP NOT NULL`);
+  await client.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique
+    ON users (username)
+    WHERE username IS NOT NULL
+  `);
+  await client.query(`ALTER TABLE user_profiles ALTER COLUMN full_name DROP NOT NULL`);
+  await client.query(`
+    ALTER TABLE user_profiles
+      ADD COLUMN IF NOT EXISTS employment_type VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS employer_name VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS monthly_income DECIMAL(12,2),
+      ADD COLUMN IF NOT EXISTS income_source VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS profile_completion_status VARCHAR(30) NOT NULL DEFAULT 'incomplete'
+  `);
 }
 
 async function listMigrationFiles() {
@@ -170,6 +193,9 @@ async function ensureFundingPartnerNameNormalizedIndex(client: PoolClient) {
  * backfill any pre-existing lender accounts that predate the trigger.
  */
 async function ensureLenderInvestorProfileInvariant(client: PoolClient) {
+  const tableExists = await client.query(`SELECT to_regclass('public.investor_profiles') AS table_name`);
+  if (!tableExists.rows[0].table_name) return;
+
   await client.query(`
     CREATE OR REPLACE FUNCTION ensure_lender_investor_profile()
     RETURNS TRIGGER AS $$
@@ -253,6 +279,7 @@ async function migrate() {
     `);
 
     if (existingSchemaCheck.rows[0].exists) {
+      await ensureAccountIdentitySchema(client);
       await ensureFundingCommitments(client);
       await ensureLenderMarketplaceSchema(client);
       await ensureFundingPartnerNameNormalizedIndex(client);

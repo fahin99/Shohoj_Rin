@@ -2,7 +2,7 @@ import { pool, closePool } from "../lib/db.js";
 import { seedLoanProducts } from "./seed-loan-products.js";
 
 const api_base = process.env.SHOHOJRIN_API_BASE ?? "http://localhost:5000/api/v1";
-const PASSWORD = process.env.SHOHOJRIN_TEST_PASSWORD ?? "DevPass123!";
+const PASSWORD = "00000000";
 const ADMIN_EMAIL = process.env.admin_email ?? "admin@admin.com";
 const ADMIN_PASSWORD = process.env.admin_password ?? "admin000";
 const TEST_EMAIL_DOMAIN = "wf-test.local";
@@ -402,9 +402,9 @@ async function runStage(name: string, fn: () => Promise<void>) {
 
     await runStage("Register lenders + complete investor profiles", async () => {
       const defs: LenderDef[] = [
-        { key: "la1", username: `wf_${RUN_TAG}_la1`, name: "Alpha Investments", categories: ["education", "development"] },
-        { key: "la2", username: `wf_${RUN_TAG}_la2`, name: "Omega Capital", categories: ["education", "development"] },
-        { key: "lb", username: `wf_${RUN_TAG}_lb`, name: "Beta Microfinance", categories: ["business", "personal"] },
+        { key: "la1", username: `alpha_investments_${RUN_TAG}`, name: "Alpha Investments", categories: ["education", "development"] },
+        { key: "la2", username: `omega_capital_${RUN_TAG}`, name: "Omega Capital", categories: ["education", "development"] },
+        { key: "lb", username: `beta_microfinance_${RUN_TAG}`, name: "Beta Microfinance", categories: ["business", "personal"] },
       ];
       for (const def of defs) {
         const reg = await registerUser(def.username, "lender");
@@ -426,8 +426,8 @@ async function runStage(name: string, fn: () => Promise<void>) {
 
     await runStage("Register borrowers + complete profiles + trust scores", async () => {
       const defs: BorrowerDef[] = [
-        { key: "ba", username: `wf_${RUN_TAG}_ba`, name: "Anika Rahman", purpose: "education", amount: 180000 },
-        { key: "bb", username: `wf_${RUN_TAG}_bb`, name: "Bakhtiar Hossain", purpose: "business", amount: 200000 },
+        { key: "ba", username: `anika_rahman_${RUN_TAG}`, name: "Anika Rahman", purpose: "education", amount: 180000 },
+        { key: "bb", username: `bakhtiar_hossain_${RUN_TAG}`, name: "Bakhtiar Hossain", purpose: "business", amount: 200000 },
       ];
       for (const def of defs) {
         const reg = await registerUser(def.username, "borrower");

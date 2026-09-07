@@ -1,7 +1,8 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
  
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username VARCHAR(50),
   email VARCHAR(255) UNIQUE NOT NULL,
   phone VARCHAR(20) UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
@@ -12,7 +13,7 @@ CREATE TABLE users (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
-CREATE TABLE login_sessions (
+CREATE TABLE IF NOT EXISTS login_sessions (
   session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
   refresh_token_hash VARCHAR(255) NOT NULL,
@@ -23,7 +24,7 @@ CREATE TABLE login_sessions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
-CREATE TABLE institutions (
+CREATE TABLE IF NOT EXISTS institutions (
   institution_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) UNIQUE NOT NULL,
   type VARCHAR(50) NOT NULL,
@@ -32,10 +33,10 @@ CREATE TABLE institutions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
-CREATE TABLE user_profiles (
+CREATE TABLE IF NOT EXISTS user_profiles (
   profile_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID UNIQUE NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
-  full_name VARCHAR(255) NOT NULL,
+  full_name VARCHAR(255),
   date_of_birth DATE,
   gender VARCHAR(20),
   nid_number VARCHAR(50) UNIQUE,
@@ -59,7 +60,7 @@ CREATE TABLE user_profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
-CREATE TABLE verification_requests (
+CREATE TABLE IF NOT EXISTS verification_requests (
   request_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
   verification_type VARCHAR(50) NOT NULL,
@@ -71,7 +72,7 @@ CREATE TABLE verification_requests (
   reviewed_at TIMESTAMPTZ
 );
  
-CREATE TABLE verification_documents (
+CREATE TABLE IF NOT EXISTS verification_documents (
   document_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL REFERENCES verification_requests (request_id) ON DELETE CASCADE,
   document_type VARCHAR(50) NOT NULL,
@@ -84,7 +85,7 @@ CREATE TABLE verification_documents (
   uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
-CREATE TABLE guarantors (
+CREATE TABLE IF NOT EXISTS guarantors (
   guarantor_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
   full_name VARCHAR(255) NOT NULL,
@@ -97,7 +98,7 @@ CREATE TABLE guarantors (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
-CREATE TABLE trust_scores (
+CREATE TABLE IF NOT EXISTS trust_scores (
   score_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE RESTRICT,
   score DECIMAL(5,2) NOT NULL,
@@ -108,7 +109,7 @@ CREATE TABLE trust_scores (
   calculated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
-CREATE TABLE trust_score_factors (
+CREATE TABLE IF NOT EXISTS trust_score_factors (
   factor_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   score_id UUID NOT NULL REFERENCES trust_scores (score_id) ON DELETE RESTRICT,
   factor_name VARCHAR(100) NOT NULL,
@@ -117,7 +118,7 @@ CREATE TABLE trust_score_factors (
   description TEXT
 );
  
-CREATE TABLE funding_partners (
+CREATE TABLE IF NOT EXISTS funding_partners (
   partner_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) UNIQUE NOT NULL,
   type VARCHAR(50) NOT NULL,
@@ -134,7 +135,7 @@ CREATE TABLE funding_partners (
 ALTER TABLE users
   ADD COLUMN partner_id UUID REFERENCES funding_partners (partner_id) ON DELETE SET NULL;
 
-CREATE TABLE investor_profiles (
+CREATE TABLE IF NOT EXISTS investor_profiles (
   investor_profile_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID UNIQUE NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
   display_name VARCHAR(255),
@@ -151,7 +152,7 @@ CREATE TABLE investor_profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE loan_products (
+CREATE TABLE IF NOT EXISTS loan_products (
   product_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   partner_id UUID NOT NULL REFERENCES funding_partners (partner_id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
@@ -168,7 +169,7 @@ CREATE TABLE loan_products (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
-CREATE TABLE loan_applications (
+CREATE TABLE IF NOT EXISTS loan_applications (
   application_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
   partner_id UUID REFERENCES funding_partners (partner_id) ON DELETE SET NULL,
@@ -183,7 +184,7 @@ CREATE TABLE loan_applications (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE funding_commitments (
+CREATE TABLE IF NOT EXISTS funding_commitments (
   commitment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   application_id UUID NOT NULL REFERENCES loan_applications (application_id) ON DELETE RESTRICT,
   lender_user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE RESTRICT,
@@ -194,7 +195,7 @@ CREATE TABLE funding_commitments (
   UNIQUE (application_id, lender_user_id)
 );
 
-CREATE TABLE lender_application_matches (
+CREATE TABLE IF NOT EXISTS lender_application_matches (
   match_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   application_id UUID NOT NULL REFERENCES loan_applications (application_id) ON DELETE CASCADE,
   lender_user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
@@ -207,7 +208,7 @@ CREATE TABLE lender_application_matches (
   UNIQUE (application_id, lender_user_id)
 );
  
-CREATE TABLE loan_offers (
+CREATE TABLE IF NOT EXISTS loan_offers (
   offer_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   application_id UUID UNIQUE NOT NULL REFERENCES loan_applications (application_id) ON DELETE CASCADE,
   partner_id UUID NOT NULL REFERENCES funding_partners (partner_id) ON DELETE RESTRICT,
@@ -221,7 +222,7 @@ CREATE TABLE loan_offers (
   responded_at TIMESTAMPTZ
 );
  
-CREATE TABLE loans (
+CREATE TABLE IF NOT EXISTS loans (
   loan_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   application_id UUID UNIQUE NOT NULL REFERENCES loan_applications (application_id) ON DELETE RESTRICT,
   offer_id UUID UNIQUE NOT NULL REFERENCES loan_offers (offer_id) ON DELETE RESTRICT,
@@ -237,7 +238,7 @@ CREATE TABLE loans (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
-CREATE TABLE loan_disbursements (
+CREATE TABLE IF NOT EXISTS loan_disbursements (
   disbursement_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   loan_id UUID NOT NULL REFERENCES loans (loan_id) ON DELETE CASCADE,
   amount DECIMAL(12,2) NOT NULL,
@@ -246,7 +247,7 @@ CREATE TABLE loan_disbursements (
   disbursed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
-CREATE TABLE repayment_schedules (
+CREATE TABLE IF NOT EXISTS repayment_schedules (
   schedule_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   loan_id UUID NOT NULL REFERENCES loans (loan_id) ON DELETE CASCADE,
   installment_number INTEGER NOT NULL,
@@ -257,7 +258,7 @@ CREATE TABLE repayment_schedules (
   UNIQUE (loan_id, installment_number)
 );
 
-CREATE TABLE repayments (
+CREATE TABLE IF NOT EXISTS repayments (
   repayment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   schedule_id UUID NOT NULL REFERENCES repayment_schedules (schedule_id) ON DELETE RESTRICT,
   amount_paid DECIMAL(12,2) NOT NULL,
@@ -268,7 +269,7 @@ CREATE TABLE repayments (
   paid_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
-CREATE TABLE partner_rules (
+CREATE TABLE IF NOT EXISTS partner_rules (
   rule_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   partner_id UUID NOT NULL REFERENCES funding_partners (partner_id) ON DELETE CASCADE,
   min_trust_score DECIMAL(5,2),
@@ -281,7 +282,7 @@ CREATE TABLE partner_rules (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
-CREATE TABLE partner_decisions (
+CREATE TABLE IF NOT EXISTS partner_decisions (
   decision_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   application_id UUID NOT NULL REFERENCES loan_applications (application_id) ON DELETE CASCADE,
   partner_id UUID NOT NULL REFERENCES funding_partners (partner_id) ON DELETE RESTRICT,
@@ -291,7 +292,7 @@ CREATE TABLE partner_decisions (
   decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
-CREATE TABLE fraud_flags (
+CREATE TABLE IF NOT EXISTS fraud_flags (
   flag_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
   flag_type VARCHAR(100) NOT NULL,
@@ -304,7 +305,7 @@ CREATE TABLE fraud_flags (
   resolved_at TIMESTAMPTZ
 );
  
-CREATE TABLE audit_logs (
+CREATE TABLE IF NOT EXISTS audit_logs (
   log_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users (user_id) ON DELETE SET NULL,
   action VARCHAR(100) NOT NULL,
@@ -317,7 +318,7 @@ CREATE TABLE audit_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
  
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
   notification_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
   channel VARCHAR(20) NOT NULL,
