@@ -6,6 +6,7 @@ import { Stepper } from "../components/Progress";
 import InstitutionCombobox from "../components/InstitutionCombobox";
 import { profileApi, documentsApi, verificationApi } from "../lib/api/index";
 import type { PageName } from "../types";
+import { gu } from "date-fns/locale";
 interface OnboardingPageProps {
   onNavigate: (page: PageName) => void;
 }
@@ -14,6 +15,7 @@ const steps = [
   { label: "Personal & ID", sublabel: "Identity" },
   { label: "Financial", sublabel: "Profile" },
   { label: "Employment", sublabel: "Status" },
+  { label: "Guarantor", sublabel: "Information" },
   { label: "Goals", sublabel: "" },
   { label: "Preferences", sublabel: "" },
 ];
@@ -57,6 +59,15 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     notifEmail: true,
     notifSms: true,
     language: "en",
+    guarantorFullName: "",
+    guarantorGender: "",
+    guarantorNidNumber: "",
+    guarantorAddressLine: "",
+    guarantorCity: "",
+    guarantorDistrict: "",
+    guarantorNidFrontUploaded: false,
+    guarantorNidBackUploaded: false,
+    guarantorIncomeProofUploaded: false,
   });
   useEffect(() => {
     async function init() {
@@ -476,6 +487,113 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {}
           {step === 3 && (
             <div>
+              <h2 className="text-2xl font-semibold text-navy mb-1">
+                Guarantor information &amp; Identity
+              </h2>
+              <p className="text-sm text-stone-500 mb-6">
+                This information helps us verify and reiterate with your guarantor in case of emergency.
+              </p>
+              <div className="grid grid-cols-1 gap-5">
+                <TextInput
+                  label="Full name"
+                  placeholder="Rahim Uddin Ahmed"
+                  required
+                  value={data.guarantorFullName}
+                  onChange={(e) => update("guarantorFullName", e.target.value)}
+                  hint="As it appears on their NID"
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <Select
+                    label="Gender"
+                    value={data.guarantorGender}
+                    onChange={(e) => update("guarantorGender", e.target.value)}
+                    options={[
+                      { value: "male", label: "Male" },
+                      { value: "female", label: "Female" },
+                      { value: "other", label: "Prefer not to say" },
+                    ]}
+                    placeholder="Select"
+                  />
+                </div>
+                <TextInput
+                  label="National ID Number"
+                  placeholder="1234567890"
+                  value={data.guarantorNidNumber}
+                  onChange={(e) => update("guarantorNidNumber", e.target.value)}
+                  hint="Your 10 or 17 digit NID number"
+                />
+                <TextInput
+                  label="Address"
+                  placeholder="House 12, Road 5, Block C"
+                  value={data.guarantorAddressLine}
+                  onChange={(e) => update("guarantorAddressLine", e.target.value)}
+                  required
+                />
+                <Select
+                  label="City / District"
+                  value={data.guarantorCity}
+                  onChange={(e) => {
+                    update("guarantorCity", e.target.value);
+                    update("guarantorDistrict", e.target.value);
+                  }}
+                  options={[
+                    { value: "dhaka", label: "Dhaka" },
+                    { value: "chittagong", label: "Chittagong" },
+                    { value: "sylhet", label: "Sylhet" },
+                    { value: "rajshahi", label: "Rajshahi" },
+                    { value: "khulna", label: "Khulna" },
+                    { value: "other", label: "Other" },
+                  ]}
+                  placeholder="Select city"
+                />
+
+                <div className="border-t border-stone-200 pt-5 mt-2">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-semibold text-navy">National ID (NID) Photo</p>
+                      <p className="text-xs text-stone-500">
+                        Upload clear photos or scans of their original NID card for one-time
+                        verification.
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-teal-light text-teal border border-teal/30">
+                      One-time KYC
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FileUpload
+                      label="NID Front Photo"
+                      hint="Front side with photo and NID no"
+                      onChange={(files) => handleFileUpload("guarantor_nid_front", files, "guarantorNidFrontUploaded")}
+                    />
+                    <FileUpload
+                      label="NID Back Photo"
+                      hint="Back side with address"
+                      onChange={(files) => handleFileUpload("guarantor_nid_back", files, "guarantorNidBackUploaded")}
+                    />
+                    <FileUpload
+                      label="Income Proof (salary slip, bank statement, or pay-stub)"
+                      hint="Used for all future insurance applications — uploaded once"
+                      onChange={(files) =>
+                        handleFileUpload("guarantor_income_proof", files, "guarantorIncomeProofUploaded")
+                      }
+                    />
+                  </div>
+                  <div className="bg-sky-light/60 border border-sky/30 rounded-[6px] p-3 mt-3 flex items-start gap-2.5">
+                    <span className="text-sm text-sky font-bold mt-0.5">ℹ</span>
+                    <p className="text-xs text-stone-600 leading-relaxed">
+                      Their identity verification is saved securely. When applying for insurance in the
+                      future, or for any transaction in your absence, they will not need to provide their NID photo, full name, or address
+                      again.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {}
+          {step === 4 && (
+            <div>
               <h2 className="text-2xl font-semibold text-navy mb-1">Your financial goals</h2>
               <p className="text-sm text-stone-500 mb-6">
                 What are you hoping to use a loan for? Select all that apply. This helps us show you
@@ -504,8 +622,8 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
               )}
             </div>
           )}
-          {/* Step 4: Preferences */}
-          {step === 4 && (
+          {}
+          {step === 5 && (
             <div>
               <h2 className="text-2xl font-semibold text-navy mb-1">Your preferences</h2>
               <p className="text-sm text-stone-500 mb-6">
