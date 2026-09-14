@@ -7,7 +7,8 @@ import { TextInput, Select, CurrencyInput, Checkbox } from "../components/Input"
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
 import { Alert } from "../components/Alert";
 import InstitutionCombobox from "../components/InstitutionCombobox";
-import { profileApi, loansApi, trustApi, investorApi } from "../lib/api/index";
+import { profileApi, loansApi, trustApi, investorApi, guarantorApi } from "../lib/api/index";
+import type { GuarantorData } from "../lib/api/guarantor";
 import { formatDate, formatTaka } from "../lib/format";
 import type { PageName } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
@@ -195,6 +196,10 @@ export default function ProfilePage({ onNavigate, user }: Props) {
   const [trustLoading, setTrustLoading] = useState(!isLender);
   const [trustError, setTrustError] = useState<string | null>(null);
 
+  const [guarantor, setGuarantor] = useState<GuarantorData | null>(null);
+  const [guarantorLoading, setGuarantorLoading] = useState(!isLender);
+  const [guarantorError, setGuarantorError] = useState<string | null>(null);
+
   const [lenderStats, setLenderStats] = useState<{ total: number; completed: number } | null>(null);
   const [lenderStatsLoading, setLenderStatsLoading] = useState(false);
   const [lenderStatsError, setLenderStatsError] = useState<string | null>(null);
@@ -251,6 +256,26 @@ export default function ProfilePage({ onNavigate, user }: Props) {
       }
     }
     loadTrust();
+  }, [isLender]);
+
+  useEffect(() => {
+    if (isLender) {
+      setGuarantorLoading(false);
+      return;
+    }
+    async function loadGuarantor() {
+      setGuarantorLoading(true);
+      setGuarantorError(null);
+      try {
+        const data = await guarantorApi.getGuarantor();
+        setGuarantor(data);
+      } catch (e) {
+        setGuarantorError(e instanceof Error ? e.message : "Failed to load guarantor");
+      } finally {
+        setGuarantorLoading(false);
+      }
+    }
+    loadGuarantor();
   }, [isLender]);
 
   useEffect(() => {
@@ -994,6 +1019,52 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       value={profile.enrollment_year ? String(profile.enrollment_year) : "—"}
                     />
                   </CardBody>
+                </Card>
+
+                <Card>
+                  <CardHeader
+                    title="Guarantor information"
+                    description="A reference who supports your loan applications."
+                    action={
+                      <Button variant="secondary" size="sm" onClick={() => onNavigate("onboarding")}>
+                        {guarantor ? "Update" : "Add guarantor"}
+                      </Button>
+                    }
+                  />
+                  {guarantorLoading ? (
+                    <CardBody>
+                      <p className="text-sm text-stone-500">Loading guarantor…</p>
+                    </CardBody>
+                  ) : guarantorError ? (
+                    <CardBody>
+                      <Alert variant="error" title="Couldn't load guarantor">
+                        {guarantorError}
+                      </Alert>
+                    </CardBody>
+                  ) : guarantor ? (
+                    <CardBody>
+                      <DataRow label="Full name" value={guarantor.fullName} />
+                      <DataRow label="Relationship" value={guarantor.relationship} />
+                      <DataRow label="Phone" value={guarantor.phone || "—"} />
+                      <DataRow label="Email" value={guarantor.email || "—"} />
+                      <DataRow label="NID" value={guarantor.nidNumber || "—"} />
+                      <DataRow label="Address" value={guarantor.address || "—"} />
+                      <div className="flex items-center justify-between py-1.5">
+                        <span className="text-sm text-stone-500">Verification status</span>
+                        <Badge variant={guarantor.isVerified ? "success" : "warning"} size="sm" dot>
+                          {guarantor.isVerified ? "Verified" : "Pending"}
+                        </Badge>
+                      </div>
+                    </CardBody>
+                  ) : (
+                    <CardBody>
+                      <EmptyState
+                        size="sm"
+                        title="No guarantor information added yet."
+                        description="Add a guarantor from onboarding to strengthen your applications."
+                      />
+                    </CardBody>
+                  )}
                 </Card>
               </>
             )}

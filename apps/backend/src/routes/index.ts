@@ -15,6 +15,7 @@ import investorRouter from "./investor.js";
 import adminRouter from "./admin.js";
 import loanDisbursementsRouter from "./loan-disbursements.js";
 import repaymentSchedulesRouter from "./repayment-schedules.js";
+import guarantorRouter from "./guarantor.js";
 
 const router = Router();
 router.use("/health", healthRouter);
@@ -23,6 +24,7 @@ router.use("/repayments", repaymentsRouter);
 router.use("/institutions", institutionsRouter);
 router.use("/trust-score", trustScoreRouter);
 router.use("/profile", profileRouter);
+router.use("/guarantor", guarantorRouter);
 router.use("/verification", verificationRouter);
 router.use("/documents", documentsRouter);
 router.use("/demo", demoRouter);

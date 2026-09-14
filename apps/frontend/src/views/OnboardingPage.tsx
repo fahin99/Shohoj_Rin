@@ -4,7 +4,7 @@ import { Button } from "../components/Button";
 import { TextInput, Select, Radio, Checkbox, FileUpload } from "../components/Input";
 import { Stepper } from "../components/Progress";
 import InstitutionCombobox from "../components/InstitutionCombobox";
-import { profileApi, documentsApi, verificationApi } from "../lib/api/index";
+import { profileApi, documentsApi, verificationApi, guarantorApi } from "../lib/api/index";
 import type { PageName } from "../types";
 import { gu } from "date-fns/locale";
 interface OnboardingPageProps {
@@ -60,6 +60,9 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     notifSms: true,
     language: "en",
     guarantorFullName: "",
+    guarantorRelationship: "",
+    guarantorPhone: "",
+    guarantorEmail: "",
     guarantorGender: "",
     guarantorNidNumber: "",
     guarantorAddressLine: "",
@@ -72,11 +75,25 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
   useEffect(() => {
     async function init() {
       try {
-        const res = await profileApi.getProfileCompletion();
-        // Here you might set step based on completion status if needed
-        // console.log("Profile completion:", res.status);
+        await profileApi.getProfileCompletion();
       } catch (e) {
         console.error("Failed to load profile completion", e);
+      }
+      try {
+        const g = await guarantorApi.getGuarantor();
+        if (g) {
+          setData((prev) => ({
+            ...prev,
+            guarantorFullName: g.fullName || prev.guarantorFullName,
+            guarantorRelationship: g.relationship || prev.guarantorRelationship,
+            guarantorPhone: g.phone || prev.guarantorPhone,
+            guarantorEmail: g.email || prev.guarantorEmail,
+            guarantorNidNumber: g.nidNumber || prev.guarantorNidNumber,
+            guarantorAddressLine: g.address || prev.guarantorAddressLine,
+          }));
+        }
+      } catch (e) {
+        console.error("Failed to load existing guarantor", e);
       }
     }
     init();
@@ -101,6 +118,20 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     if (d.institutionId !== null) payload.institutionId = d.institutionId;
     if (d.studentId) payload.studentId = d.studentId;
     return payload;
+  };
+  const buildGuarantorPayload = (d: typeof data) => {
+    const addressParts = [d.guarantorAddressLine, d.guarantorCity, d.guarantorDistrict]
+      .map((p) => (p ? p.trim() : ""))
+      .filter(Boolean);
+    const uniqueAddressParts = Array.from(new Set(addressParts));
+    return {
+      fullName: d.guarantorFullName.trim(),
+      relationship: d.guarantorRelationship.trim(),
+      phone: d.guarantorPhone.trim() || undefined,
+      email: d.guarantorEmail.trim() || undefined,
+      nidNumber: d.guarantorNidNumber.trim() || undefined,
+      address: uniqueAddressParts.length ? uniqueAddressParts.join(", ") : undefined,
+    };
   };
   const toggleGoal = (g: string) => {
     setData((d) => ({
@@ -167,6 +198,13 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     } catch (e) {
       console.error("Failed to update profile", e);
     }
+    if (step === 3 && data.guarantorFullName.trim() && data.guarantorRelationship.trim()) {
+      try {
+        await guarantorApi.updateGuarantor(buildGuarantorPayload(data));
+      } catch (e) {
+        console.error("Failed to save guarantor", e);
+      }
+    }
     if (step < steps.length - 1) {
       setStep((s) => s + 1);
     } else {
@@ -185,6 +223,9 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     setSaving(true);
     try {
       await profileApi.updateProfile(buildProfilePayload(data));
+      if (step === 3 && data.guarantorFullName.trim() && data.guarantorRelationship.trim()) {
+        await guarantorApi.updateGuarantor(buildGuarantorPayload(data));
+      }
     } catch (e) {
       console.error("Failed to save profile", e);
     } finally {
@@ -502,6 +543,38 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   onChange={(e) => update("guarantorFullName", e.target.value)}
                   hint="As it appears on their NID"
                 />
+                <Select
+                  label="Relationship to you"
+                  required
+                  value={data.guarantorRelationship}
+                  onChange={(e) => update("guarantorRelationship", e.target.value)}
+                  options={[
+                    { value: "parent", label: "Parent" },
+                    { value: "sibling", label: "Sibling" },
+                    { value: "spouse", label: "Spouse" },
+                    { value: "relative", label: "Relative" },
+                    { value: "employer", label: "Employer" },
+                    { value: "teacher", label: "Teacher" },
+                    { value: "friend", label: "Friend" },
+                    { value: "other", label: "Other" },
+                  ]}
+                  placeholder="Select relationship"
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <TextInput
+                    label="Guarantor phone"
+                    placeholder="01712345678"
+                    value={data.guarantorPhone}
+                    onChange={(e) => update("guarantorPhone", e.target.value)}
+                  />
+                  <TextInput
+                    label="Guarantor email"
+                    type="email"
+                    placeholder="guarantor@example.com"
+                    value={data.guarantorEmail}
+                    onChange={(e) => update("guarantorEmail", e.target.value)}
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <Select
                     label="Gender"
