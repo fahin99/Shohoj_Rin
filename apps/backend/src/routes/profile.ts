@@ -37,7 +37,26 @@ router.put("/", requireAuth, requireRole("borrower", "lender"), async (req, res)
       return res.status(400).json({ success: false, error: { message: "No fields to update" } });
     }
     return res.json({ success: true, data: updated });
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Failed to update profile:", error);
+    if (error?.code === "23505") {
+      return res.status(409).json({
+        success: false,
+        error: { message: "This National ID number is already registered to another account" },
+      });
+    }
+    if (error?.code === "23503") {
+      return res.status(400).json({
+        success: false,
+        error: { message: "Selected institution is invalid or does not exist" },
+      });
+    }
+    if (error?.code === "22007" || error?.code === "22008") {
+      return res.status(400).json({
+        success: false,
+        error: { message: "Invalid date format provided" },
+      });
+    }
     return res.status(500).json({ success: false, error: { message: "Failed to update profile" } });
   }
 });

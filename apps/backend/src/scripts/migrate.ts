@@ -62,6 +62,7 @@ async function ensureAccountIdentitySchema(client: PoolClient) {
       ADD COLUMN IF NOT EXISTS employment_type VARCHAR(50),
       ADD COLUMN IF NOT EXISTS employer_name VARCHAR(255),
       ADD COLUMN IF NOT EXISTS monthly_income DECIMAL(12,2),
+      ADD COLUMN IF NOT EXISTS monthly_savings DECIMAL(12,2),
       ADD COLUMN IF NOT EXISTS income_source VARCHAR(100),
       ADD COLUMN IF NOT EXISTS profile_completion_status VARCHAR(30) NOT NULL DEFAULT 'incomplete'
   `);

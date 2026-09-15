@@ -193,10 +193,13 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     }
   };
   const next = async () => {
-    try {
-      await profileApi.updateProfile(buildProfilePayload(data));
-    } catch (e) {
-      console.error("Failed to update profile", e);
+    const profilePayload = buildProfilePayload(data);
+    if (Object.keys(profilePayload).length > 0) {
+      try {
+        await profileApi.updateProfile(profilePayload);
+      } catch (e) {
+        console.error("Failed to update profile", e);
+      }
     }
     if (step === 3 && data.guarantorFullName.trim() && data.guarantorRelationship.trim()) {
       try {
@@ -222,7 +225,10 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
   const saveAndContinueLater = async () => {
     setSaving(true);
     try {
-      await profileApi.updateProfile(buildProfilePayload(data));
+      const profilePayload = buildProfilePayload(data);
+      if (Object.keys(profilePayload).length > 0) {
+        await profileApi.updateProfile(profilePayload);
+      }
       if (step === 3 && data.guarantorFullName.trim() && data.guarantorRelationship.trim()) {
         await guarantorApi.updateGuarantor(buildGuarantorPayload(data));
       }
