@@ -1,19 +1,27 @@
 import { Router } from "express";
 import { pool } from "../lib/db.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
-import { recalculateAndPersistTrustScore } from "../services/trust-persistence.service.js";
+import { 
+  recalculateAndPersistTrustScore, 
+  initializeTrustScoreIfNeeded 
+} from "../services/trust-persistence.service.js";
+
 const router = Router();
 router.use(requireAuth);
+
 router.get("/", async (req: RequestWithAuth, res) => {
   try {
+    await initializeTrustScoreIfNeeded(req.user!.userId);
+
     const scoreRes = await pool.query(
       `SELECT score_id, score, trust_band, confidence_score, calculated_at 
        FROM trust_scores 
        WHERE user_id = $1 AND is_current = TRUE`,
       [req.user!.userId],
     );
+    
     if (scoreRes.rowCount === 0) {
-      return res.status(200).json({ success: true, data: null });
+      return res.status(404).json({ success: false, error: { message: "Score could not be initialized" } });
     }
     const scoreRow = scoreRes.rows[0];
     const factorsRes = await pool.query(

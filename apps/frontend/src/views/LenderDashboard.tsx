@@ -77,6 +77,14 @@ const trustBandDisplay: Record<string, { label: string; tone: "success" | "warni
   very_high_risk: { label: "Very High Risk", tone: "error" },
 };
 
+const factorNameLabel: Record<string, string> = {
+  repayment_history: "Repayment History",
+  financial_capacity: "Financial Capacity",
+  financial_behavior: "Financial Behavior",
+  identity_verification: "Identity & Verification",
+  credit_behavior: "Credit Behavior",
+};
+
 const roundTaka = (value: number): number => Math.round(value * 100) / 100;
 
 function remainingFor(opp: Opportunity): number {
@@ -487,7 +495,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                                 key={`${op.applicationId}-${f.name}`}
                                 className="flex items-center justify-between gap-2"
                               >
-                                <span className="truncate">{f.name}</span>
+                                <span className="truncate">{factorNameLabel[f.name] ?? f.name}</span>
                                 <span className="tabular-nums text-stone-500">
                                   {Math.round(f.score)}
                                 </span>

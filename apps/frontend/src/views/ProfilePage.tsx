@@ -119,6 +119,14 @@ const trustBandVariant: Record<string, "success" | "warning" | "error"> = {
   very_high_risk: "error",
 };
 
+const factorNameLabel: Record<string, string> = {
+  repayment_history: "Repayment History",
+  financial_capacity: "Financial Capacity",
+  financial_behavior: "Financial Behavior",
+  identity_verification: "Identity & Verification",
+  credit_behavior: "Credit Behavior",
+};
+
 const verificationStatusLabel: Record<string, string> = {
   pending: "Pending",
   approved: "Approved",
@@ -1113,7 +1121,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                         <div key={factor.name} className="flex flex-col gap-1">
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-sm font-medium text-navy capitalize">
-                              {factor.name.replace(/_/g, " ")}
+                              {factorNameLabel[factor.name] ?? factor.name.replace(/_/g, " ")}
                             </span>
                             <span className="tabular-nums text-sm text-stone-500">
                               {Math.round(factor.score)}

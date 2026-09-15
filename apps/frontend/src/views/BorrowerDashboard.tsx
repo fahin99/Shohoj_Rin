@@ -192,7 +192,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                     <h2 className="mt-0.5 text-base font-semibold leading-snug text-navy">
                       {activeLoan.name}
                     </h2>
-                    <p className="mt-0.5 tabular-nums text-xs text-stone-500">{activeLoan.id}</p>
+
                   </div>
                   <LoanStatusBadge status="active" />
                 </div>
@@ -361,7 +361,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                           <p className="text-sm font-medium leading-snug text-navy">
                             {app.product}
                           </p>
-                          <p className="mt-0.5 tabular-nums text-xs text-stone-500">{app.id}</p>
+
                         </div>
                         <Badge
                           variant={

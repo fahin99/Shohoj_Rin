@@ -144,3 +144,11 @@ export async function buildTrustInputs(userId: string): Promise<TrustInputs> {
     },
   };
 }
+
+export async function hasPreviousLoans(userId: string): Promise<boolean> {
+  const res = await pool.query(
+    `SELECT 1 FROM loans WHERE user_id = $1 LIMIT 1`,
+    [userId],
+  );
+  return (res.rowCount ?? 0) > 0;
+}

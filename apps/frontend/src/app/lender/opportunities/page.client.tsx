@@ -44,6 +44,14 @@ const trustBandDisplay: Record<string, { label: string; tone: "success" | "warni
   very_high_risk: { label: "Very High Risk", tone: "error" },
 };
 
+const factorNameLabel: Record<string, string> = {
+  repayment_history: "Repayment History",
+  financial_capacity: "Financial Capacity",
+  financial_behavior: "Financial Behavior",
+  identity_verification: "Identity & Verification",
+  credit_behavior: "Credit Behavior",
+};
+
 function purposeLabel(value: string | null) {
   if (!value) return "Loan";
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -267,7 +275,7 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                             opportunity.trustFactors.map((factor) => (
                               <div key={`${opportunity.applicationId}-${factor.name}`}>
                                 <div className="flex items-center justify-between gap-3 text-xs">
-                                  <span className="font-medium text-navy">{factor.name}</span>
+                                  <span className="font-medium text-navy">{factorNameLabel[factor.name] ?? factor.name}</span>
                                   <span className="tabular-nums text-stone-500">
                                     {factor.score}
                                     {factor.weight == null
