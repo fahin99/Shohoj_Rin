@@ -4,8 +4,11 @@ import type { ReactNode } from "react";
 import { Logo } from "./Logo";
 import { Badge } from "./Badge";
 import { IconButton } from "./Button";
+import { LanguageToggle } from "./LanguageToggle";
 import type { PageName } from "../types";
 import { useCurrentUser } from "../lib/user-context";
+import { useTranslation } from "../lib/language-context";
+import type { TranslationKey } from "../translations/en";
 import { getDisplayName } from "../lib/session";
 import { apiRequest } from "../lib/api";
 import {
@@ -35,6 +38,7 @@ interface AppLayoutProps {
 }
 interface SidebarItem {
   label: string;
+  labelKey: TranslationKey;
   page: PageName;
   icon: ReactNode;
   badge?: number;
@@ -50,6 +54,7 @@ interface NotificationItem {
 const borrowerNav: SidebarItem[] = [
   {
     label: "Dashboard",
+    labelKey: "nav.dashboard",
     page: "borrower-dashboard",
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -62,6 +67,7 @@ const borrowerNav: SidebarItem[] = [
   },
   {
     label: "Explore Loans",
+    labelKey: "nav.exploreLoans",
     page: "loan-marketplace",
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -72,6 +78,7 @@ const borrowerNav: SidebarItem[] = [
   },
   {
     label: "My Loans",
+    labelKey: "nav.myLoans",
     page: "active-loan",
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -87,6 +94,7 @@ const borrowerNav: SidebarItem[] = [
   },
   {
     label: "Applications",
+    labelKey: "nav.applications",
     page: "application-status",
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -102,6 +110,7 @@ const borrowerNav: SidebarItem[] = [
   },
   {
     label: "Repayments",
+    labelKey: "nav.repayments",
     page: "repayment",
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -112,6 +121,7 @@ const borrowerNav: SidebarItem[] = [
   },
   {
     label: "Learn",
+    labelKey: "nav.learn",
     page: "education",
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -134,6 +144,7 @@ const borrowerNav: SidebarItem[] = [
 const lenderNav: SidebarItem[] = [
   {
     label: "Portfolio",
+    labelKey: "nav.portfolio",
     page: "lender-dashboard",
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -146,6 +157,7 @@ const lenderNav: SidebarItem[] = [
   },
   {
     label: "Opportunities",
+    labelKey: "nav.opportunities",
     page: "lender-opportunities",
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -158,6 +170,7 @@ const lenderNav: SidebarItem[] = [
 const adminNav: SidebarItem[] = [
   {
     label: "Admin Overview",
+    labelKey: "nav.adminOverview",
     page: "admin",
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -170,6 +183,7 @@ const adminNav: SidebarItem[] = [
   },
   {
     label: "Applications",
+    labelKey: "nav.applications",
     page: "application-status",
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -218,6 +232,7 @@ export function AppLayout({
 }: AppLayoutProps) {
   const currentUser = useCurrentUser();
   const router = useRouter();
+  const { t } = useTranslation();
   const currentUserRole = currentUser?.role;
   const resolvedUserType: "borrower" | "lender" | "admin" =
     userType ??
@@ -230,12 +245,16 @@ export function AppLayout({
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
-  const navItems =
+  const rawNavItems =
     resolvedUserType === "admin"
       ? adminNav
       : resolvedUserType === "lender"
         ? lenderNav
         : borrowerNav;
+  const navItems = rawNavItems.map((item) => ({
+    ...item,
+    label: t(item.labelKey),
+  }));
   const handleLogout = async () => {
     setLogoutLoading(true);
     setLogoutError(null);
@@ -325,8 +344,9 @@ export function AppLayout({
             </svg>
           </button>
           <p className="min-w-0 flex-1 truncate text-sm font-medium text-stone-500">
-            {navItems.find((i) => i.page === currentPage)?.label ?? "Shohoj Rin"}
+            {navItems.find((i) => i.page === currentPage)?.label ?? t("app.name")}
           </p>
+          <LanguageToggle />
           <div className="relative">
             <IconButton
               label="Notifications"
@@ -347,9 +367,9 @@ export function AppLayout({
             {notifOpen && (
               <div className="absolute right-0 top-full mt-2 w-72 bg-white border-[1.5px] border-navy shadow-nb rounded-[8px] overflow-hidden z-10">
                 <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between">
-                  <p className="text-sm font-semibold text-navy">Notifications</p>
+                  <p className="text-sm font-semibold text-navy">{t("header.notifications")}</p>
                   <span className="text-xs text-teal cursor-pointer hover:underline">
-                    Mark all read
+                    {t("header.markAllRead")}
                   </span>
                 </div>
                 <div className="max-h-72 overflow-y-auto flex flex-col gap-px p-2">
@@ -390,10 +410,10 @@ export function AppLayout({
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => router.push("/profile")} className="px-3 py-2.5">
-                Profile
+                {t("menu.profile")}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => router.push("/settings")} className="px-3 py-2.5">
-                Settings
+                {t("menu.settings")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -403,7 +423,7 @@ export function AppLayout({
                 }}
                 className="px-3 py-2.5 text-coral focus:text-coral"
               >
-                Log Out
+                {t("menu.logOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -418,8 +438,8 @@ export function AppLayout({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Log Out?</AlertDialogTitle>
-            <AlertDialogDescription>Are you sure you want to log out?</AlertDialogDescription>
+            <AlertDialogTitle>{t("logout.title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("logout.description")}</AlertDialogDescription>
           </AlertDialogHeader>
           {logoutError && (
             <p role="alert" className="text-sm text-coral">
@@ -427,7 +447,7 @@ export function AppLayout({
             </p>
           )}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={logoutLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={logoutLoading}>{t("logout.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               disabled={logoutLoading}
               onClick={(event) => {
@@ -435,7 +455,7 @@ export function AppLayout({
                 void handleLogout();
               }}
             >
-              {logoutLoading ? "Logging out..." : "Log Out"}
+              {logoutLoading ? t("logout.loading") : t("logout.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

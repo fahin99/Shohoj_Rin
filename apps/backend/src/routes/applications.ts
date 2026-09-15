@@ -60,6 +60,7 @@ router.post("/", requireAuth, async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, 'submitted', $7, NOW())
        RETURNING
         application_id AS "applicationId",
+        reference_code AS "referenceCode",
         user_id AS "userId",
         partner_id AS "partnerId",
         product_id AS "productId",
@@ -143,6 +144,7 @@ router.get("/", requireAuth, async (req, res) => {
     const result = await pool.query(
       `SELECT
         la.application_id AS "applicationId",
+        la.reference_code AS "referenceCode",
         la.user_id AS "userId",
         la.partner_id AS "partnerId",
         la.product_id AS "productId",
@@ -200,6 +202,7 @@ router.get("/:id", requireAuth, async (req, res) => {
     const result = await pool.query(
       `SELECT
         la.application_id AS "applicationId",
+        la.reference_code AS "referenceCode",
         la.user_id AS "userId",
         la.partner_id AS "partnerId",
         la.product_id AS "productId",
