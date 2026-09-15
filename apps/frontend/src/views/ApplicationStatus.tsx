@@ -16,6 +16,7 @@ import type { PageName, AppStatus } from "../types";
 
 interface StoredApplication {
   id: string;
+  referenceCode?: string;
   product: string;
   provider: string;
   amount: number;
@@ -91,6 +92,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
       const data = await applicationsApi.getApplications();
       const mapped = (data.applications || []).map((a) => ({
         id: a.applicationId ?? "",
+        referenceCode: a.referenceCode,
         product: a.productName || a.purpose || "Loan Application",
         provider: a.partnerName || "Shohoj Rin",
         amount: a.requestedAmount ?? 0,
@@ -202,7 +204,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                       </div>
                       <p className="text-sm text-stone-500 truncate">{app.provider}</p>
                       <p className="text-xs tabular-nums text-stone-400 mt-1">
-                        Submitted {formatDate(app.submitted)}
+                        {app.referenceCode ? `${app.referenceCode} · ` : ""}Submitted {formatDate(app.submitted)}
                       </p>
                     </div>
                     <div className="shrink-0 flex flex-col items-end gap-2">

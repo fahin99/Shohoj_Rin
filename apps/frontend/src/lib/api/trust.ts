@@ -12,6 +12,7 @@ export interface TrustScoreData {
   band: string;
   confidenceScore: number;
   lastUpdated: string;
+  isFirstTimeBorrower: boolean;
   factors: TrustScoreFactor[];
 }
 

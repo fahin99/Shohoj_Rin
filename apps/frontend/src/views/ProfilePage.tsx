@@ -1105,6 +1105,11 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                     <Badge variant={trustBandVariant[trustScore.band] ?? "neutral"} dot>
                       {trustBandLabel[trustScore.band] ?? trustScore.band}
                     </Badge>
+                    {trustScore.isFirstTimeBorrower && (
+                      <Badge variant="neutral" size="sm">
+                        First-time borrower
+                      </Badge>
+                    )}
                     <div className="ml-auto text-right">
                       <p className="text-xs text-stone-500">Confidence</p>
                       <p className="tabular-nums text-sm font-medium text-navy">
