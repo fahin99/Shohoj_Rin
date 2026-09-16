@@ -113,7 +113,7 @@ export default function LoanMarketplace({ onNavigate }: Props) {
               aria-label={t("marketplace.sort")}
               options={sortOptions.map((opt) => ({
                 value: opt.value,
-                label: t(opt.labelKey),
+                label: t(opt.labelKey as import("../translations/en").TranslationKey),
               }))}
               value={sort}
               onChange={(e) => setSort(e.target.value)}
