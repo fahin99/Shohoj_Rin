@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import type {
   InputHTMLAttributes,
@@ -5,6 +7,7 @@ import type {
   ReactNode,
   SelectHTMLAttributes,
 } from "react";
+import { useTranslation } from "../lib/language-context";
 interface InputWrapperProps {
   label?: string;
   error?: string;
@@ -116,6 +119,7 @@ export function PasswordInput({
   className = "",
   ...props
 }: Omit<TextInputProps, "type" | "suffix" | "prefix">) {
+  const { t } = useTranslation();
   const [show, setShow] = useState(false);
   return (
     <InputWrapper label={label} error={error} hint={hint} required={required}>
@@ -132,7 +136,7 @@ export function PasswordInput({
           className="absolute right-3 text-stone-400 hover:text-stone-600 transition-colors text-xs"
           tabIndex={-1}
         >
-          {show ? "Hide" : "Show"}
+          {show ? t("input.hide") : t("input.show")}
         </button>
       </div>
     </InputWrapper>
@@ -204,6 +208,7 @@ interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "
   onClear?: () => void;
 }
 export function SearchInput({ className = "", value, onClear, ...props }: SearchInputProps) {
+  const { t } = useTranslation();
   return (
     <div className="relative flex items-center">
       <span className="absolute left-3 text-stone-400 text-sm pointer-events-none">
@@ -222,6 +227,7 @@ export function SearchInput({ className = "", value, onClear, ...props }: Search
         <button
           type="button"
           onClick={onClear}
+          aria-label={t("common.clear")}
           className="absolute right-3 text-stone-400 hover:text-stone-600 text-sm"
         >
           ×
@@ -349,6 +355,7 @@ interface FileUploadProps {
   onChange?: (files: FileList | null) => void;
 }
 export function FileUpload({ label, hint, error, accept, onChange }: FileUploadProps) {
+  const { t } = useTranslation();
   const [fileName, setFileName] = useState<string | null>(null);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -356,7 +363,7 @@ export function FileUpload({ label, hint, error, accept, onChange }: FileUploadP
     onChange?.(files);
   };
   return (
-    <InputWrapper label={label} error={error} hint={hint ?? "PDF, JPG, PNG up to 5MB"}>
+    <InputWrapper label={label} error={error} hint={hint ?? t("input.uploadHint")}>
       <label
         className={`flex flex-col items-center justify-center gap-2 p-6 rounded-[6px] border-[1.5px] border-dashed cursor-pointer transition-colors ${
           error
@@ -378,7 +385,8 @@ export function FileUpload({ label, hint, error, accept, onChange }: FileUploadP
           <span className="text-sm text-teal font-medium">{fileName}</span>
         ) : (
           <span className="text-sm text-stone-500">
-            <span className="text-teal font-medium">Browse file</span> or drag and drop
+            <span className="text-teal font-medium">{t("input.browseFile")}</span>{" "}
+            {t("input.orDragAndDrop")}
           </span>
         )}
       </label>
