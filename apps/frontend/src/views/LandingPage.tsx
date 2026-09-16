@@ -3,10 +3,14 @@ import { Footer } from "../components/Footer";
 import { Button } from "../components/Button";
 import type { PageName } from "../types";
 import type { StoredUserProfile } from "../lib/session";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
+
 interface LandingPageProps {
   onNavigate: (page: PageName) => void;
   user: StoredUserProfile | null;
 }
+
 const loanCategories = [
   {
     name: "Education",
@@ -45,6 +49,7 @@ const loanCategories = [
     accent: "text-emerald",
   },
 ];
+
 const howItWorks = [
   {
     step: "01",
@@ -67,6 +72,7 @@ const howItWorks = [
     desc: "Track your repayments, get reminders, and access your full loan history from one clear dashboard.",
   },
 ];
+
 const trustPoints = [
   {
     icon: "◉",
@@ -89,6 +95,7 @@ const trustPoints = [
     desc: "What you see is what you pay. Processing fees and costs are declared up front.",
   },
 ];
+
 const literacyCards = [
   {
     title: "Understanding Interest Rates",
@@ -109,11 +116,15 @@ const literacyCards = [
     desc: "Duration, amount, credit history — see which factors influence the rate you receive.",
   },
 ];
+
 export default function LandingPage({ onNavigate, user }: LandingPageProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="bg-offwhite min-h-screen">
       <Navbar onNavigate={onNavigate} user={user} />
-      {}
+
+      {/* Hero Section */}
       <section className="max-w-6xl mx-auto px-4 md:px-6 pt-16 pb-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         <div>
           {/* <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-teal-light border border-teal/30 rounded-[4px] text-xs font-medium text-teal mb-6">
@@ -121,27 +132,27 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
             Trusted by 50,000+ users across Bangladesh
           </div> */}
           <h1 className="font-display text-5xl md:text-6xl text-navy leading-[1.1] mb-5">
-            Finance made
+            {t("landing.heroTitle1")}
             <br />
-            <em className="not-italic text-teal">simpler.</em>
+            <em className="not-italic text-teal">{t("landing.heroTitleEmphasis")}</em>
           </h1>
           <p className="text-lg text-stone-500 leading-relaxed max-w-lg mb-8">
-            Discover loans that fit your life, understand every term clearly, and manage your
-            repayments without stress. Shohoj Rin is built for first-time borrowers.
+            {t("landing.heroBody")}
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Button variant="primary" size="lg" onClick={() => onNavigate("auth")}>
-              Start Exploring Loans
+              {t("landing.startExploring")}
             </Button>
             <Button variant="secondary" size="lg" onClick={() => onNavigate("education")}>
-              Learn About Borrowing
+              {t("landing.learnAboutBorrowing")}
             </Button>
           </div>
+
           <div className="flex items-center gap-6 mt-8 pt-8 border-t border-stone-200">
             {[
-              ["৳240 Cr+", "Loans facilitated"],
-              ["50K+", "Active borrowers"],
-              ["98%", "Repayment rate"],
+              ["৳240 Cr+", t("landing.statLoansFacilitated")],
+              ["50K+", t("landing.statActiveBorrowers")],
+              ["98%", t("landing.statRepaymentRate")],
             ].map(([val, label]) => (
               <div key={label}>
                 <p className="font-display tabular-nums text-xl font-semibold text-navy">{val}</p>
@@ -150,12 +161,14 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
             ))}
           </div>
         </div>
-        {}
+
+        {/* Mock UI Element */}
         <div className="relative lg:flex justify-end hidden">
           <div className="relative w-full max-w-sm">
-            {}
+            {/* Background decoration */}
             <div className="absolute -bottom-4 -right-4 w-full h-full bg-teal-light border-[1.5px] border-teal/30 rounded-[8px]" />
-            {}
+
+            {/* Main card */}
             <div className="relative bg-white border-[1.5px] border-navy rounded-[8px] shadow-nb-lg p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -167,12 +180,13 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
                   </p>
                 </div>
                 <span className="px-2 py-1 bg-emerald-light text-emerald text-xs font-medium rounded-[4px] border border-emerald/30">
-                  Approved
+                  {t(enumKey("appStatus", "approved"))}
                 </span>
               </div>
+
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-stone-500">Interest rate</span>
+                  <span className="text-stone-500">{t("loanDetails.interestRate")}</span>
                   <span className="tabular-nums font-medium text-navy">8.5% p.a.</span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -180,39 +194,45 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
                   <span className="tabular-nums font-medium text-navy">৳4,500</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-stone-500">Duration</span>
-                  <span className="font-medium text-navy">48 months</span>
+                  <span className="text-stone-500">{t("loanDetails.repaymentDuration")}</span>
+                  <span className="font-medium text-navy">
+                    {t("loanDetails.monthsUnit", { months: 48 })}
+                  </span>
                 </div>
               </div>
+
               <div className="bg-stone-50 border border-stone-200 rounded-[4px] p-3">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs text-stone-500">Repayment progress</span>
+                  <span className="text-xs text-stone-500">{t("activeLoan.repaymentProgress")}</span>
                   <span className="text-xs tabular-nums text-navy">14 / 48 months</span>
                 </div>
                 <div className="w-full h-2 bg-stone-200 rounded-full overflow-hidden">
                   <div className="h-full bg-teal rounded-full" style={{ width: "29%" }} />
                 </div>
-                <p className="text-xs text-stone-400 mt-1.5">Next payment: Dec 15, 2025</p>
+                <p className="text-xs text-stone-400 mt-1.5">{t("activeLoan.nextPayment")}: Dec 15, 2025</p>
               </div>
             </div>
-            {}
+
+            {/* Floating badge */}
             <div className="absolute -top-6 -left-10 bg-white border-[1.5px] border-navy rounded-[6px] shadow-nb p-3 w-40">
-              <p className="text-xs text-stone-500">Total repaid</p>
+              <p className="text-xs text-stone-500">{t("dashboard.totalRepaid")}</p>
               <p className="font-display tabular-nums text-base font-semibold text-navy">৳63,000</p>
               <p className="text-xs text-emerald mt-0.5">↑ On track</p>
             </div>
           </div>
         </div>
       </section>
-      {}
+
+      {/* Value Prop Section */}
       <section id="how" className="bg-teal-light border-y border-teal/20">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-16">
           <div className="text-center mb-12">
             <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
-              Simple by design
+              {t("landing.howItWorksEyebrow")}
             </p>
-            <h2 className="font-display text-4xl text-navy">How Shohoj Rin works</h2>
+            <h2 className="font-display text-4xl text-navy">{t("landing.howItWorksTitle")}</h2>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {howItWorks.map((item) => (
               <div
@@ -229,19 +249,21 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
           </div>
         </div>
       </section>
-      {}
+
+      {/* Categories */}
       <section className="max-w-6xl mx-auto px-4 md:px-6 py-16">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
-              What we offer
+              {t("landing.categoriesEyebrow")}
             </p>
-            <h2 className="font-display text-4xl text-navy">Loan categories</h2>
+            <h2 className="font-display text-4xl text-navy">{t("landing.categoriesTitle")}</h2>
           </div>
           <Button variant="tertiary" size="sm" onClick={() => onNavigate("loan-marketplace")}>
-            View all loans →
+            {t("landing.viewAllLoans")}
           </Button>
         </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {loanCategories.map((cat) => (
             <div
@@ -262,24 +284,25 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
           ))}
         </div>
       </section>
-      {}
+
+      {/* Education Teaser */}
       <section id="education" className="bg-white border-y border-stone-200">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-16">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
-                Build your knowledge
+                {t("landing.educationEyebrow")}
               </p>
-              <h2 className="font-display text-4xl text-navy">Financial education</h2>
+              <h2 className="font-display text-4xl text-navy">{t("landing.educationTitle")}</h2>
               <p className="text-stone-500 mt-2 max-w-lg">
-                Understanding money should come before borrowing it. Our guides make financial
-                concepts approachable.
+                {t("landing.educationBody")}
               </p>
             </div>
             <Button variant="tertiary" size="sm" onClick={() => onNavigate("education")}>
-              All articles →
+              {t("landing.allArticles")}
             </Button>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {literacyCards.map((card, i) => (
               <div
@@ -300,18 +323,19 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
           </div>
         </div>
       </section>
-      {}
+
+      {/* Trust Markers */}
       <section className="max-w-6xl mx-auto px-4 md:px-6 py-16">
         <div className="text-center mb-10">
           <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
-            Why Shohoj Rin
+            {t("landing.trustEyebrow")}
           </p>
-          <h2 className="font-display text-4xl text-navy mb-3">Built on trust</h2>
+          <h2 className="font-display text-4xl text-navy mb-3">{t("landing.trustTitle")}</h2>
           <p className="text-stone-500 max-w-lg mx-auto">
-            We designed every part of this platform so you always know exactly where you stand
-            financially.
+            {t("landing.trustBody")}
           </p>
         </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {trustPoints.map((tp, i) => (
             <div
@@ -329,23 +353,23 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
           ))}
         </div>
       </section>
-      {}
+
+      {/* CTA */}
       <section className="bg-navy">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-16 flex flex-col md:flex-row items-center justify-between gap-8">
           <div>
             <h2 className="font-display text-4xl text-white mb-3">
-              Ready to take
+              {t("landing.ctaTitle1")}
               <br />
-              control of your finances?
+              {t("landing.ctaTitle2")}
             </h2>
             <p className="text-stone-400 max-w-md leading-relaxed">
-              Join over 50,000 people who have used Shohoj Rin to find the right loan and manage
-              their repayments clearly.
+              {t("landing.ctaBody")}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 shrink-0">
             <Button variant="primary" size="lg" onClick={() => onNavigate("auth")}>
-              Create free account
+              {t("landing.createFreeAccount")}
             </Button>
             <Button
               variant="secondary"
@@ -353,11 +377,12 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
               className="border-stone-500 text-white hover:bg-stone-700 bg-transparent"
               onClick={() => onNavigate("loan-marketplace")}
             >
-              Explore loans first
+              {t("landing.exploreLoansFirst")}
             </Button>
           </div>
         </div>
       </section>
+
       <Footer onNavigate={onNavigate} />
     </div>
   );

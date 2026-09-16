@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
@@ -8,28 +10,12 @@ import { CurrencyInput, TextInput, Select, Textarea } from "../components/Input"
 import { formatTaka } from "../lib/format";
 import { loansApi, applicationsApi } from "../lib/api/index";
 import type { PageName, LoanProduct } from "../types";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
 
 interface Props {
   onNavigate: (page: PageName) => void;
 }
-
-const steps = [
-  { label: "Loan details" },
-  { label: "Employment & income" },
-  { label: "Review & submit" },
-];
-
-const durationOptions = [12, 18, 24, 36, 48].map((d) => ({
-  value: String(d),
-  label: `${d} months`,
-}));
-
-const employmentOptions = [
-  { value: "salaried", label: "Salaried" },
-  { value: "self-employed", label: "Self-employed" },
-  { value: "business-owner", label: "Business owner" },
-  { value: "student", label: "Student" },
-];
 
 function calculateEmi(principal: number, annualRate: number, months: number) {
   const monthlyRate = annualRate / 12 / 100;
@@ -52,6 +38,26 @@ interface FormState {
 }
 
 export default function LoanApplication({ onNavigate }: Props) {
+  const { t } = useTranslation();
+
+  const steps = [
+    { label: t("application.stepLoanDetails") },
+    { label: t("application.stepEmployment") },
+    { label: t("application.stepReview") },
+  ];
+
+  const durationOptions = [12, 18, 24, 36, 48].map((d) => ({
+    value: String(d),
+    label: t("loanDetails.monthsUnit", { count: d }),
+  }));
+
+  const employmentOptions = [
+    { value: "salaried", label: t("employment.employed-full") },
+    { value: "self-employed", label: t("employment.self-employed") },
+    { value: "business-owner", label: t("employment.business") },
+    { value: "student", label: t("employment.student") },
+  ];
+
   const [loanProducts, setLoanProducts] = useState<LoanProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -122,18 +128,18 @@ export default function LoanApplication({ onNavigate }: Props) {
     const next: Record<string, string> = {};
     if (current === 0) {
       if (!form.amount || form.amount < selectedLoan.minAmount)
-        next.amount = `Enter at least ${formatTaka(selectedLoan.minAmount)}`;
+        next.amount = t("application.errorAmountMin", { amount: formatTaka(selectedLoan.minAmount) });
       if (form.amount > selectedLoan.maxAmount)
-        next.amount = `Amount cannot exceed ${formatTaka(selectedLoan.maxAmount)}`;
-      if (!form.duration) next.duration = "Select a repayment duration";
-      if (!form.purpose.trim()) next.purpose = "Tell us what this loan is for";
+        next.amount = t("application.errorAmountMax", { amount: formatTaka(selectedLoan.maxAmount) });
+      if (!form.duration) next.duration = t("application.errorDuration");
+      if (!form.purpose.trim()) next.purpose = t("application.errorPurpose");
     }
     if (current === 1) {
       if (!/^01\d{9}$/.test(form.phone.replace(/\s/g, "")))
-        next.phone = "Enter a valid Bangladeshi mobile number";
-      if (!form.employment) next.employment = "Select your employment type";
+        next.phone = t("application.errorPhone");
+      if (!form.employment) next.employment = t("application.errorEmployment");
       if (!form.monthlyIncome || form.monthlyIncome <= 0)
-        next.monthlyIncome = "Enter your monthly income";
+        next.monthlyIncome = t("application.errorIncome");
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -170,7 +176,7 @@ export default function LoanApplication({ onNavigate }: Props) {
     return (
       <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 flex justify-center items-center h-64">
-          <p className="text-stone-500">Loading loan application...</p>
+          <p className="text-stone-500">{t("common.loading")}</p>
         </div>
       </AppLayout>
     );
@@ -178,25 +184,26 @@ export default function LoanApplication({ onNavigate }: Props) {
 
   const summary = (
     <Card variant="raised">
-      <CardHeader title="Application summary" />
+      <CardHeader title={t("application.summary")} />
       <CardBody>
-        <DataRow label="Loan product" value={selectedLoan.name || "—"} />
-        <DataRow label="Requested amount" value={formatTaka(form.amount || 0)} />
+        <DataRow label={t("application.loanProduct")} value={selectedLoan.name || "—"} />
+        <DataRow label={t("loanDetails.loanAmount")} value={formatTaka(form.amount || 0)} />
         <DataRow
-          label="Duration"
-          value={`${form.duration || selectedLoan.durationMonths} months`}
+          label={t("loanDetails.repaymentDuration")}
+          value={t("loanDetails.monthsUnit", { count: form.duration || selectedLoan.durationMonths })}
         />
         <div className="border-t border-stone-200 mt-2 pt-2">
-          <DataRow label="Estimated monthly EMI" value={formatTaka(Math.round(emi))} emphasis />
+          <DataRow label={t("application.estimatedEmi")} value={formatTaka(Math.round(emi))} emphasis />
         </div>
       </CardBody>
     </Card>
   );
+
   return (
     <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-navy sm:text-3xl">Apply for a loan</h1>
+          <h1 className="text-2xl font-semibold text-navy sm:text-3xl">{t("application.title")}</h1>
           <p className="mt-1.5 text-sm text-stone-500">
             {selectedLoan.name} — {selectedLoan.provider}
           </p>
@@ -211,7 +218,7 @@ export default function LoanApplication({ onNavigate }: Props) {
             <Card>
               <CardHeader
                 title={steps[step].label}
-                description={`Step ${step + 1} of ${steps.length}`}
+                description={t("onboarding.stepOf", { current: step + 1, total: steps.length })}
               />
               <CardBody>
                 <div
@@ -223,7 +230,7 @@ export default function LoanApplication({ onNavigate }: Props) {
                   {step === 0 && (
                     <>
                       <Select
-                        label="Loan product"
+                        label={t("application.loanProduct")}
                         required
                         options={loanProducts.map((l) => ({
                           value: l.id,
@@ -233,30 +240,30 @@ export default function LoanApplication({ onNavigate }: Props) {
                         onChange={(e) => update("loanId", e.target.value)}
                       />
                       <CurrencyInput
-                        label="Loan amount"
+                        label={t("loanDetails.loanAmount")}
                         required
                         value={form.amount}
                         error={errors.amount}
                         min={selectedLoan.minAmount}
                         max={selectedLoan.maxAmount}
                         onChange={(e) => update("amount", Number(e.target.value))}
-                        hint={`Between ${formatTaka(selectedLoan.minAmount)} and ${formatTaka(selectedLoan.maxAmount)}`}
+                        hint={t("loanDetails.loanRange", { min: formatTaka(selectedLoan.minAmount), max: formatTaka(selectedLoan.maxAmount) })}
                       />
                       <Select
-                        label="Repayment duration"
+                        label={t("loanDetails.repaymentDuration")}
                         required
                         options={durationOptions.filter(
                           (d) => Number(d.value) <= selectedLoan.durationMonths,
                         )}
-                        placeholder="Select duration"
+                        placeholder={t("application.errorDuration")}
                         value={form.duration}
                         error={errors.duration}
                         onChange={(e) => update("duration", e.target.value)}
                       />
                       <Textarea
-                        label="Purpose of loan"
+                        label={t("application.purpose")}
                         required
-                        placeholder="E.g. Tuition fees for spring semester"
+                        placeholder={t("application.purposePlaceholder")}
                         value={form.purpose}
                         error={errors.purpose}
                         onChange={(e) => update("purpose", e.target.value)}
@@ -272,38 +279,37 @@ export default function LoanApplication({ onNavigate }: Props) {
                           </span>
                           <div>
                             <p className="text-xs font-semibold text-emerald-800">
-                              Identity &amp; Address Verified
+                              {t("application.identityVerified")}
                             </p>
                             <p className="text-xs text-stone-600">
-                              Your Full Name, National ID, NID photo, and Present Address are linked
-                              from your onboarding profile.
+                              {t("application.identityVerifiedBody")}
                             </p>
                           </div>
                         </div>
                         <span className="text-xs font-medium text-emerald bg-white px-2 py-0.5 rounded border border-emerald/20 shrink-0">
-                          Profile KYC
+                          {t("application.profileKyc")}
                         </span>
                       </div>
                       <TextInput
-                        label="Contact mobile number"
+                        label={t("application.contactMobile")}
                         required
                         placeholder="01XXXXXXXXX"
                         value={form.phone}
                         error={errors.phone}
                         onChange={(e) => update("phone", e.target.value)}
-                        hint="For SMS updates regarding your loan application"
+                        hint={t("application.contactMobileHint")}
                       />
                       <Select
-                        label="Employment type"
+                        label={t("application.employmentType")}
                         required
-                        placeholder="Select employment type"
+                        placeholder={t("application.employmentType")}
                         options={employmentOptions}
                         value={form.employment}
                         error={errors.employment}
                         onChange={(e) => update("employment", e.target.value)}
                       />
                       <CurrencyInput
-                        label="Monthly income"
+                        label={t("application.monthlyIncome")}
                         required
                         value={form.monthlyIncome || ""}
                         error={errors.monthlyIncome}
@@ -313,45 +319,44 @@ export default function LoanApplication({ onNavigate }: Props) {
                   )}
                   {step === 2 && (
                     <div className="flex flex-col gap-4">
-                      <Alert variant="success" title="Ready to submit">
-                        Please review your details below. You can go back to make changes before
-                        submitting.
+                      <Alert variant="success" title={t("application.readyToSubmit")}>
+                        {t("application.readyToSubmitBody")}
                       </Alert>
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">
-                          Loan details
+                          {t("application.stepLoanDetails")}
                         </p>
-                        <DataRow label="Loan product" value={selectedLoan.name} />
-                        <DataRow label="Amount requested" value={formatTaka(form.amount)} />
-                        <DataRow label="Duration" value={`${form.duration} months`} />
-                        <DataRow label="Purpose" value={form.purpose || "—"} />
+                        <DataRow label={t("application.loanProduct")} value={selectedLoan.name} />
+                        <DataRow label={t("loanDetails.loanAmount")} value={formatTaka(form.amount)} />
+                        <DataRow label={t("loanDetails.repaymentDuration")} value={t("loanDetails.monthsUnit", { count: form.duration })} />
+                        <DataRow label={t("application.purpose")} value={form.purpose || "—"} />
                       </div>
                       <div className="border-t border-stone-200 pt-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">
-                          Identity &amp; employment
+                          {t("application.stepEmployment")}
                         </p>
-                        <DataRow label="Identity & NID" value="Verified from profile ✓" />
-                        <DataRow label="Address" value="Verified from profile ✓" />
-                        <DataRow label="Income source" value="Verified from profile ✓" />
-                        <DataRow label="Contact mobile" value={form.phone || "—"} />
+                        <DataRow label={t("profile.personalIdentity")} value={`${t("application.identityVerified")} ✓`} />
+                        <DataRow label={t("lender.address")} value={`${t("application.identityVerified")} ✓`} />
+                        <DataRow label={t("lender.income")} value={`${t("application.identityVerified")} ✓`} />
+                        <DataRow label={t("application.contactMobile")} value={form.phone || "—"} />
                         <DataRow
-                          label="Employment type"
+                          label={t("application.employmentType")}
                           value={
                             employmentOptions.find((o) => o.value === form.employment)?.label ?? "—"
                           }
                         />
                         <DataRow
-                          label="Monthly income"
+                          label={t("application.monthlyIncome")}
                           value={form.monthlyIncome ? formatTaka(form.monthlyIncome) : "—"}
                         />
                       </div>
                       <div className="border-t border-stone-200 pt-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">
-                          Verification from onboarding
+                          {t("application.profileKyc")}
                         </p>
-                        <DataRow label="Identity" value="Verified ✓" />
-                        <DataRow label="Address" value="Verified ✓" />
-                        <DataRow label="Income" value="Verified ✓" />
+                        <DataRow label={t("profile.personalIdentity")} value={`${t("application.identityVerified")} ✓`} />
+                        <DataRow label={t("lender.address")} value={`${t("application.identityVerified")} ✓`} />
+                        <DataRow label={t("lender.income")} value={`${t("application.identityVerified")} ✓`} />
                       </div>
                     </div>
                   )}
@@ -360,15 +365,15 @@ export default function LoanApplication({ onNavigate }: Props) {
             </Card>
             <div className="flex flex-wrap items-center justify-between gap-3 mt-5">
               <Button variant="secondary" onClick={handleBack} disabled={step === 0 || submitting}>
-                Back
+                {t("common.back")}
               </Button>
               {step < steps.length - 1 ? (
                 <Button variant="primary" onClick={handleNext}>
-                  Next
+                  {t("common.next")}
                 </Button>
               ) : (
                 <Button variant="primary" onClick={handleSubmit} loading={submitting}>
-                  {submitting ? "Submitting…" : "Submit application"}
+                  {submitting ? t("application.submitting") : t("application.submit")}
                 </Button>
               )}
             </div>

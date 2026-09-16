@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { Button } from "../components/Button";
@@ -11,18 +13,13 @@ import { formatDate, formatPercent, formatTaka } from "../lib/format";
 import type { ApplicationRecord } from "../lib/api/applications";
 import type { PageName, ActiveLoan, Transaction } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
 
 interface BorrowerDashboardProps {
   onNavigate: (page: PageName) => void;
   user: StoredUserProfile;
 }
-
-const quickActions: { label: string; page: PageName; icon: string }[] = [
-  { label: "Explore loans", icon: "🔍", page: "loan-marketplace" },
-  { label: "Make a payment", icon: "💳", page: "repayment" },
-  { label: "Loan details", icon: "📋", page: "active-loan" },
-  { label: "Learn finance", icon: "📚", page: "education" },
-];
 
 const txDirection: Record<Transaction["type"], "in" | "out"> = {
   repayment: "out",
@@ -52,10 +49,18 @@ function TransactionIcon({ type }: { type: Transaction["type"] }) {
 }
 
 export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboardProps) {
+  const { t } = useTranslation();
   const [activeLoan, setActiveLoan] = useState<ActiveLoan | null>(null);
   const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const quickActions: { label: string; page: PageName; icon: string }[] = [
+    { label: t("dashboard.exploreLoans"), icon: "🔍", page: "loan-marketplace" },
+    { label: t("dashboard.makeAPayment"), icon: "💳", page: "repayment" },
+    { label: t("dashboard.loanDetailsAction"), icon: "📋", page: "active-loan" },
+    { label: t("dashboard.learnFinance"), icon: "📚", page: "education" },
+  ];
 
   useEffect(() => {
     async function fetchData() {
@@ -74,7 +79,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
           (appsRes.applications || []).map((a) => ({
             ...a,
             id: a.applicationId ?? a.id,
-            product: a.productName || a.purpose || a.product || "Loan Application",
+            product: a.productName || a.purpose || a.product || t("application.loanProduct"),
             amount: a.requestedAmount ?? a.amount ?? 0,
             submitted: a.submittedAt || a.createdAt || a.submitted || "",
           })),
@@ -91,11 +96,11 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
       }
     }
     fetchData();
-  }, []);
+  }, [t]);
 
   const now = new Date();
   const hour = now.getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const greeting = hour < 12 ? t("dashboard.greetingMorning") : hour < 17 ? t("dashboard.greetingAfternoon") : t("dashboard.greetingEvening");
   const openApplications = applications.filter(
     (a) => a.status === "under-review" || a.status === "info-required" || a.status === "submitted",
   );
@@ -111,7 +116,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
         userName={userName}
       >
         <div className="mx-auto max-w-5xl px-4 py-6 md:px-6 flex justify-center items-center h-64">
-          <p className="text-stone-500">Loading dashboard...</p>
+          <p className="text-stone-500">{t("common.loading")}</p>
         </div>
       </AppLayout>
     );
@@ -140,42 +145,42 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
             </p>
           </div>
           <Button variant="primary" size="sm" onClick={() => onNavigate("loan-marketplace")}>
-            Apply for a loan
+            {t("dashboard.applyForLoan")}
           </Button>
         </header>
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            label="Remaining balance"
+            label={t("dashboard.remainingBalance")}
             value={formatTaka(activeLoan ? activeLoan.remainingBalance : 0)}
-            hint={activeLoan ? activeLoan.name : "No active loans"}
+            hint={activeLoan ? activeLoan.name : t("dashboard.noActiveLoans")}
           />
           <StatCard
-            label="Next repayment"
+            label={t("dashboard.nextRepayment")}
             value={formatTaka(activeLoan ? activeLoan.monthlyPayment : 0)}
             hint={
               activeLoan && activeLoan.nextPaymentDate
-                ? `Due ${formatDate(activeLoan.nextPaymentDate)}`
-                : "No payments due"
+                ? `${t("dashboard.dueOn")} ${formatDate(activeLoan.nextPaymentDate)}`
+                : t("dashboard.noPaymentsDue")
             }
             tone={activeLoan ? "attention" : undefined}
           />
           <StatCard
-            label="Total repaid"
+            label={t("dashboard.totalRepaid")}
             value={formatTaka(activeLoan ? activeLoan.amountRepaid : 0)}
             hint={
               activeLoan
-                ? `${activeLoan.paidMonths} of ${activeLoan.durationMonths} instalments`
-                : "0 instalments"
+                ? `${activeLoan.paidMonths} ${t("pagination.of")} ${activeLoan.durationMonths} ${t("dashboard.instalments")}`
+                : `0 ${t("dashboard.instalments")}`
             }
             tone={activeLoan ? "positive" : undefined}
           />
           <StatCard
-            label="Applications"
+            label={t("dashboard.applications")}
             value={String(applications.length)}
             hint={
               openApplications.length > 0
-                ? `${openApplications.length} awaiting a decision`
-                : "No pending applications"
+                ? `${openApplications.length} ${t("dashboard.awaitingDecision")}`
+                : t("dashboard.noPendingApplications")
             }
             tone="info"
           />
@@ -187,30 +192,29 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                 <div className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                   <div className="min-w-0">
                     <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
-                      Active loan
+                      {t("dashboard.activeLoan")}
                     </p>
                     <h2 className="mt-0.5 text-base font-semibold leading-snug text-navy">
                       {activeLoan.name}
                     </h2>
-
                   </div>
                   <LoanStatusBadge status="active" />
                 </div>
                 <dl className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div className="min-w-0">
-                    <dt className="text-xs text-stone-500">Amount borrowed</dt>
+                    <dt className="text-xs text-stone-500">{t("dashboard.amountBorrowed")}</dt>
                     <dd className="mt-0.5 tabular-nums font-semibold text-navy">
                       {formatTaka(activeLoan.principal)}
                     </dd>
                   </div>
                   <div className="min-w-0">
-                    <dt className="text-xs text-stone-500">Remaining balance</dt>
+                    <dt className="text-xs text-stone-500">{t("dashboard.remainingBalance")}</dt>
                     <dd className="mt-0.5 tabular-nums font-semibold text-navy">
                       {formatTaka(activeLoan.remainingBalance)}
                     </dd>
                   </div>
                   <div className="min-w-0">
-                    <dt className="text-xs text-stone-500">Interest rate</dt>
+                    <dt className="text-xs text-stone-500">{t("loanDetails.interestRate")}</dt>
                     <dd className="mt-0.5 tabular-nums font-semibold text-navy">
                       {formatPercent(activeLoan.interestRate)}
                     </dd>
@@ -219,20 +223,20 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                 <ProgressBar
                   value={activeLoan.paidMonths}
                   max={activeLoan.durationMonths}
-                  label={`Repayment progress — ${activeLoan.paidMonths} of ${activeLoan.durationMonths} months`}
+                  label={`${t("activeLoan.repaymentProgress")} — ${activeLoan.paidMonths} ${t("pagination.of")} ${activeLoan.durationMonths} ${t("loanDetails.monthsUnit")}`}
                   showValue
                   size="lg"
                   color="teal"
                 />
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-4">
                   <p className="min-w-0 text-xs text-stone-500">
-                    Next payment {formatDate(activeLoan.nextPaymentDate)} —{" "}
+                    {t("activeLoan.nextPayment")} {formatDate(activeLoan.nextPaymentDate)} —{" "}
                     <span className="tabular-nums font-medium text-navy">
                       {formatTaka(activeLoan.monthlyPayment)}
                     </span>
                   </p>
                   <Button variant="tertiary" size="sm" onClick={() => onNavigate("active-loan")}>
-                    View loan details
+                    {t("dashboard.viewLoanDetails")}
                   </Button>
                 </div>
               </section>
@@ -240,20 +244,20 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
               <div className="min-w-0 rounded-[8px] border-[1.5px] border-stone-200 bg-white shadow-nb">
                 <EmptyState
                   icon={EmptyIcons.loans}
-                  title="No active loans yet"
-                  description="Explore available loans and apply in minutes to get started on your financial journey."
-                  action={{ label: "Explore loans", onClick: () => onNavigate("loan-marketplace") }}
-                  secondaryAction={{ label: "Learn more", onClick: () => onNavigate("education") }}
+                  title={t("dashboard.emptyLoanTitle")}
+                  description={t("dashboard.emptyLoanDescription")}
+                  action={{ label: t("dashboard.exploreLoans"), onClick: () => onNavigate("loan-marketplace") }}
+                  secondaryAction={{ label: t("dashboard.learnMore"), onClick: () => onNavigate("education") }}
                 />
               </div>
             )}
             <Card>
               <CardHeader
-                title="Recent transactions"
+                title={t("dashboard.recentTransactions")}
                 action={
                   transactions.length > 0 ? (
                     <Button variant="ghost" size="sm" onClick={() => onNavigate("active-loan")}>
-                      See all
+                      {t("common.seeAll")}
                     </Button>
                   ) : undefined
                 }
@@ -289,10 +293,10 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                             size="sm"
                           >
                             {tx.status === "completed"
-                              ? "Completed"
+                              ? t("dashboard.txCompleted")
                               : tx.status === "failed"
-                                ? "Failed"
-                                : "Pending"}
+                                ? t("dashboard.txFailed")
+                                : t("dashboard.txPending")}
                           </Badge>
                         </div>
                       </li>
@@ -303,8 +307,8 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                 <CardBody>
                   <EmptyState
                     icon={EmptyIcons.transactions}
-                    title="No transactions yet"
-                    description="Your repayments and disbursements will show up here."
+                    title={t("dashboard.emptyTransactionsTitle")}
+                    description={t("dashboard.emptyTransactionsDescription")}
                     size="sm"
                   />
                 </CardBody>
@@ -313,7 +317,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
           </div>
           <div className="flex min-w-0 flex-col gap-5">
             <Card>
-              <CardHeader title="Quick actions" />
+              <CardHeader title={t("dashboard.quickActions")} />
               <CardBody>
                 <div className="grid grid-cols-2 gap-2">
                   {quickActions.map((action) => (
@@ -334,7 +338,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
             </Card>
             <Card>
               <CardHeader
-                title="Applications"
+                title={t("dashboard.applications")}
                 action={
                   applications.length > 0 ? (
                     <Button
@@ -342,7 +346,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                       size="sm"
                       onClick={() => onNavigate("application-status")}
                     >
-                      View all
+                      {t("common.viewAll")}
                     </Button>
                   ) : undefined
                 }
@@ -361,7 +365,6 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                           <p className="text-sm font-medium leading-snug text-navy">
                             {app.product}
                           </p>
-
                         </div>
                         <Badge
                           variant={
@@ -375,22 +378,22 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                           dot
                         >
                           {app.status === "under-review"
-                            ? "In review"
+                            ? t("dashboard.appInReview")
                             : app.status === "info-required"
-                              ? "Info needed"
+                              ? t("dashboard.appInfoNeeded")
                               : app.status === "disbursed"
-                                ? "Disbursed"
-                                : "Rejected"}
+                                ? t("dashboard.appDisbursed")
+                                : t("dashboard.appRejected")}
                         </Badge>
                       </div>
                       <p className="mt-1.5 text-xs text-stone-500">
-                        {formatTaka(app.amount || 0)} · submitted {formatDate(app.submitted || "")}
+                        {formatTaka(app.amount || 0)} · {t("appStatusPage.submittedOn")} {formatDate(app.submitted || "")}
                       </p>
                     </button>
                   ))
                 ) : (
                   <p className="py-3 text-center text-xs text-stone-500">
-                    No loan applications yet.
+                    {t("dashboard.noApplicationsYet")}
                   </p>
                 )}
               </CardBody>
@@ -398,13 +401,13 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
             {activeLoan ? (
               <section className="rounded-[8px] border-[1.5px] border-yellow bg-yellow-light p-4">
                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-yellow-dark">
-                  Upcoming payment
+                  {t("dashboard.upcomingPayment")}
                 </p>
                 <p className="font-display tabular-nums text-2xl font-semibold text-navy">
                   {formatTaka(activeLoan.monthlyPayment)}
                 </p>
                 <p className="mt-0.5 text-xs text-stone-600">
-                  Due {formatDate(activeLoan.nextPaymentDate)}
+                  {t("dashboard.dueOn")} {formatDate(activeLoan.nextPaymentDate)}
                 </p>
                 <Button
                   variant="primary"
@@ -413,19 +416,19 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                   className="mt-3"
                   onClick={() => onNavigate("repayment")}
                 >
-                  Pay now
+                  {t("dashboard.payNow")}
                 </Button>
               </section>
             ) : (
               <section className="rounded-[8px] border-[1.5px] border-teal/30 bg-teal-light p-4">
                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-teal">
-                  Looking for financing?
+                  {t("dashboard.lookingForFinancing")}
                 </p>
                 <p className="font-display text-base font-semibold text-navy">
-                  Compare loan options
+                  {t("dashboard.compareLoanOptions")}
                 </p>
                 <p className="mt-0.5 text-xs text-stone-600">
-                  Transparent terms, fast approval, and clear repayment terms.
+                  {t("dashboard.compareLoanOptionsBody")}
                 </p>
                 <Button
                   variant="primary"
@@ -434,7 +437,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                   className="mt-3"
                   onClick={() => onNavigate("loan-marketplace")}
                 >
-                  Explore loans
+                  {t("dashboard.exploreLoans")}
                 </Button>
               </section>
             )}

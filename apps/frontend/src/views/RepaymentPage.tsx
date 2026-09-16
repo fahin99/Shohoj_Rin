@@ -1,4 +1,8 @@
+"use client";
+
 import { useEffect, useState } from "react";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
 import { AppLayout } from "../components/AppLayout";
 import { PageHeader } from "../components/PageHeader";
 import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
@@ -19,29 +23,10 @@ interface Props {
 
 type AmountOption = "full" | "custom" | "payoff";
 type PaymentMethod = "bkash" | "nagad" | "bank" | "card";
-const methodInfo: Record<
-  PaymentMethod,
-  { label: string; fee: (amt: number) => number; hint: string }
-> = {
-  bkash: {
-    label: "bKash",
-    fee: (amt) => Math.round(amt * 0.015),
-    hint: "1.5% bKash processing fee",
-  },
-  nagad: {
-    label: "Nagad",
-    fee: (amt) => Math.round(amt * 0.012),
-    hint: "1.2% Nagad processing fee",
-  },
-  bank: { label: "Bank transfer", fee: () => 0, hint: "No fee — funds may take 1 business day" },
-  card: {
-    label: "Debit/credit card",
-    fee: (amt) => Math.round(amt * 0.02) + 10,
-    hint: "2% + ৳10 card processing fee",
-  },
-};
 
 export default function RepaymentPage({ onNavigate }: Props) {
+  const { t } = useTranslation();
+  
   const [activeLoan, setActiveLoan] = useState<ActiveLoan | null>(null);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,6 +46,32 @@ export default function RepaymentPage({ onNavigate }: Props) {
     totalCharged: number;
     remainingAfter: number;
   } | null>(null);
+
+  const methodInfo: Record<
+    PaymentMethod,
+    { label: string; fee: (amt: number) => number; hint: string }
+  > = {
+    bkash: {
+      label: t("repayment.methodBkash"),
+      fee: (amt) => Math.round(amt * 0.015),
+      hint: t("repayment.methodBkashHint"),
+    },
+    nagad: {
+      label: t("repayment.methodNagad"),
+      fee: (amt) => Math.round(amt * 0.012),
+      hint: t("repayment.methodNagadHint"),
+    },
+    bank: { 
+      label: t("repayment.methodBank"), 
+      fee: () => 0, 
+      hint: t("repayment.methodBankHint") 
+    },
+    card: {
+      label: t("repayment.methodCard"),
+      fee: (amt) => Math.round(amt * 0.02) + 10,
+      hint: t("repayment.methodCardHint"),
+    },
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -84,14 +95,14 @@ export default function RepaymentPage({ onNavigate }: Props) {
   }, []);
 
   const recentPayments: Transaction[] = allTransactions.filter(
-    (t) => t.type === "repayment" || t.type === "fee",
+    (tx) => tx.type === "repayment" || tx.type === "fee",
   );
 
   if (isLoading) {
     return (
       <AppLayout onNavigate={onNavigate} currentPage="repayment">
         <div className="max-w-2xl mx-auto px-4 md:px-6 py-10 flex justify-center items-center h-64">
-          <p className="text-stone-500">Loading repayment details...</p>
+          <p className="text-stone-500">{t("common.loading")}</p>
         </div>
       </AppLayout>
     );
@@ -106,31 +117,31 @@ export default function RepaymentPage({ onNavigate }: Props) {
               ✓
             </div>
             <h1 className="text-2xl font-semibold text-navy mb-1">
-              {receiptData.completed ? "Loan Fully Repaid! 🎉" : "Payment successful"}
+              {receiptData.completed ? t("repayment.successTitleCompleted") : t("repayment.successTitle")}
             </h1>
             <p className="text-sm text-stone-500 mb-6">
               {receiptData.completed
-                ? `Congratulations! You have completed all repayments for your loan.`
-                : `Your payment has been received and applied to your loan.`}
+                ? t("repayment.successBodyCompleted")
+                : t("repayment.successBody")}
             </p>
             <div className="text-left bg-stone-50 border border-stone-200 rounded-[8px] p-4">
-              <DataRow label="Receipt no." value={receiptData.receiptId} />
-              <DataRow label="Paid via" value={methodInfo[method].label} />
-              <DataRow label="Instalment" value={formatTaka(receiptData.amount)} />
-              <DataRow label="Processing fee" value={formatTaka(receiptData.fee)} />
+              <DataRow label={t("repayment.receiptNo")} value={receiptData.receiptId} />
+              <DataRow label={t("repayment.paidVia")} value={methodInfo[method].label} />
+              <DataRow label={t("repayment.instalment")} value={formatTaka(receiptData.amount)} />
+              <DataRow label={t("repayment.processingFee")} value={formatTaka(receiptData.fee)} />
               <DataRow
-                label="Total charged"
+                label={t("repayment.totalCharged")}
                 value={formatTaka(receiptData.totalCharged)}
                 emphasis
               />
-              <DataRow label="Remaining balance" value={formatTaka(receiptData.remainingAfter)} />
+              <DataRow label={t("repayment.remainingAfter")} value={formatTaka(receiptData.remainingAfter)} />
             </div>
             <div className="flex flex-col sm:flex-row gap-2 mt-6 justify-center">
               <Button variant="secondary" onClick={() => onNavigate("active-loan")}>
-                View loan details
+                {t("repayment.viewLoanDetails")}
               </Button>
               <Button variant="primary" onClick={() => onNavigate("borrower-dashboard")}>
-                Back to dashboard
+                {t("repayment.backToDashboard")}
               </Button>
             </div>
           </Card>
@@ -144,17 +155,17 @@ export default function RepaymentPage({ onNavigate }: Props) {
       <AppLayout onNavigate={onNavigate} currentPage="repayment">
         <div className="max-w-3xl mx-auto px-4 md:px-6 py-10">
           <PageHeader
-            eyebrow="Repayment"
-            title="Make a repayment"
-            description="Clear and secure loan repayments with instant receipt generation."
+            eyebrow={t("repayment.title")}
+            title={t("repayment.title")}
+            description={t("repayment.subtitle")}
           />
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px]">
             <EmptyState
               icon={EmptyIcons.transactions}
-              title="No payments due"
-              description="You do not currently have any active loans requiring repayment."
-              action={{ label: "Explore loans", onClick: () => onNavigate("loan-marketplace") }}
-              secondaryAction={{ label: "Learn more", onClick: () => onNavigate("education") }}
+              title={t("repayment.emptyTitle")}
+              description={t("repayment.emptyDescription")}
+              action={{ label: t("dashboard.exploreLoans"), onClick: () => onNavigate("loan-marketplace") }}
+              secondaryAction={{ label: t("dashboard.learnMore"), onClick: () => onNavigate("education") }}
             />
           </div>
         </div>
@@ -177,8 +188,8 @@ export default function RepaymentPage({ onNavigate }: Props) {
     <AppLayout onNavigate={onNavigate} currentPage="repayment">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
         <PageHeader
-          title="Make a payment"
-          description={`Loan details — ${activeLoan.name}`}
+          title={t("repayment.title")}
+          description={`${t("application.stepLoanDetails")} — ${activeLoan.name}`}
         />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 flex flex-col gap-5 min-w-0">
@@ -186,41 +197,41 @@ export default function RepaymentPage({ onNavigate }: Props) {
               <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between sm:items-start">
                 <div className="min-w-0">
                   <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
-                    Amount due
+                    {t("repayment.amountDue")}
                   </p>
                   <p className="font-display tabular-nums text-3xl font-semibold text-navy mt-1">
                     {formatTaka(activeLoan.monthlyPayment)}
                   </p>
                   <p className="text-sm text-stone-500 mt-1">
-                    Due {formatDate(activeLoan.nextPaymentDate)}
+                    {t("repayment.due")} {formatDate(activeLoan.nextPaymentDate)}
                   </p>
                 </div>
                 <Badge variant="warning" dot className="shrink-0">
-                  Due
+                  {t("repayment.due")}
                 </Badge>
               </div>
               {isOverdue && (
-                <Alert variant="error" title="Payment overdue" className="mt-4">
-                  This instalment is past due. A late fee may apply if not paid within 3 days.
+                <Alert variant="error" title={t("repayment.overdueTitle")} className="mt-4">
+                  {t("repayment.overdueBody")}
                 </Alert>
               )}
             </Card>
             <Card variant="plain">
               <CardHeader
-                title="Choose amount"
-                description="Pay your regular instalment, a custom amount, or clear the loan early."
+                title={t("repayment.chooseAmount")}
+                description={t("repayment.chooseAmountHint")}
               />
               <CardBody className="flex flex-col gap-4">
                 <Radio
                   name="amount-option"
-                  label={`Pay full instalment — ${formatTaka(activeLoan.monthlyPayment)}`}
+                  label={`${t("repayment.payFullInstalment")} — ${formatTaka(activeLoan.monthlyPayment)}`}
                   value="full"
                   checked={amountOption === "full"}
                   onChange={() => setAmountOption("full")}
                 />
                 <Radio
                   name="amount-option"
-                  label="Pay a custom amount"
+                  label={t("repayment.payCustomAmount")}
                   value="custom"
                   checked={amountOption === "custom"}
                   onChange={() => setAmountOption("custom")}
@@ -228,17 +239,17 @@ export default function RepaymentPage({ onNavigate }: Props) {
                 {amountOption === "custom" && (
                   <div className="ml-6.5">
                     <CurrencyInput
-                      label="Custom amount"
+                      label={t("repayment.customAmount")}
                       value={customAmount}
                       onChange={(e) => setCustomAmount(e.target.value)}
                       max={activeLoan.remainingBalance}
-                      hint={`Maximum ${formatTaka(activeLoan.remainingBalance)}`}
+                      hint={t("repayment.customAmountHint", { amount: formatTaka(activeLoan.remainingBalance) })}
                     />
                   </div>
                 )}
                 <Radio
                   name="amount-option"
-                  label={`Pay off early — ${formatTaka(activeLoan.remainingBalance)}`}
+                  label={`${t("repayment.payOffEarly")} — ${formatTaka(activeLoan.remainingBalance)}`}
                   value="payoff"
                   checked={amountOption === "payoff"}
                   onChange={() => setAmountOption("payoff")}
@@ -247,8 +258,8 @@ export default function RepaymentPage({ onNavigate }: Props) {
             </Card>
             <Card variant="plain">
               <CardHeader
-                title="Payment method"
-                description="A small processing fee may apply depending on your method."
+                title={t("repayment.paymentMethod")}
+                description={t("repayment.paymentMethodHint")}
               />
               <CardBody className="flex flex-col gap-4">
                 {(Object.keys(methodInfo) as PaymentMethod[]).map((m) => (
@@ -272,23 +283,23 @@ export default function RepaymentPage({ onNavigate }: Props) {
               onClick={() => setConfirmOpen(true)}
               disabled={instalmentAmount <= 0}
             >
-              Confirm and pay {formatTaka(totalCharged)}
+              {t("repayment.confirmAndPay")} {formatTaka(totalCharged)}
             </Button>
           </div>
           <div className="flex flex-col gap-5 min-w-0 lg:sticky lg:top-6 lg:self-start">
             <Card variant="plain">
-              <CardHeader title="Payment summary" />
+              <CardHeader title={t("repayment.summary")} />
               <CardBody>
-                <DataRow label="Instalment" value={formatTaka(instalmentAmount)} />
+                <DataRow label={t("repayment.instalment")} value={formatTaka(instalmentAmount)} />
                 <DataRow
-                  label="Processing fee"
+                  label={t("repayment.processingFee")}
                   value={formatTaka(fee)}
                   hint={methodInfo[method].hint}
                 />
-                <DataRow label="Total charged" value={formatTaka(totalCharged)} emphasis />
+                <DataRow label={t("repayment.totalCharged")} value={formatTaka(totalCharged)} emphasis />
                 <div className="mt-2 pt-2 border-t border-stone-100">
                   <DataRow
-                    label="Remaining balance after this payment"
+                    label={t("repayment.remainingAfter")}
                     value={formatTaka(remainingAfter)}
                   />
                 </div>
@@ -297,42 +308,42 @@ export default function RepaymentPage({ onNavigate }: Props) {
           </div>
         </div>
         <Card variant="plain" className="mt-6">
-          <CardHeader title="Recent payments" />
+          <CardHeader title={t("repayment.recentPayments")} />
           <DataTable
-            caption="Recent payments"
+            caption={t("repayment.recentPayments")}
             rows={recentPayments}
-            rowKey={(t) => t.id}
+            rowKey={(tx) => tx.id}
             columns={[
-              { key: "date", header: "Date", render: (t) => formatDate(t.date) },
+              { key: "date", header: t("common.date"), render: (tx) => formatDate(tx.date) },
               {
                 key: "desc",
-                header: "Description",
-                render: (t) => (
-                  <span className="block min-w-0 truncate max-w-[220px]">{t.description}</span>
+                header: t("common.description"),
+                render: (tx) => (
+                  <span className="block min-w-0 truncate max-w-[220px]">{tx.description}</span>
                 ),
               },
               {
                 key: "amount",
-                header: "Amount",
+                header: t("common.amount"),
                 numeric: true,
-                render: (t) => <span className="text-coral">−{formatTaka(t.amount)}</span>,
+                render: (tx) => <span className="text-coral">−{formatTaka(tx.amount)}</span>,
               },
               {
                 key: "status",
-                header: "Status",
-                render: (t) => (
+                header: t("common.status"),
+                render: (tx) => (
                   <Badge
                     variant={
-                      t.status === "completed"
+                      tx.status === "completed"
                         ? "success"
-                        : t.status === "pending"
+                        : tx.status === "pending"
                           ? "warning"
                           : "error"
                     }
                     size="sm"
                     dot
                   >
-                    {t.status}
+                    {t(enumKey("dashboard.tx", tx.status))}
                   </Badge>
                 ),
               },
@@ -342,7 +353,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
         <Modal
           open={confirmOpen}
           onClose={() => setConfirmOpen(false)}
-          title="Confirm payment"
+          title={t("repayment.confirmTitle")}
           footer={
             <>
               <Button
@@ -351,7 +362,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
                 onClick={() => setConfirmOpen(false)}
                 disabled={isSubmitting}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 variant="primary"
@@ -383,22 +394,18 @@ export default function RepaymentPage({ onNavigate }: Props) {
                   }
                 }}
               >
-                Pay {formatTaka(totalCharged)}
+                {t("repayment.confirmAndPay")} {formatTaka(totalCharged)}
               </Button>
             </>
           }
         >
           <div className="flex flex-col gap-1">
             <p className="text-sm text-stone-600 leading-relaxed mb-2">
-              You are about to pay{" "}
-              <span className="tabular-nums font-semibold text-navy">
-                {formatTaka(totalCharged)}
-              </span>{" "}
-              via {methodInfo[method].label} for your loan.
+              {t("repayment.confirmBody", { amount: formatTaka(totalCharged), method: methodInfo[method].label })}
             </p>
-            <DataRow label="Instalment" value={formatTaka(instalmentAmount)} />
-            <DataRow label="Processing fee" value={formatTaka(fee)} />
-            <DataRow label="Total charged" value={formatTaka(totalCharged)} emphasis />
+            <DataRow label={t("repayment.instalment")} value={formatTaka(instalmentAmount)} />
+            <DataRow label={t("repayment.processingFee")} value={formatTaka(fee)} />
+            <DataRow label={t("repayment.totalCharged")} value={formatTaka(totalCharged)} emphasis />
           </div>
         </Modal>
       </div>

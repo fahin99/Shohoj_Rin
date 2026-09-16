@@ -6,6 +6,7 @@ import { Tabs } from "../components/Tabs";
 import { SearchInput, TextInput } from "../components/Input";
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
 import { formatTaka } from "../lib/format";
+import { useTranslation } from "../lib/language-context";
 
 // Static educational content — not financial data, safe to keep client-side
 const educationArticles = [
@@ -104,7 +105,7 @@ const faqs = [
   },
   {
     q: "Can I repay my loan early?",
-    a: "Most Shohoj Rin partner products allow early repayment. Check the specific loan\u2019s terms for any prepayment charges before applying.",
+    a: "Most Shohoj Rin partner products allow early repayment. Check the specific loan’s terms for any prepayment charges before applying.",
   },
   {
     q: "What happens if I miss a payment?",
@@ -116,6 +117,7 @@ const faqs = [
   },
 ];
 export default function FinancialEducation({ onNavigate, user }: Props) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [amount, setAmount] = useState(150000);
@@ -148,16 +150,15 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
       <section className="max-w-6xl mx-auto px-4 md:px-6 pt-14 pb-12">
         <div className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
-            Financial education
+            {t("education.eyebrow")}
           </p>
           <h1 className="font-display text-4xl md:text-5xl text-navy leading-[1.1] mb-4">
-            Understand money
+            {t("education.title1")}
             <br />
-            <em className="not-italic text-teal">before you borrow it.</em>
+            <em className="not-italic text-teal">{t("education.titleEmphasis")}</em>
           </h1>
           <p className="text-stone-500 leading-relaxed">
-            Clear, jargon-free guides on interest, repayment, credit, and planning — written for
-            first-time borrowers across Bangladesh.
+            {t("education.body")}
           </p>
         </div>
       </section>
@@ -166,17 +167,17 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mb-5">
           <div className="w-full sm:max-w-xs">
             <SearchInput
-              placeholder="Search articles..."
+              placeholder={t("education.searchPlaceholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onClear={() => setQuery("")}
-              aria-label="Search articles"
+              aria-label={t("education.searchPlaceholder")}
             />
           </div>
         </div>
         <Tabs
           variant="pill"
-          tabs={categories.map((c) => ({ id: c, label: c }))}
+          tabs={categories.map((c) => ({ id: c, label: c === "All" ? t("category.all") : c }))}
           activeTab={category}
           onChange={setCategory}
         />
@@ -186,7 +187,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
         <section className="max-w-6xl mx-auto px-4 md:px-6 pb-10">
           <div className="bg-teal border-[1.5px] border-navy rounded-[8px] shadow-nb-lg p-6 md:p-8 grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-start">
             <span className="inline-flex px-2.5 py-1 rounded-[4px] bg-white text-teal text-xs font-semibold uppercase tracking-wide w-fit">
-              Featured
+              {t("education.featured")}
             </span>
             <div className="min-w-0">
               <h2 className="text-2xl font-semibold text-white mb-2">{featured.title}</h2>
@@ -197,7 +198,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
                   size="sm"
                   onClick={() => onNavigate("loan-marketplace")}
                 >
-                  Read guide
+                  {t("education.readGuide")}
                 </Button>
                 <span className="text-xs text-white/80">{featured.readTime}</span>
               </div>
@@ -210,8 +211,8 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
         {rest.length === 0 ? (
           <EmptyState
             icon={EmptyIcons.search}
-            title="No articles found"
-            description="Try a different search term or category."
+            title={t("education.emptyTitle")}
+            description={t("education.emptyDescription")}
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -240,19 +241,19 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-16">
           <div className="mb-10 max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
-              Try it yourself
+              {t("education.calculatorEyebrow")}
             </p>
             <h2 className="font-display text-3xl md:text-4xl text-navy mb-2">
-              Loan cost calculator
+              {t("education.calculatorTitle")}
             </h2>
             <p className="text-stone-500">
-              See how amount, rate, and tenure change your monthly instalment.
+              {t("education.calculatorBody")}
             </p>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-8 bg-offwhite border-[1.5px] border-navy rounded-[8px] shadow-nb p-6">
             <div className="flex flex-col gap-5 min-w-0">
               <TextInput
-                label="Loan amount"
+                label={t("education.loanAmount")}
                 type="number"
                 min={1000}
                 step={1000}
@@ -262,7 +263,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
                 className="tabular-nums"
               />
               <TextInput
-                label="Interest rate (% p.a.)"
+                label={t("education.interestRateLabel")}
                 type="number"
                 min={0}
                 step={0.25}
@@ -271,7 +272,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
                 className="tabular-nums"
               />
               <TextInput
-                label="Tenure (months)"
+                label={t("education.tenureLabel")}
                 type="number"
                 min={1}
                 step={1}
@@ -283,7 +284,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
             <div className="flex flex-col gap-3 min-w-0">
               <div className="bg-white border-[1.5px] border-teal rounded-[6px] p-4">
                 <p className="text-xs text-stone-500 font-medium uppercase tracking-wide">
-                  Monthly instalment (EMI)
+                  {t("education.monthlyInstalment")}
                 </p>
                 <p className="font-display tabular-nums text-2xl font-semibold text-teal mt-1">
                   {formatTaka(Math.round(emi))}
@@ -291,20 +292,20 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-white border border-stone-200 rounded-[6px] p-4">
-                  <p className="text-xs text-stone-500 font-medium">Total interest</p>
+                  <p className="text-xs text-stone-500 font-medium">{t("education.totalInterest")}</p>
                   <p className="tabular-nums text-lg font-semibold text-navy mt-1">
                     {formatTaka(Math.round(totalInterest))}
                   </p>
                 </div>
                 <div className="bg-white border border-stone-200 rounded-[6px] p-4">
-                  <p className="text-xs text-stone-500 font-medium">Total repayment</p>
+                  <p className="text-xs text-stone-500 font-medium">{t("education.totalRepayment")}</p>
                   <p className="tabular-nums text-lg font-semibold text-navy mt-1">
                     {formatTaka(Math.round(totalRepayment))}
                   </p>
                 </div>
               </div>
               <p className="text-xs text-stone-400 mt-1">
-                Estimate only. Actual offers depend on the lender and your eligibility.
+                {t("education.calculatorDisclaimer")}
               </p>
             </div>
           </div>
@@ -314,9 +315,9 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
       <section className="max-w-6xl mx-auto px-4 md:px-6 py-16">
         <div className="mb-10 max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
-            Key terms
+            {t("education.glossaryEyebrow")}
           </p>
-          <h2 className="font-display text-3xl md:text-4xl text-navy">Glossary</h2>
+          <h2 className="font-display text-3xl md:text-4xl text-navy">{t("education.glossaryTitle")}</h2>
         </div>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
           {glossary.map((g) => (
@@ -332,9 +333,9 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
         <div className="max-w-3xl mx-auto px-4 md:px-6 py-16">
           <div className="mb-10">
             <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
-              Common questions
+              {t("education.faqEyebrow")}
             </p>
-            <h2 className="font-display text-3xl md:text-4xl text-navy">FAQ</h2>
+            <h2 className="font-display text-3xl md:text-4xl text-navy">{t("education.faqTitle")}</h2>
           </div>
           <div className="flex flex-col gap-3">
             {faqs.map((f, i) => (
@@ -359,10 +360,10 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-16 flex flex-col md:flex-row items-center justify-between gap-8">
           <div>
             <h2 className="font-display text-3xl md:text-4xl text-white mb-3">
-              Ready to put this into practice?
+              {t("education.ctaTitle")}
             </h2>
             <p className="text-stone-400 max-w-md leading-relaxed">
-              Explore real loan products with transparent terms matched to your needs.
+              {t("education.ctaBody")}
             </p>
           </div>
           <Button
@@ -371,7 +372,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
             className="shrink-0"
             onClick={() => onNavigate("loan-marketplace")}
           >
-            Explore loans
+            {t("dashboard.exploreLoans")}
           </Button>
         </div>
       </section>

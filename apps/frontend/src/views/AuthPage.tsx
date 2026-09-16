@@ -1,24 +1,32 @@
+"use client";
+
 import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "../lib/language-context";
 import { Logo } from "../components/Logo";
 import { Button } from "../components/Button";
 import { TextInput, PasswordInput, Checkbox } from "../components/Input";
 import { Alert } from "../components/Alert";
 import type { PageName } from "../types";
 import { apiRequest } from "../lib/api";
+
 type AuthMode = "login" | "register" | "forgot";
+
 interface AuthPageProps {
   onNavigate: (page: PageName) => void;
   initialMode?: "login" | "register";
 }
+
 export default function AuthPage({ onNavigate, initialMode = "register" }: AuthPageProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
   const [role, setRole] = useState<"borrower" | "lender">("borrower");
+  
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -28,18 +36,23 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
     remember: false,
     terms: false,
   });
+
   const update = (k: string, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
+
   useEffect(() => {
     setMode(initialMode);
     setErrors({});
     setSuccess(false);
   }, [initialMode]);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const errs: Record<string, string> = {};
+
     if (mode !== "forgot" && !form.password) errs.password = "Password is required";
     if ((mode === "login" || mode === "forgot") && !form.email)
       errs.email = "Email, phone, or username is required";
+
     if (mode === "register") {
       if (!form.name.trim()) errs.name = "Username is required";
       else if (!/^[a-zA-Z0-9_.-]{3,50}$/.test(form.name.trim()))
@@ -49,15 +62,19 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
       if (form.password !== form.confirm) errs.confirm = "Passwords do not match";
       if (!form.terms) errs.terms = "You must agree to the terms to continue";
     }
+
     setErrors(errs);
     if (Object.keys(errs).length) return;
+
     setLoading(true);
     setApiError("");
+
     try {
       if (mode === "forgot") {
         setSuccess(true);
         return;
       }
+
       if (mode === "register") {
         const result = await apiRequest<{ user: { role: "borrower" | "lender" } }>(
           "/auth/register",
@@ -89,6 +106,7 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
           onNavigate("borrower-dashboard");
         }
       }
+
       router.refresh();
     } catch (error) {
       setApiError(error instanceof Error ? error.message : "Authentication failed");
@@ -96,27 +114,33 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
       setLoading(false);
     }
   };
+
   return (
     <div className="min-h-screen bg-offwhite flex">
+      {/* Left Banner */}
       <div className="hidden lg:flex lg:w-[45%] bg-navy flex-col justify-between p-10">
         <Logo variant="white" size="lg" onClick={() => onNavigate("landing")} />
         <div>
           <h2 className="font-display text-4xl text-white leading-tight mb-4">
-            Your financial journey starts here.
+            {t("landing.heroTitle1")}
           </h2>
           <p className="text-stone-400 leading-relaxed">
-            Simple, transparent, and designed for first-time borrowers.
+            {t("landing.heroBody")}
           </p>
         </div>
         <p className="text-xs text-stone-600">
-          © 2025 Shohoj Rin Technologies Ltd. BFIU Registered.
+          {t("app.copyright")}
         </p>
       </div>
+
+      {/* Right Form */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
           <div className="lg:hidden mb-8">
             <Logo onClick={() => onNavigate("landing")} />
           </div>
+
+          {/* Mode Switcher */}
           {mode !== "forgot" && (
             <div className="flex mb-7 bg-stone-100 border border-stone-200 rounded-[6px] p-1">
               {(["login", "register"] as const).map((m) => (
@@ -130,97 +154,108 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
                   }}
                   className={`flex-1 py-1.5 text-sm font-medium rounded-[4px] ${mode === m ? "bg-white text-navy shadow-nb-xs" : "text-stone-500"}`}
                 >
-                  {m === "login" ? "Log in" : "Register"}
+                  {m === "login" ? t("auth.login") : t("auth.register")}
                 </button>
               ))}
             </div>
           )}
+
+          {/* Header */}
           <div className="mb-6">
             <h1 className="text-2xl font-semibold text-navy">
               {mode === "login"
-                ? "Welcome back"
+                ? t("auth.welcomeBack")
                 : mode === "register"
-                  ? "Create your account"
-                  : "Reset your password"}
+                  ? t("auth.createAccount")
+                  : t("auth.resetPassword")}
             </h1>
             <p className="text-sm text-stone-500 mt-1">
               {mode === "login"
-                ? "Log in to manage your loans and repayments."
+                ? t("auth.loginSubtitle")
                 : mode === "register"
-                  ? "Get started — it only takes a few minutes."
-                  : "Enter your email and we will send a reset link."}
+                  ? t("auth.registerSubtitle")
+                  : t("auth.forgotSubtitle")}
             </p>
           </div>
+
+          {/* Messages */}
           {success && mode === "forgot" && (
-            <Alert variant="success" title="Reset link sent" dismissible>
-              Check your inbox — we sent a password reset link.
+            <Alert variant="success" title={t("auth.resetSentTitle")} dismissible>
+              {t("auth.resetSentBody")}
             </Alert>
           )}
+
           {apiError && (
-            <Alert variant="error" title="Authentication failed" dismissible>
+            <Alert variant="error" title={t("auth.authFailedTitle")} dismissible>
               {apiError}
             </Alert>
           )}
+
+          {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {mode === "register" && (
               <TextInput
-                label="Username"
+                label={t("auth.username")}
                 placeholder="rahim_uddin"
                 value={form.name}
                 onChange={(e) => update("name", e.target.value)}
                 error={errors.name}
-                hint="This is your account username, not your full name."
+                hint={t("auth.usernameHint")}
                 required
                 autoComplete="username"
               />
             )}
+
             <TextInput
-              label={mode === "login" ? "Email, phone, or username" : "Email address"}
+              label={mode === "login" ? t("auth.emailOrUsername") : t("auth.emailAddress")}
               type={mode === "login" ? "text" : "email"}
-              placeholder={mode === "login" ? "you@example.com" : "you@example.com"}
+              placeholder="you@example.com"
               value={form.email}
               onChange={(e) => update("email", e.target.value)}
               error={errors.email}
               required
               autoComplete={mode === "login" ? "username" : "email"}
             />
+
             {mode === "register" && (
               <TextInput
-                label="Phone number"
+                label={t("auth.phoneNumber")}
                 type="tel"
                 placeholder="+880 1XXXXXXXXX"
                 value={form.phone}
                 onChange={(e) => update("phone", e.target.value)}
-                hint="We will send verification codes to this number."
+                hint={t("auth.phoneHint")}
               />
             )}
+
             {mode === "register" && (
               <div>
-                <p className="text-sm font-medium text-navy mb-3">I want to join as</p>
+                <p className="text-sm font-medium text-navy mb-3">{t("auth.iWantToJoinAs")}</p>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setRole("borrower")}
                     className={`text-left p-4 border-[1.5px] rounded-[6px] ${role === "borrower" ? "border-teal bg-teal-light text-teal" : "border-stone-200 bg-white text-stone-600"}`}
                   >
-                    <p className="font-medium">Customer / Borrower</p>
-                    <p className="text-xs mt-1">I want to apply for loans.</p>
+                    <p className="font-medium">{t("auth.roleBorrowerTitle")}</p>
+                    <p className="text-xs mt-1">{t("auth.roleBorrowerBody")}</p>
                   </button>
                   <button
                     type="button"
                     onClick={() => setRole("lender")}
                     className={`text-left p-4 border-[1.5px] rounded-[6px] ${role === "lender" ? "border-teal bg-teal-light text-teal" : "border-stone-200 bg-white text-stone-600"}`}
                   >
-                    <p className="font-medium">Sponsor / Investor</p>
-                    <p className="text-xs mt-1">I want to fund borrowers.</p>
+                    <p className="font-medium">{t("auth.roleLenderTitle")}</p>
+                    <p className="text-xs mt-1">{t("auth.roleLenderBody")}</p>
                   </button>
                 </div>
               </div>
             )}
+
             {mode !== "forgot" && (
               <PasswordInput
-                label="Password"
-                placeholder={mode === "register" ? "At least 8 characters" : "••••••••"}
+                label={t("auth.password")}
+                placeholder={mode === "register" ? t("auth.passwordHint") : "••••••••"}
                 value={form.password}
                 onChange={(e) => update("password", e.target.value)}
                 error={errors.password}
@@ -228,9 +263,10 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
                 autoComplete={mode === "register" ? "new-password" : "current-password"}
               />
             )}
+
             {mode === "register" && (
               <PasswordInput
-                label="Confirm password"
+                label={t("auth.confirmPassword")}
                 placeholder="••••••••"
                 value={form.confirm}
                 onChange={(e) => update("confirm", e.target.value)}
@@ -239,10 +275,11 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
                 autoComplete="new-password"
               />
             )}
+
             {mode === "login" && (
               <div className="flex items-center justify-between">
                 <Checkbox
-                  label="Remember me"
+                  label={t("auth.rememberMe")}
                   checked={form.remember}
                   onChange={(v) => update("remember", v)}
                 />
@@ -255,26 +292,29 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
                   }}
                   className="text-sm text-teal hover:underline"
                 >
-                  Forgot password?
+                  {t("auth.forgotPassword")}
                 </button>
               </div>
             )}
+
             {mode === "register" && (
               <Checkbox
-                label={<span>I agree to the Terms of Service and Privacy Policy.</span>}
+                label={<span>{t("auth.agreeToTerms")}</span>}
                 checked={form.terms}
                 onChange={(v) => update("terms", v)}
                 error={errors.terms}
               />
             )}
+
             <Button type="submit" variant="primary" size="lg" fullWidth loading={loading}>
               {mode === "login"
-                ? "Log in"
+                ? t("auth.login")
                 : mode === "register"
-                  ? "Create account"
-                  : "Send reset link"}
+                  ? t("auth.createAccount")
+                  : t("auth.sendResetLink")}
             </Button>
           </form>
+
           {mode === "forgot" && (
             <button
               type="button"
@@ -285,7 +325,7 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
               }}
               className="mt-4 w-full text-sm text-stone-500 hover:text-navy"
             >
-              ← Back to login
+              {t("auth.backToLogin")}
             </button>
           )}
         </div>

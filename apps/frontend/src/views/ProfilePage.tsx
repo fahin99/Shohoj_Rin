@@ -14,6 +14,8 @@ import type { PageName } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
 import type { InvestorProfile, ProfileCompletionItem } from "@shohojrin/shared";
 import type { TrustScoreData } from "../lib/api/trust";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
 import { useCallback, useEffect, useState } from "react";
 
 interface Props {
@@ -187,6 +189,7 @@ function toFormValue(value: string | number | null | undefined) {
 }
 
 export default function ProfilePage({ onNavigate, user }: Props) {
+  const { t } = useTranslation();
   const isLender = user.role === "lender";
 
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
@@ -500,26 +503,26 @@ export default function ProfilePage({ onNavigate, user }: Props) {
     >
       <div className="max-w-4xl mx-auto px-4 md:px-6 py-6">
         <PageHeader
-          eyebrow="Account"
-          title="Your profile"
-          description="Review and update the information used across your loan applications."
+          eyebrow={t("settings.account")}
+          title={t("profile.title")}
+          description={t("profile.description")}
         />
 
         {!isLender && profileError && (
-          <Alert variant="error" title="Couldn't load your profile" className="mb-5">
+          <Alert variant="error" title={t("profile.notFoundTitle")} className="mb-5">
             {profileError}
           </Alert>
         )}
 
         {!isLender && saveSuccess && !isEditing && (
-          <Alert variant="success" title="Profile updated" dismissible className="mb-5">
-            Your profile changes have been saved.
+          <Alert variant="success" title={t("common.save")} dismissible className="mb-5">
+            {t("common.save")}
           </Alert>
         )}
 
         {isLender && lenderSaveSuccess && !lenderIsEditing && (
-          <Alert variant="success" title="Profile updated" dismissible className="mb-5">
-            Your profile changes have been saved.
+          <Alert variant="success" title={t("common.save")} dismissible className="mb-5">
+            {t("common.save")}
           </Alert>
         )}
 
@@ -527,11 +530,11 @@ export default function ProfilePage({ onNavigate, user }: Props) {
           investorLoading ? (
             <Card>
               <CardBody>
-                <p className="text-sm text-stone-500">Loading your profile…</p>
+                <p className="text-sm text-stone-500">{t("common.loading")}</p>
               </CardBody>
             </Card>
           ) : investorError ? (
-            <Alert variant="error" title="Couldn't load your profile">
+            <Alert variant="error" title={t("profile.notFoundTitle")}>
               {investorError}
             </Alert>
           ) : investorProfile ? (
@@ -544,7 +547,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                   <div className="min-w-0 flex-1">
                     <p className="text-lg font-semibold text-navy truncate">@{username}</p>
                     <p className="text-sm text-stone-500 truncate">
-                      {investorProfile.displayName || "Display name not set"}
+                      {investorProfile.displayName || t("common.notSet")}
                     </p>
                     <div className="flex flex-wrap items-center gap-2 mt-2">
                       <Badge variant="teal" size="sm">
@@ -559,8 +562,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                         size="sm"
                         dot
                       >
-                        {verificationStatusLabel[investorProfile.verificationStatus ?? "pending"] ??
-                          "Pending"}
+                        {t(enumKey("verification", investorProfile.verificationStatus ?? "pending"))}
                       </Badge>
                       <Badge
                         variant={
@@ -571,8 +573,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                         dot
                       >
                         KYC:{" "}
-                        {completionStatusLabel[investorProfile.kycStatus ?? "incomplete"] ??
-                          "Incomplete"}
+                        {t(enumKey("verification", investorProfile.kycStatus ?? "incomplete"))}
                       </Badge>
                     </div>
                   </div>
@@ -583,7 +584,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       onClick={startLenderEdit}
                       className="shrink-0"
                     >
-                      Edit profile
+                      {t("profile.editProfile")}
                     </Button>
                   )}
                 </CardBody>
@@ -598,7 +599,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
               {lenderIsEditing && lenderForm ? (
                 <Card>
                   <CardHeader
-                    title="Edit profile"
+                    title={t("profile.editProfile")}
                     description="Update your details below, then save your changes."
                   />
                   <CardBody className="flex flex-col gap-5">
@@ -631,29 +632,29 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                     </div>
                     <div className="border-t border-stone-200 pt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <CurrencyInput
-                        label="Funding capacity"
+                        label={t("profile.fundingCapacity")}
                         value={lenderForm.fundingCapacity}
                         onChange={(e) => updateLenderForm("fundingCapacity", e.target.value)}
                       />
                       <CurrencyInput
-                        label="Maximum exposure"
+                        label={t("profile.maxExposure")}
                         value={lenderForm.maxExposure}
                         onChange={(e) => updateLenderForm("maxExposure", e.target.value)}
                       />
                       <Select
-                        label="Risk preference"
+                        label={t("profile.riskPreference")}
                         value={lenderForm.riskPreference}
                         onChange={(e) => updateLenderForm("riskPreference", e.target.value)}
-                        options={riskPreferenceOptions}
+                        options={riskPreferenceOptions.map(o => ({...o, label: t(enumKey("risk", o.value))}))}
                         placeholder="Select"
                       />
                     </div>
                     <div className="border-t border-stone-200 pt-5 flex flex-col gap-2">
-                      <p className="text-sm font-medium text-navy">Preferred loan purposes</p>
+                      <p className="text-sm font-medium text-navy">{t("profile.preferredCategories")}</p>
                       {supportedCategories.map((category) => (
                         <Checkbox
                           key={category.value}
-                          label={category.label}
+                          label={t(enumKey("category", category.value))}
                           checked={lenderForm.preferredCategories.includes(category.value)}
                           onChange={() => togglePreferredCategory(category.value)}
                         />
@@ -661,10 +662,10 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                     </div>
                     <div className="flex items-center justify-end gap-2 border-t border-stone-200 pt-5">
                       <Button variant="ghost" onClick={cancelLenderEdit} disabled={lenderSaving}>
-                        Cancel
+                        {t("common.cancel")}
                       </Button>
                       <Button variant="primary" onClick={handleLenderSave} loading={lenderSaving}>
-                        Save changes
+                        {t("common.save")}
                       </Button>
                     </div>
                   </CardBody>
@@ -673,8 +674,8 @@ export default function ProfilePage({ onNavigate, user }: Props) {
 
               <Card>
                 <CardHeader
-                  title="Company / organization"
-                  description="Borrowers see this company as the source of their funding."
+                  title={t("profile.company")}
+                  description={t("profile.companyHint")}
                 />
                 <CardBody>
                   <DataRow label="Company name" value={investorProfile.company?.name || "—"} />
@@ -693,10 +694,10 @@ export default function ProfilePage({ onNavigate, user }: Props) {
               </Card>
 
               <Card>
-                <CardHeader title="Investment profile" />
+                <CardHeader title={t("profile.investmentProfile")} />
                 <CardBody>
                   <DataRow
-                    label="Funding capacity"
+                    label={t("profile.fundingCapacity")}
                     value={
                       investorProfile.fundingCapacity != null
                         ? formatTaka(Number(investorProfile.fundingCapacity))
@@ -704,7 +705,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                     }
                   />
                   <DataRow
-                    label="Maximum exposure"
+                    label={t("profile.maxExposure")}
                     value={
                       investorProfile.maxExposure != null
                         ? formatTaka(Number(investorProfile.maxExposure))
@@ -712,21 +713,20 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                     }
                   />
                   <DataRow
-                    label="Risk preference"
+                    label={t("profile.riskPreference")}
                     value={
                       investorProfile.riskPreference
-                        ? (riskPreferenceLabel[investorProfile.riskPreference] ??
-                          investorProfile.riskPreference)
+                        ? (t(enumKey("risk", investorProfile.riskPreference)))
                         : "—"
                     }
                   />
                   <DataRow
-                    label="Preferred loan purposes"
+                    label={t("profile.preferredCategories")}
                     value={
                       investorProfile.preferredCategories &&
                       investorProfile.preferredCategories.length > 0
                         ? investorProfile.preferredCategories
-                            .map((c) => loanCategoryLabel[c] ?? c)
+                            .map((c) => t(enumKey("category", c)))
                             .join(", ")
                         : "—"
                     }
@@ -735,10 +735,10 @@ export default function ProfilePage({ onNavigate, user }: Props) {
               </Card>
 
               <Card>
-                <CardHeader title="Lending statistics" />
+                <CardHeader title={t("profile.lendingStatistics")} />
                 {lenderStatsLoading ? (
                   <CardBody>
-                    <p className="text-sm text-stone-500">Loading loan statistics…</p>
+                    <p className="text-sm text-stone-500">{t("common.loading")}</p>
                   </CardBody>
                 ) : lenderStatsError ? (
                   <CardBody>
@@ -751,7 +751,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-xs text-stone-500 uppercase tracking-wide">
-                          Total loans funded
+                          {t("profile.totalLoansFunded")}
                         </p>
                         <p className="tabular-nums text-2xl font-semibold text-navy mt-1">
                           {lenderStats?.total ?? 0}
@@ -759,7 +759,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       </div>
                       <div>
                         <p className="text-xs text-stone-500 uppercase tracking-wide">
-                          Completed loans
+                          {t("profile.completedLoans")}
                         </p>
                         <p className="tabular-nums text-2xl font-semibold text-navy mt-1">
                           {lenderStats?.completed ?? 0}
@@ -773,14 +773,14 @@ export default function ProfilePage({ onNavigate, user }: Props) {
           ) : (
             <EmptyState
               icon={EmptyIcons.error}
-              title="Profile not found"
-              description="We couldn't find an investor profile for your account."
+              title={t("profile.notFoundTitle")}
+              description={t("profile.notFoundDescription")}
             />
           )
         ) : loadingProfile ? (
           <Card>
             <CardBody>
-              <p className="text-sm text-stone-500">Loading your profile…</p>
+              <p className="text-sm text-stone-500">{t("common.loading")}</p>
             </CardBody>
           </Card>
         ) : profile ? (
@@ -801,7 +801,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                 <div className="min-w-0 flex-1">
                   <p className="text-lg font-semibold text-navy truncate">@{username}</p>
                   <p className="text-sm text-stone-500 truncate">
-                    {profile.full_name || "Full name not set"}
+                    {profile.full_name || t("common.notSet")}
                   </p>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     <Badge variant="teal" size="sm" className="capitalize">
@@ -814,8 +814,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       size="sm"
                       dot
                     >
-                      {completionStatusLabel[profile.profile_completion_status ?? "incomplete"] ??
-                        "Incomplete"}
+                      {t(enumKey("verification", profile.profile_completion_status ?? "incomplete"))}
                     </Badge>
                     {completionItems.length > 0 && (
                       <span className="text-xs text-stone-500">
@@ -826,7 +825,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                 </div>
                 {!isEditing && (
                   <Button variant="secondary" size="sm" onClick={startEdit} className="shrink-0">
-                    Edit profile
+                    {t("profile.editProfile")}
                   </Button>
                 )}
               </CardBody>
@@ -841,7 +840,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
             {isEditing && form ? (
               <Card>
                 <CardHeader
-                  title="Edit profile"
+                  title={t("profile.editProfile")}
                   description="Update your details below, then save your changes."
                 />
                 <CardBody className="flex flex-col gap-5">
@@ -905,7 +904,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       label="Employment type"
                       value={form.employmentType}
                       onChange={(e) => updateForm("employmentType", e.target.value)}
-                      options={employmentOptions}
+                      options={employmentOptions.map(o => ({...o, label: t(enumKey("employment", o.value))}))}
                       placeholder="Select"
                     />
                     <TextInput
@@ -954,10 +953,10 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                   </div>
                   <div className="flex items-center justify-end gap-2 border-t border-stone-200 pt-5">
                     <Button variant="ghost" onClick={cancelEdit} disabled={saving}>
-                      Cancel
+                      {t("common.cancel")}
                     </Button>
                     <Button variant="primary" onClick={handleSave} loading={saving}>
-                      Save changes
+                      {t("common.save")}
                     </Button>
                   </div>
                 </CardBody>
@@ -965,7 +964,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
             ) : (
               <>
                 <Card>
-                  <CardHeader title="Personal & identity" />
+                  <CardHeader title={t("profile.personalIdentity")} />
                   <CardBody>
                     <DataRow label="Full name" value={profile.full_name || "—"} />
                     <DataRow
@@ -984,7 +983,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                 </Card>
 
                 <Card>
-                  <CardHeader title="Financial profile" />
+                  <CardHeader title={t("profile.financialProfile")} />
                   <CardBody>
                     <DataRow label="Occupation" value={profile.occupation || "—"} />
                     <DataRow
@@ -1018,7 +1017,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                 </Card>
 
                 <Card>
-                  <CardHeader title="Education" />
+                  <CardHeader title={t("profile.education")} />
                   <CardBody>
                     <DataRow label="Institution" value={profile.institution_name || "—"} />
                     <DataRow label="Student ID" value={profile.student_id || "—"} />
@@ -1031,17 +1030,17 @@ export default function ProfilePage({ onNavigate, user }: Props) {
 
                 <Card>
                   <CardHeader
-                    title="Guarantor information"
-                    description="A reference who supports your loan applications."
+                    title={t("profile.guarantorInfo")}
+                    description={t("profile.guarantorHint")}
                     action={
                       <Button variant="secondary" size="sm" onClick={() => onNavigate("onboarding")}>
-                        {guarantor ? "Update" : "Add guarantor"}
+                        {guarantor ? t("profile.updateGuarantor") : t("profile.addGuarantor")}
                       </Button>
                     }
                   />
                   {guarantorLoading ? (
                     <CardBody>
-                      <p className="text-sm text-stone-500">Loading guarantor…</p>
+                      <p className="text-sm text-stone-500">{t("common.loading")}</p>
                     </CardBody>
                   ) : guarantorError ? (
                     <CardBody>
@@ -1060,7 +1059,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       <div className="flex items-center justify-between py-1.5">
                         <span className="text-sm text-stone-500">Verification status</span>
                         <Badge variant={guarantor.isVerified ? "success" : "warning"} size="sm" dot>
-                          {guarantor.isVerified ? "Verified" : "Pending"}
+                          {guarantor.isVerified ? t(enumKey("verification", "approved")) : t(enumKey("verification", "pending"))}
                         </Badge>
                       </div>
                     </CardBody>
@@ -1068,8 +1067,8 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                     <CardBody>
                       <EmptyState
                         size="sm"
-                        title="No guarantor information added yet."
-                        description="Add a guarantor from onboarding to strengthen your applications."
+                        title={t("profile.noGuarantor")}
+                        description={t("profile.noGuarantorHint")}
                       />
                     </CardBody>
                   )}
@@ -1079,12 +1078,12 @@ export default function ProfilePage({ onNavigate, user }: Props) {
 
             <Card>
               <CardHeader
-                title="Trust score"
-                description="An explainable score lenders use alongside your application."
+                title={t("profile.trustScore")}
+                description={t("profile.trustScoreHint")}
               />
               {trustLoading ? (
                 <CardBody>
-                  <p className="text-sm text-stone-500">Loading trust score…</p>
+                  <p className="text-sm text-stone-500">{t("common.loading")}</p>
                 </CardBody>
               ) : trustError ? (
                 <CardBody>
@@ -1103,22 +1102,22 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       </p>
                     </div>
                     <Badge variant={trustBandVariant[trustScore.band] ?? "neutral"} dot>
-                      {trustBandLabel[trustScore.band] ?? trustScore.band}
+                      {t(enumKey("trustBand", trustScore.band))}
                     </Badge>
                     {trustScore.isFirstTimeBorrower && (
                       <Badge variant="neutral" size="sm">
-                        First-time borrower
+                        {t("profile.firstTimeBorrower")}
                       </Badge>
                     )}
                     <div className="ml-auto text-right">
-                      <p className="text-xs text-stone-500">Confidence</p>
+                      <p className="text-xs text-stone-500">{t("profile.confidence")}</p>
                       <p className="tabular-nums text-sm font-medium text-navy">
                         {Math.round(trustScore.confidenceScore)}%
                       </p>
                     </div>
                   </div>
                   <p className="text-xs text-stone-400">
-                    Last updated {formatDate(trustScore.lastUpdated)}
+                    {t("profile.lastUpdated")} {formatDate(trustScore.lastUpdated)}
                   </p>
                   {trustScore.factors.length > 0 && (
                     <div className="border-t border-stone-200 pt-4 flex flex-col gap-3">
@@ -1146,8 +1145,8 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                   <EmptyState
                     icon={EmptyIcons.search}
                     size="sm"
-                    title="No trust score yet"
-                    description="Complete your profile and verification to generate a trust score."
+                    title={t("profile.noTrustScoreTitle")}
+                    description={t("profile.noTrustScoreDescription")}
                   />
                 </CardBody>
               )}
@@ -1156,8 +1155,8 @@ export default function ProfilePage({ onNavigate, user }: Props) {
         ) : (
           <EmptyState
             icon={EmptyIcons.error}
-            title="Profile not found"
-            description="We couldn't find a profile for your account."
+            title={t("profile.notFoundTitle")}
+            description={t("profile.notFoundDescription")}
           />
         )}
       </div>

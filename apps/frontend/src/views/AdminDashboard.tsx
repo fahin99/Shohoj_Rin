@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { PageHeader } from "../components/PageHeader";
@@ -14,6 +16,8 @@ import type { AdminUser } from "../lib/api/admin";
 import type { ApplicationRecord } from "../lib/api/applications";
 import type { PageName } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
 
 interface Props {
   onNavigate: (page: PageName) => void;
@@ -38,6 +42,7 @@ interface ProviderRecord {
 }
 
 export default function AdminDashboard({ onNavigate, user }: Props) {
+  const { t } = useTranslation();
   const [liveApplications, setLiveApplications] = useState<ApplicationRecord[]>([]);
   const [usersList, setUsersList] = useState<AdminUser[]>([]);
   const [providers, setProviders] = useState<ProviderRecord[]>([]);
@@ -79,7 +84,7 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
           setLiveApplications(appsRes.applications);
         }
 
-        if (statsRes){
+        if (statsRes) {
           setStats({
             applicationsToday: statsRes.applicationsToday,
             approvalRate: statsRes.approvalRate,
@@ -152,38 +157,38 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
   const columns: Column<PendingApplication>[] = [
     {
       key: "applicant",
-      header: "Applicant",
+      header: t("admin.applicant", "Applicant"),
       render: (r) => <span className="font-medium">{r.applicant}</span>,
     },
     {
       key: "product",
-      header: "Product",
+      header: t("admin.product", "Product"),
       hideBelow: "md",
       render: (r) => <span className="text-stone-500">{r.product}</span>,
     },
-    { key: "amount", header: "Amount", numeric: true, render: (r) => formatTaka(r.amount) },
+    { key: "amount", header: t("admin.amount", "Amount"), numeric: true, render: (r) => formatTaka(r.amount) },
     {
       key: "submitted",
-      header: "Submitted",
+      header: t("admin.submitted", "Submitted"),
       hideBelow: "sm",
       render: (r) => formatDate(r.submitted),
     },
     {
       key: "actions",
-      header: "Actions",
+      header: t("admin.actions", "Actions"),
       render: (r) =>
         r.status === "pending" ? (
           <div className="flex items-center gap-2 justify-end">
             <Button variant="secondary" size="xs" onClick={() => handleDecision(r.id, "rejected")}>
-              Reject
+              {t("admin.reject")}
             </Button>
             <Button variant="primary" size="xs" onClick={() => handleDecision(r.id, "approved")}>
-              Approve
+              {t("admin.approve")}
             </Button>
           </div>
         ) : (
           <Badge variant={r.status === "approved" ? "success" : "error"} size="sm">
-            {r.status === "approved" ? "Approved" : "Rejected"}
+            {r.status === "approved" ? t("admin.approved") : t("admin.rejected")}
           </Badge>
         ),
     },
@@ -195,33 +200,36 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
     <AppLayout onNavigate={onNavigate} currentPage="admin" userType="admin" userName={userName}>
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
         <PageHeader
-          eyebrow="Platform overview"
-          title="Admin dashboard"
-          description="Monitor applications, users, providers, and platform health."
+          eyebrow={t("admin.platformOverview", "Platform overview")}
+          title={t("admin.title")}
+          description={t("admin.description")}
         />
         {confirmation && (
           <div className="mb-5">
             <Alert
               variant={confirmation.type === "approved" ? "success" : "error"}
               title={
-                confirmation.type === "approved" ? "Application approved" : "Application rejected"
+                confirmation.type === "approved" ? t("admin.applicationApproved") : t("admin.applicationRejected")
               }
               dismissible
             >
-              {confirmation.applicant}'s application has been {confirmation.type}.
+              {t("admin.applicantHasBeen", {
+                applicant: confirmation.applicant,
+                status: t(`admin.${confirmation.type}`),
+              })}
             </Alert>
           </div>
         )}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          <StatCard label="Pending review" value={String(pendingCount)} tone="attention" />
-          <StatCard label="Approval rate" value={`${stats.approvalRate}%`} tone="positive" />
+          <StatCard label={t("admin.pendingReview")} value={String(pendingCount)} tone="attention" />
+          <StatCard label={t("admin.approvalRate")} value={`${stats.approvalRate}%`} tone="positive" />
           <StatCard
-            label="Total disbursed"
+            label={t("admin.totalDisbursed")}
             value={formatTaka(stats.totalDisbursed)}
             tone="info"
           />
           <StatCard
-            label="Overdue loans"
+            label={t("admin.overdueLoans")}
             value={String(stats.overdueLoans)}
             tone="critical"
           />
@@ -230,9 +238,9 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
           variant="card"
           className="mb-5"
           tabs={[
-            { id: "applications", label: "Applications", count: pendingCount },
-            { id: "users", label: "Users", count: usersList.length },
-            { id: "providers", label: "Providers", count: providers.length },
+            { id: "applications", label: t("admin.tabApplications", "Applications"), count: pendingCount },
+            { id: "users", label: t("admin.tabUsers", "Users"), count: usersList.length },
+            { id: "providers", label: t("admin.tabProviders", "Providers"), count: providers.length },
           ]}
           activeTab={tab}
           onChange={setTab}
@@ -240,11 +248,11 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
         <TabPanel id="applications" activeTab={tab}>
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] mb-6">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between items-center px-5 py-4 border-b border-stone-200">
-              <h2 className="text-sm font-semibold text-navy min-w-0">Review queue</h2>
-              <span className="text-xs text-stone-500 shrink-0">{pendingCount} pending</span>
+              <h2 className="text-sm font-semibold text-navy min-w-0">{t("admin.reviewQueue")}</h2>
+              <span className="text-xs text-stone-500 shrink-0">{pendingCount} {t("admin.pending")}</span>
             </div>
             <DataTable
-              caption="Pending applications"
+              caption={t("admin.pendingApplications", "Pending applications")}
               columns={columns}
               rows={queue}
               rowKey={(r) => r.id}
@@ -254,28 +262,28 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
         <TabPanel id="users" activeTab={tab}>
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] mb-6">
             <DataTable
-              caption="Users"
+              caption={t("admin.users", "Users")}
               rowKey={(r) => r.userId}
               rows={usersList}
               columns={[
                 {
                   key: "name",
-                  header: "Name",
+                  header: t("settings.username", "Name"),
                   render: (r) => <span className="font-medium">{r.fullName || r.email}</span>,
                 },
-                { key: "role", header: "Role", render: (r) => r.role || "User" },
+                { key: "role", header: t("settings.role", "Role"), render: (r) => r.role || t("admin.userRole", "User") },
                 {
                   key: "joined",
-                  header: "Joined",
+                  header: t("admin.joined", "Joined"),
                   hideBelow: "sm",
                   render: (r) => formatDate(r.createdAt || ""),
                 },
                 {
                   key: "status",
-                  header: "Status",
+                  header: t("settings.status", "Status"),
                   render: (r) => (
                     <Badge variant={r.accountStatus === "active" ? "success" : "error"} size="sm" dot>
-                      {r.accountStatus === "active" ? "Active" : "Inactive"}
+                      {t(enumKey("accountStatus", r.accountStatus === "active" ? "active" : "deactivated"))}
                     </Badge>
                   ),
                 },
@@ -286,28 +294,28 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
         <TabPanel id="providers" activeTab={tab}>
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] mb-6">
             <DataTable
-              caption="Providers"
+              caption={t("admin.providers", "Providers")}
               rowKey={(r) => r.id}
               rows={providers}
               columns={[
                 {
                   key: "name",
-                  header: "Provider",
+                  header: t("admin.provider", "Provider"),
                   render: (r) => <span className="font-medium">{r.name}</span>,
                 },
-                { key: "products", header: "Products", numeric: true, render: (r) => r.products },
+                { key: "products", header: t("admin.products", "Products"), numeric: true, render: (r) => r.products },
                 {
                   key: "applications",
-                  header: "Applications",
+                  header: t("admin.applications", "Applications"),
                   numeric: true,
                   render: (r) => r.applications,
                 },
                 {
                   key: "status",
-                  header: "Status",
+                  header: t("settings.status", "Status"),
                   render: (r) => (
                     <Badge variant={r.status === "active" ? "success" : "warning"} size="sm" dot>
-                      {r.status === "active" ? "Active" : "Under review"}
+                      {r.status === "active" ? t(enumKey("accountStatus", "active")) : t("admin.underReview", "Under review")}
                     </Badge>
                   ),
                 },
@@ -317,11 +325,11 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
         </TabPanel>
 
         <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5">
-          <h2 className="text-sm font-semibold text-navy mb-4">System health</h2>
+          <h2 className="text-sm font-semibold text-navy mb-4">{t("admin.systemHealth")}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { label: "API uptime", value: "99.98%", status: "success" as const },
-              { label: "Payment gateway", value: "Operational", status: "success" as const },
+              { label: t("admin.apiUptime"), value: "99.98%", status: "success" as const },
+              { label: t("admin.paymentGateway"), value: t("admin.operational"), status: "success" as const },
             ].map((item) => (
               <div
                 key={item.label}
@@ -332,7 +340,7 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
                   <p className="text-sm font-medium text-navy mt-0.5 truncate">{item.value}</p>
                 </div>
                 <Badge variant={item.status} size="sm" dot>
-                  {item.status === "success" ? "OK" : "Watch"}
+                  {item.status === "success" ? t("common.ok", "OK") : t("common.watch", "Watch")}
                 </Badge>
               </div>
             ))}
