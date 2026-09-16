@@ -65,6 +65,21 @@ export async function updateProfile(userId: string, data: ProfileUpdateInput) {
     values,
   );
 
+  if (!result.rows[0]) {
+    await pool.query(
+      `INSERT INTO user_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
+      [userId],
+    );
+    const retryResult = await pool.query(
+      `UPDATE user_profiles 
+       SET ${setClause}, updated_at = NOW() 
+       WHERE user_id = $1 
+       RETURNING *`,
+      values,
+    );
+    return retryResult.rows[0] ?? null;
+  }
+
   return result.rows[0];
 }
 

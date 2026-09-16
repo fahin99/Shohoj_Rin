@@ -126,7 +126,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between sm:items-start mb-6">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-1">
-              Loan {activeLoan.id}
+              Active Loan
             </p>
             <h1 className="text-2xl sm:text-3xl font-semibold text-navy truncate">
               {activeLoan.name}
@@ -334,7 +334,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
             <div className="min-w-0">
               <h2 className="text-sm font-semibold text-navy">Loan agreement</h2>
               <p className="text-xs text-stone-500 mt-0.5">
-                Signed agreement and disclosure documents for {activeLoan.id}.
+                Signed agreement and disclosure documents for your loan.
               </p>
             </div>
             <Button variant="secondary" size="sm" className="shrink-0">

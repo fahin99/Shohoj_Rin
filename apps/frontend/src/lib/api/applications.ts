@@ -4,6 +4,7 @@ import type { AppStatus } from "../../types";
 export interface ApplicationRecord {
   id?: string;
   applicationId?: string;
+  referenceCode?: string;
   productName?: string;
   purpose?: string;
   partnerName?: string;

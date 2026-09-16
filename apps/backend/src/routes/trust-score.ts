@@ -1,35 +1,36 @@
 import { Router } from "express";
 import { pool } from "../lib/db.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
-import { recalculateAndPersistTrustScore } from "../services/trust-persistence.service.js";
+import { 
+  recalculateAndPersistTrustScore, 
+  initializeTrustScoreIfNeeded 
+} from "../services/trust-persistence.service.js";
+
 const router = Router();
 router.use(requireAuth);
+
 router.get("/", async (req: RequestWithAuth, res) => {
   try {
-    const scoreRes = await pool.query(
-      `SELECT score_id, score, trust_band, confidence_score, calculated_at 
-       FROM trust_scores 
-       WHERE user_id = $1 AND is_current = TRUE`,
+    await initializeTrustScoreIfNeeded(req.user!.userId);
+
+    const summary = await pool.query(
+      `SELECT score, trust_band, confidence_score, calculated_at, is_first_time_borrower, factors
+       FROM borrower_trust_summary WHERE user_id = $1`,
       [req.user!.userId],
     );
-    if (scoreRes.rowCount === 0) {
-      return res.status(200).json({ success: true, data: null });
+    if (summary.rowCount === 0 || summary.rows[0].score === null) {
+      return res.status(404).json({ success: false, error: { message: "Score could not be initialized" } });
     }
-    const scoreRow = scoreRes.rows[0];
-    const factorsRes = await pool.query(
-      `SELECT factor_name as name, factor_value as score, factor_weight as weight, description 
-       FROM trust_score_factors 
-       WHERE score_id = $1`,
-      [scoreRow.score_id],
-    );
+    const row = summary.rows[0];
     return res.status(200).json({
       success: true,
       data: {
-        score: Number(scoreRow.score),
-        band: scoreRow.trust_band,
-        confidenceScore: Number(scoreRow.confidence_score || 0),
-        lastUpdated: scoreRow.calculated_at,
-        factors: factorsRes.rows.map((f) => ({
+        score: Number(row.score),
+        band: row.trust_band,
+        confidenceScore: Number(row.confidence_score || 0),
+        lastUpdated: row.calculated_at,
+        isFirstTimeBorrower: row.is_first_time_borrower,
+        factors: (row.factors || []).map((f: any) => ({
           name: f.name,
           score: Number(f.score),
           weight: Number(f.weight || 0),
@@ -42,35 +43,31 @@ router.get("/", async (req: RequestWithAuth, res) => {
     return res.status(500).json({ success: false, error: { message: "Internal server error" } });
   }
 });
+
 router.post("/recalculate", async (req: RequestWithAuth, res) => {
   try {
     await recalculateAndPersistTrustScore(req.user!.userId, "manual_recalculation");
-    const scoreRes = await pool.query(
-      `SELECT score_id, score, trust_band, confidence_score, calculated_at 
-       FROM trust_scores 
-       WHERE user_id = $1 AND is_current = TRUE`,
+
+    const summary = await pool.query(
+      `SELECT score, trust_band, confidence_score, calculated_at, is_first_time_borrower, factors
+       FROM borrower_trust_summary WHERE user_id = $1`,
       [req.user!.userId],
     );
-    if (scoreRes.rowCount === 0) {
+    if (summary.rowCount === 0 || summary.rows[0].score === null) {
       return res
         .status(404)
         .json({ success: false, error: { message: "Score could not be calculated" } });
     }
-    const scoreRow = scoreRes.rows[0];
-    const factorsRes = await pool.query(
-      `SELECT factor_name as name, factor_value as score, factor_weight as weight, description 
-       FROM trust_score_factors 
-       WHERE score_id = $1`,
-      [scoreRow.score_id],
-    );
+    const row = summary.rows[0];
     return res.status(200).json({
       success: true,
       data: {
-        score: Number(scoreRow.score),
-        band: scoreRow.trust_band,
-        confidenceScore: Number(scoreRow.confidence_score || 0),
-        lastUpdated: scoreRow.calculated_at,
-        factors: factorsRes.rows.map((f) => ({
+        score: Number(row.score),
+        band: row.trust_band,
+        confidenceScore: Number(row.confidence_score || 0),
+        lastUpdated: row.calculated_at,
+        isFirstTimeBorrower: row.is_first_time_borrower,
+        factors: (row.factors || []).map((f: any) => ({
           name: f.name,
           score: Number(f.score),
           weight: Number(f.weight || 0),

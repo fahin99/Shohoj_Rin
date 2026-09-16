@@ -1,7 +1,7 @@
 import { type PoolClient } from "pg";
 import { pool } from "../lib/db.js";
-import { TrustScoreResult, calculateTrustScore } from "./trust.service.js";
-import { buildTrustInputs } from "./trust-inputs.service.js";
+import { TrustScoreResult, calculateInitialTrustScore } from "./trust.service.js";
+import { buildTrustInputs, hasPreviousLoans } from "./trust-inputs.service.js";
 export async function persistTrustScore(
   client: Pick<PoolClient, "query">,
   userId: string,
@@ -39,8 +39,11 @@ export async function recalculateAndPersistTrustScore(
 ): Promise<{ score: number; band: string }> {
   let retries = 3;
   while (retries > 0) {
-    const inputs = await buildTrustInputs(userId);
-    const result = calculateTrustScore(inputs);
+    const [inputs, hasLoans] = await Promise.all([
+      buildTrustInputs(userId),
+      hasPreviousLoans(userId),
+    ]);
+    const result = calculateInitialTrustScore(inputs, hasLoans);
 
     if (client) {
       try {
@@ -78,4 +81,39 @@ export async function recalculateAndPersistTrustScore(
     }
   }
   throw new Error("Failed to persist trust score after retries");
+}
+
+export async function initializeTrustScoreIfNeeded(
+  userId: string,
+): Promise<{ initialized: boolean }> {
+  const existing = await pool.query(
+    `SELECT 1 FROM trust_scores WHERE user_id = $1 AND is_current = TRUE`,
+    [userId],
+  );
+  if ((existing.rowCount ?? 0) > 0) {
+    return { initialized: false };
+  }
+
+  const [inputs, hasLoans] = await Promise.all([
+    buildTrustInputs(userId),
+    hasPreviousLoans(userId),
+  ]);
+  const result = calculateInitialTrustScore(inputs, hasLoans);
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await persistTrustScore(client, userId, result, "initial_score");
+    await client.query("COMMIT");
+  } catch (error: any) {
+    await client.query("ROLLBACK");
+    if (error.code === "23505") {
+      return { initialized: false };
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  return { initialized: true };
 }

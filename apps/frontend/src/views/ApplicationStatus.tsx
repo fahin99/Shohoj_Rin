@@ -16,6 +16,7 @@ import type { PageName, AppStatus } from "../types";
 
 interface StoredApplication {
   id: string;
+  referenceCode?: string;
   product: string;
   provider: string;
   amount: number;
@@ -91,6 +92,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
       const data = await applicationsApi.getApplications();
       const mapped = (data.applications || []).map((a) => ({
         id: a.applicationId ?? "",
+        referenceCode: a.referenceCode,
         product: a.productName || a.purpose || "Loan Application",
         provider: a.partnerName || "Shohoj Rin",
         amount: a.requestedAmount ?? 0,
@@ -117,7 +119,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
     setVerifyingId(appId);
     setTimeout(() => {
       setVerifyingId(null);
-      setVerifiedAlert(`Application ${appId} has been submitted for verification!`);
+      setVerifiedAlert(`Your application has been submitted for verification!`);
       fetchApplications();
     }, 600);
   };
@@ -202,7 +204,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                       </div>
                       <p className="text-sm text-stone-500 truncate">{app.provider}</p>
                       <p className="text-xs tabular-nums text-stone-400 mt-1">
-                        {app.id} · Submitted {formatDate(app.submitted)}
+                        {app.referenceCode ? `${app.referenceCode} · ` : ""}Submitted {formatDate(app.submitted)}
                       </p>
                     </div>
                     <div className="shrink-0 flex flex-col items-end gap-2">
@@ -318,7 +320,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs text-stone-500">{selected.provider}</p>
-                  <p className="text-sm tabular-nums text-stone-400">{selected.id}</p>
+                  <p className="text-sm text-stone-400">Application details</p>
                 </div>
                 <AppStatusBadge status={selected.status} />
               </div>

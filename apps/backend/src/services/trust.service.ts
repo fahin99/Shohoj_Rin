@@ -160,3 +160,92 @@ export function calculateTrustScore(inputs: TrustInputs): TrustScoreResult {
     ],
   };
 }
+
+function generateRepaymentDescription(
+  inputs: TrustInputs["repayment"],
+  hasPreviousLoans: boolean,
+): string {
+  if (!hasPreviousLoans && inputs.totalDuePayments === 0) {
+    return "No previous loan history. First-time borrower baseline is 80.";
+  }
+  if (hasPreviousLoans && inputs.totalDuePayments === 0) {
+    return "Based on your previous repayment history.";
+  }
+  const parts: string[] = ["Based on your previous repayment history."];
+  const details: string[] = [];
+  if (inputs.onTimePayments > 0) details.push(`${inputs.onTimePayments} on time`);
+  if (inputs.latePayments > 0) details.push(`${inputs.latePayments} late`);
+  if (inputs.missedPayments > 0) details.push(`${inputs.missedPayments} missed`);
+  if (inputs.defaults > 0) details.push(`${inputs.defaults} defaulted`);
+  if (details.length > 0) parts.push(details.join(", ") + ".");
+  return parts.join(" ");
+}
+
+export function calculateInitialTrustScore(
+  inputs: TrustInputs,
+  hasPrevLoans: boolean,
+): TrustScoreResult {
+  const baseline = hasPrevLoans ? 70 : 80;
+  const neutral = 50;
+
+  const rScore = calculateRepaymentHistory(inputs.repayment);
+  const fScore = calculateFinancialCapacity(inputs.financial);
+  const bScore = calculateFinancialBehavior(inputs.behavior);
+  const vScore = calculateIdentityVerification(inputs.verification);
+  const cScore = calculateCreditBehavior(inputs.credit);
+
+  const adjustment =
+    0.35 * (rScore - neutral) +
+    0.25 * (fScore - neutral) +
+    0.15 * (bScore - neutral) +
+    0.15 * (vScore - neutral) +
+    0.10 * (cScore - neutral);
+
+  const finalScore = Math.max(0, Math.min(100, Math.round((baseline + adjustment) * 100) / 100));
+
+  return {
+    score: finalScore,
+    band: getTrustBand(finalScore),
+    confidenceScore: Math.round(calculateConfidenceScore(inputs.tenure) * 100) / 100,
+    components: [
+      {
+        name: "repayment_history",
+        score: Math.round(rScore * 100) / 100,
+        weight: 0.35,
+        description: generateRepaymentDescription(inputs.repayment, hasPrevLoans),
+      },
+      {
+        name: "financial_capacity",
+        score: Math.round(fScore * 100) / 100,
+        weight: 0.25,
+        description:
+          inputs.financial.monthlyIncome === null || inputs.financial.monthlyIncome === 0
+            ? "No income data reported yet."
+            : "Financial capacity based on your reported income and current debt obligations.",
+      },
+      {
+        name: "financial_behavior",
+        score: Math.round(bScore * 100) / 100,
+        weight: 0.15,
+        description: !inputs.behavior.hasTransactionData
+          ? "No transaction data available yet."
+          : "Financial behavior based on your transaction history.",
+      },
+      {
+        name: "identity_verification",
+        score: Math.round(vScore * 100) / 100,
+        weight: 0.15,
+        description: "Based on your current verification status.",
+      },
+      {
+        name: "credit_behavior",
+        score: Math.round(cScore * 100) / 100,
+        weight: 0.1,
+        description:
+          inputs.credit.activeLoanCount === 0 && inputs.credit.recentApplications <= 2
+            ? "No previous credit problems recorded."
+            : "Credit application and active loan behavior.",
+      },
+    ],
+  };
+}

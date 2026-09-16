@@ -110,8 +110,8 @@ export default function RepaymentPage({ onNavigate }: Props) {
             </h1>
             <p className="text-sm text-stone-500 mb-6">
               {receiptData.completed
-                ? `Congratulations! You have completed all repayments for loan ${receiptData.loanId}.`
-                : `Your payment has been received and applied to loan ${receiptData.loanId}.`}
+                ? `Congratulations! You have completed all repayments for your loan.`
+                : `Your payment has been received and applied to your loan.`}
             </p>
             <div className="text-left bg-stone-50 border border-stone-200 rounded-[8px] p-4">
               <DataRow label="Receipt no." value={receiptData.receiptId} />
@@ -178,7 +178,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
         <PageHeader
           title="Make a payment"
-          description={`Loan ${activeLoan.id} — ${activeLoan.name}`}
+          description={`Loan details — ${activeLoan.name}`}
         />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 flex flex-col gap-5 min-w-0">
@@ -394,7 +394,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
               <span className="tabular-nums font-semibold text-navy">
                 {formatTaka(totalCharged)}
               </span>{" "}
-              via {methodInfo[method].label} for loan {activeLoan.id}.
+              via {methodInfo[method].label} for your loan.
             </p>
             <DataRow label="Instalment" value={formatTaka(instalmentAmount)} />
             <DataRow label="Processing fee" value={formatTaka(fee)} />

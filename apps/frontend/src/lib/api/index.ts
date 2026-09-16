@@ -8,3 +8,4 @@ export * as investorApi from "./investor";
 export * as demoApi from "./demo";
 export * as adminApi from "./admin";
 export * as trustApi from "./trust";
+export * as guarantorApi from "./guarantor";

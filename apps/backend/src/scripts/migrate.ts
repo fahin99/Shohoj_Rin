@@ -62,6 +62,7 @@ async function ensureAccountIdentitySchema(client: PoolClient) {
       ADD COLUMN IF NOT EXISTS employment_type VARCHAR(50),
       ADD COLUMN IF NOT EXISTS employer_name VARCHAR(255),
       ADD COLUMN IF NOT EXISTS monthly_income DECIMAL(12,2),
+      ADD COLUMN IF NOT EXISTS monthly_savings DECIMAL(12,2),
       ADD COLUMN IF NOT EXISTS income_source VARCHAR(100),
       ADD COLUMN IF NOT EXISTS profile_completion_status VARCHAR(30) NOT NULL DEFAULT 'incomplete'
   `);
@@ -231,6 +232,81 @@ async function ensureLenderInvestorProfileInvariant(client: PoolClient) {
   }
 }
 
+async function ensureLoanApplicationReference(client: PoolClient) {
+  const columnExists = await client.query(`
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'loan_applications' AND column_name = 'reference_code'
+  `);
+  if (!columnExists.rowCount) {
+    console.log("Adding reference_code to loan_applications...");
+    await client.query(`CREATE SEQUENCE IF NOT EXISTS loan_application_ref_seq START 1`);
+    await client.query(`ALTER TABLE loan_applications ADD COLUMN reference_code VARCHAR(20)`);
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_loan_applications_reference_code
+      ON loan_applications (reference_code) WHERE reference_code IS NOT NULL
+    `);
+  }
+
+  await client.query(`
+    CREATE OR REPLACE FUNCTION generate_loan_application_reference()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      IF NEW.reference_code IS NULL THEN
+        NEW.reference_code := 'SR-' || to_char(NOW(), 'YYYY') || '-' ||
+          lpad(nextval('loan_application_ref_seq')::text, 5, '0');
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+  await client.query(`DROP TRIGGER IF EXISTS trg_loan_applications_reference ON loan_applications`);
+  await client.query(`
+    CREATE TRIGGER trg_loan_applications_reference
+      BEFORE INSERT ON loan_applications
+      FOR EACH ROW EXECUTE PROCEDURE generate_loan_application_reference();
+  `);
+
+  const backfilled = await client.query(`
+    UPDATE loan_applications
+    SET reference_code = 'SR-' || to_char(created_at, 'YYYY') || '-' ||
+      lpad(nextval('loan_application_ref_seq')::text, 5, '0')
+    WHERE reference_code IS NULL
+    RETURNING application_id
+  `);
+  if (backfilled.rowCount && backfilled.rowCount > 0) {
+    console.log(`Backfilled reference_code for ${backfilled.rowCount} existing application(s).`);
+  }
+}
+
+async function ensureBorrowerTrustSummaryView(client: PoolClient) {
+  await client.query(`
+    CREATE OR REPLACE VIEW borrower_trust_summary AS
+    SELECT
+      u.user_id,
+      up.full_name,
+      ts.score,
+      ts.trust_band,
+      ts.confidence_score,
+      ts.trigger_event,
+      ts.calculated_at,
+      NOT EXISTS (SELECT 1 FROM loans l WHERE l.user_id = u.user_id) AS is_first_time_borrower,
+      COALESCE((
+        SELECT json_agg(json_build_object(
+          'name', tsf.factor_name,
+          'score', tsf.factor_value,
+          'weight', tsf.factor_weight,
+          'description', tsf.description
+        ) ORDER BY tsf.factor_name)
+        FROM trust_score_factors tsf
+        WHERE tsf.score_id = ts.score_id
+      ), '[]'::json) AS factors
+    FROM users u
+    LEFT JOIN user_profiles up ON up.user_id = u.user_id
+    LEFT JOIN trust_scores ts ON ts.user_id = u.user_id AND ts.is_current = TRUE
+    WHERE u.role = 'borrower';
+  `);
+}
+
 async function migrate() {
   const client = await pool.connect();
   try {
@@ -266,6 +342,8 @@ async function migrate() {
       await ensureLenderMarketplaceSchema(client);
       await ensureFundingPartnerNameNormalizedIndex(client);
       await ensureLenderInvestorProfileInvariant(client);
+      await ensureLoanApplicationReference(client);
+      await ensureBorrowerTrustSummaryView(client);
 
       console.log("Canonical schema is already installed.");
       return;
@@ -284,6 +362,8 @@ async function migrate() {
       await ensureLenderMarketplaceSchema(client);
       await ensureFundingPartnerNameNormalizedIndex(client);
       await ensureLenderInvestorProfileInvariant(client);
+      await ensureLoanApplicationReference(client);
+      await ensureBorrowerTrustSummaryView(client);
 
       const schemaStillIncomplete = !(await hasCanonicalSchema(client));
       if (schemaStillIncomplete) {
@@ -325,6 +405,8 @@ async function migrate() {
     await ensureLenderMarketplaceSchema(client);
     await ensureFundingPartnerNameNormalizedIndex(client);
     await ensureLenderInvestorProfileInvariant(client);
+    await ensureLoanApplicationReference(client);
+    await ensureBorrowerTrustSummaryView(client);
 
     console.log("Canonical schema installed successfully.");
   } finally {
