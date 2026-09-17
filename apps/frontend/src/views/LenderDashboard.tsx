@@ -1,3 +1,5 @@
+"use client";
+
 import { useCallback, useEffect, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { Alert } from "../components/Alert";
@@ -17,6 +19,8 @@ import {
   fundOpportunity,
   rejectOpportunity,
 } from "../lib/api/investor";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
 
 interface Props {
   onNavigate: (page: PageName) => void;
@@ -94,6 +98,7 @@ function remainingFor(opp: Opportunity): number {
 }
 
 export default function LenderDashboard({ onNavigate, user }: Props) {
+  const { t } = useTranslation();
   const [funded, setFunded] = useState<Set<string>>(new Set());
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [fundedLoans, setFundedLoans] = useState<FundedLoan[]>([]);
@@ -160,9 +165,9 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
         setMonthlyPerformance(portfolioRes.monthlyPerformance ?? []);
         setRiskBreakdown(
           portfolioRes.riskBreakdown ?? [
-            { label: "Low risk", value: 58, color: "emerald" as const },
-            { label: "Medium risk", value: 32, color: "yellow" as const },
-            { label: "High risk", value: 10, color: "coral" as const },
+            { label: t("trustBand.low_risk"), value: 58, color: "emerald" as const },
+            { label: t("trustBand.moderate_risk"), value: 32, color: "yellow" as const },
+            { label: t("trustBand.high_risk"), value: 10, color: "coral" as const },
           ],
         );
       }
@@ -173,7 +178,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
     } catch (err) {
       console.error("Failed to fetch lender data", err);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void loadData();
@@ -185,7 +190,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
     const amount = entered && entered.trim() !== "" ? roundTaka(Number(entered)) : remaining;
 
     if (!Number.isFinite(amount) || amount <= 0) {
-      setFundError("Enter a funding amount greater than ৳0.");
+      setFundError(t("application.errorAmountMin") || "Enter a funding amount greater than ৳0.");
       return;
     }
     if (amount > remaining) {
@@ -245,40 +250,40 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
     },
     {
       key: "product",
-      header: "Product",
+      header: t("application.loanProduct"),
       hideBelow: "md",
       render: (r) => <span className="text-stone-500">{r.product}</span>,
     },
-    { key: "amount", header: "Amount", numeric: true, render: (r) => formatTaka(r.amount) },
+    { key: "amount", header: t("loanDetails.loanAmount"), numeric: true, render: (r) => formatTaka(r.amount) },
     {
       key: "rate",
-      header: "Rate",
+      header: t("loanDetails.interestRate"),
       numeric: true,
       hideBelow: "sm",
       render: (r) => formatPercent(r.rate),
     },
     {
       key: "tenure",
-      header: "Tenure",
+      header: t("loanDetails.tenure"),
       numeric: true,
       hideBelow: "lg",
-      render: (r) => `${r.tenure} mo`,
+      render: (r) => `${r.tenure} ${t("loanDetails.monthsUnit")}`,
     },
-    { key: "repaid", header: "Repaid", numeric: true, render: (r) => `${r.repaidPct}%` },
+    { key: "repaid", header: t("activeLoan.repaid"), numeric: true, render: (r) => `${r.repaidPct}%` },
     {
       key: "remaining",
-      header: "Remaining",
+      header: t("lender.remaining"),
       numeric: true,
       hideBelow: "md",
       render: (r) => formatTaka(r.remainingAmount),
     },
     {
       key: "nextDue",
-      header: "Next due",
+      header: t("activeLoan.nextDueDate"),
       hideBelow: "lg",
       render: (r) => (r.nextDueDate ? formatDate(r.nextDueDate) : "—"),
     },
-    { key: "status", header: "Status", render: (r) => <LoanStatusBadge status={r.status} /> },
+    { key: "status", header: t("settings.status"), render: (r) => <LoanStatusBadge status={r.status} /> },
   ];
   const maxDeployed =
     monthlyPerformance.length > 0 ? Math.max(...monthlyPerformance.map((m) => m.deployed)) : 1;
@@ -295,46 +300,46 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
         <PageHeader
           eyebrow="Lender portfolio"
-          title={`Welcome back, ${firstName}`}
-          description="Track your deployed capital, funded loans, and review new applications to fund."
+          title={t("lender.welcomeBack", { firstName })}
+          description={t("lender.subtitle")}
         />
 
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           <StatCard
-            label="Total deployed"
+            label={t("lender.totalDeployed")}
             value={formatTaka(statsState.totalDeployed)}
-            hint={`Across ${fundedLoans.length} loan${fundedLoans.length === 1 ? "" : "s"}`}
+            hint={t("lender.acrossLoans", { count: fundedLoans.length })}
           />
           <StatCard
-            label="Active loans"
+            label={t("lender.activeLoans")}
             value={String(statsState.activeLoans)}
-            hint="In repayment"
+            hint={t("lender.inRepayment")}
           />
           <StatCard
-            label="Average yield"
+            label={t("lender.averageYield")}
             value={formatPercent(statsState.averageYield)}
             tone="positive"
           />
           <StatCard
-            label="Repayment rate"
+            label={t("lender.repaymentRate")}
             value={`${statsState.repaymentRate}%`}
             tone="positive"
-            hint="Last 12 months"
+            hint={t("lender.last12Months")}
           />
           <StatCard
-            label="At-risk exposure"
+            label={t("lender.atRiskExposure")}
             value={formatTaka(statsState.atRiskExposure)}
             tone="critical"
-            hint="Overdue loans"
+            hint={t("lender.overdueLoans")}
           />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
           <div className="lg:col-span-2 bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5 min-w-0">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between items-start mb-5">
               <div className="min-w-0">
-                <h2 className="text-sm font-semibold text-navy">Capital deployed over time</h2>
+                <h2 className="text-sm font-semibold text-navy">{t("lender.capitalDeployed")}</h2>
                 <p className="text-xs text-stone-500 mt-0.5">
-                  Monthly disbursed amount, last 6 months
+                  {t("lender.monthlyDisbursed")}
                 </p>
               </div>
             </div>
@@ -358,7 +363,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
           </div>
 
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5 min-w-0">
-            <h2 className="text-sm font-semibold text-navy mb-4">Risk distribution</h2>
+            <h2 className="text-sm font-semibold text-navy mb-4">{t("lender.riskDistribution")}</h2>
             <div className="flex flex-col gap-4">
               {riskBreakdown.map((r) => (
                 <ProgressBar
@@ -375,16 +380,16 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
 
         <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] mb-6">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between items-center px-5 py-4 border-b border-stone-200">
-            <h2 className="text-sm font-semibold text-navy min-w-0">Funded loans</h2>
-            <span className="text-xs text-stone-500 shrink-0">{fundedLoans.length} loans</span>
+            <h2 className="text-sm font-semibold text-navy min-w-0">{t("lender.fundedLoans")}</h2>
+            <span className="text-xs text-stone-500 shrink-0">{fundedLoans.length} {t("common.loans", "loans")}</span>
           </div>
           {fundedLoans.length === 0 ? (
             <p className="px-5 py-8 text-sm text-stone-500">
-              No funded loans yet. Fund an opportunity below to get started.
+              {t("lender.noFundedLoans")}
             </p>
           ) : (
             <DataTable
-              caption="Funded loans"
+              caption={t("lender.fundedLoans")}
               columns={columns}
               rows={fundedLoans}
               rowKey={(r) => r.id}
@@ -395,21 +400,21 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
         <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-navy">Funding opportunities</h2>
+              <h2 className="text-sm font-semibold text-navy">{t("lender.fundingOpportunities")}</h2>
               <p className="text-xs text-stone-500 mt-0.5">
-                Real borrower applications matched to your preferred categories.
+                {t("lender.fundingOpportunitiesHint")}
               </p>
             </div>
-            <span className="text-xs text-stone-500">{visibleOpportunities.length} available</span>
+            <span className="text-xs text-stone-500">{visibleOpportunities.length} {t("lender.available")}</span>
           </div>
           {fundError && (
-            <Alert variant="error" title="Funding not recorded" className="mb-5">
+            <Alert variant="error" title={t("lender.fundingNotRecorded")} className="mb-5">
               {fundError}
             </Alert>
           )}
           {visibleOpportunities.length === 0 ? (
             <p className="text-sm text-stone-500">
-              No new opportunities match your preferences right now.
+              {t("lender.noMatchingOpportunities")}
             </p>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -428,10 +433,10 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                       <div className="flex items-start justify-between gap-3 min-w-0">
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-navy truncate">
-                            {op.borrowerName ?? "Borrower"} · {op.purpose ?? "loan"}
+                            {op.borrowerName ?? "Borrower"} · {op.purpose ?? t("application.purpose")}
                           </p>
                           <p className="text-xs text-stone-500 mt-0.5 truncate">
-                            {op.productName ?? "Loan product"}
+                            {op.productName ?? t("application.loanProduct")}
                             {op.partnerName ? ` · ${op.partnerName}` : ""}
                           </p>
                           {op.purposeDescription && (
@@ -442,51 +447,51 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                         </div>
                         {bandMeta && (
                           <Badge variant={bandMeta.tone} size="sm" dot>
-                            {bandMeta.label}
+                            {op.trustBand ? t(enumKey("trustBand", op.trustBand)) : bandMeta.label}
                           </Badge>
                         )}
                       </div>
 
                       <div className="grid grid-cols-3 gap-2 text-xs">
                         <div>
-                          <p className="text-stone-400">Requested</p>
+                          <p className="text-stone-400">{t("lender.requested")}</p>
                           <p className="tabular-nums font-medium text-navy">
                             {formatTaka(op.requestedAmount)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-stone-400">Remaining</p>
+                          <p className="text-stone-400">{t("lender.remaining")}</p>
                           <p className="tabular-nums font-medium text-navy">
                             {formatTaka(remaining)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-stone-400">Rate · Tenure</p>
+                          <p className="text-stone-400">{t("lender.rateAndTenure")}</p>
                           <p className="tabular-nums font-medium text-navy">
                             {op.interestRate != null ? formatPercent(op.interestRate) : "—"}
-                            {op.durationMonths ? ` · ${op.durationMonths} mo` : ""}
+                            {op.durationMonths ? ` · ${op.durationMonths} ${t("loanDetails.monthsUnit")}` : ""}
                           </p>
                         </div>
                       </div>
 
                       <div className="bg-stone-50 rounded-[4px] p-2.5 text-xs">
                         <div className="flex items-center justify-between">
-                          <span className="text-stone-500">Trust score</span>
+                          <span className="text-stone-500">{t("lender.trustScore")}</span>
                           <span className="tabular-nums font-semibold text-navy">
                             {op.trustScore != null ? `${Math.round(op.trustScore)} / 100` : "—"}
                           </span>
                         </div>
                         <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-stone-600">
-                          <span>Identity: {op.identityVerified ? "Verified" : "Pending"}</span>
-                          <span>Address: {op.addressVerified ? "Verified" : "Pending"}</span>
-                          <span>Income: {op.incomeVerified ? "Verified" : "Pending"}</span>
+                          <span>{t("lender.identity")}: {op.identityVerified ? t("verification.approved") : t("verification.pending")}</span>
+                          <span>{t("lender.address")}: {op.addressVerified ? t("verification.approved") : t("verification.pending")}</span>
+                          <span>{t("lender.income")}: {op.incomeVerified ? t("verification.approved") : t("verification.pending")}</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => toggleFactors(op.applicationId)}
                           className="mt-2 text-[11px] font-medium text-teal hover:underline"
                         >
-                          {showFactors ? "Hide" : "Show"} trust-factor breakdown
+                          {showFactors ? t("lender.hideBreakdown") : t("lender.showBreakdown")}
                         </button>
                         {showFactors && op.trustFactors.length > 0 && (
                           <ul className="mt-2 space-y-1 text-[11px] text-stone-600">
@@ -509,7 +514,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 mt-auto pt-2 border-t border-stone-100">
                           <div className="flex-1 min-w-0">
                             <CurrencyInput
-                              label="Fund amount"
+                              label={t("lender.fundAmount")}
                               value={fundAmounts[op.applicationId] ?? String(remaining)}
                               min={1}
                               max={remaining}
@@ -519,7 +524,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                                   [op.applicationId]: e.target.value,
                                 }))
                               }
-                              hint={`Up to ${formatTaka(remaining)}`}
+                              hint={t("lender.upTo", { amount: formatTaka(remaining) })}
                             />
                           </div>
                           <Button
@@ -529,7 +534,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                             onClick={() => handleReject(op)}
                             disabled={fundingId !== null || rejectingId !== null}
                           >
-                            Not now
+                            {t("lender.notNow")}
                           </Button>
                           <Button
                             variant="primary"
@@ -538,13 +543,13 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                             onClick={() => handleFund(op)}
                             disabled={fundingId !== null || rejectingId !== null}
                           >
-                            Fund
+                            {t("lender.fund")}
                           </Button>
                         </div>
                       )}
                       {isFunded && (
                         <p className="text-xs text-emerald font-medium pt-2 border-t border-stone-100">
-                          Funding commitment recorded.
+                          {t("lender.fundingRecorded")}
                         </p>
                       )}
                     </div>

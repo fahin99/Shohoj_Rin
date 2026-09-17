@@ -9,6 +9,8 @@ import { formatTaka, formatPercent } from "../../../lib/format";
 import { fundOpportunity, getOpportunities, rejectOpportunity } from "../../../lib/api/investor";
 import { getDisplayName, type StoredUserProfile } from "../../../lib/session";
 import type { PageName } from "../../../types";
+import { useTranslation } from "../../../lib/language-context";
+import { enumKey } from "../../../lib/enum-labels";
 
 interface TrustFactor {
   name: string;
@@ -36,28 +38,16 @@ interface Opportunity {
   trustFactors: TrustFactor[];
 }
 
-const trustBandDisplay: Record<string, { label: string; tone: "success" | "warning" | "error" }> = {
-  very_low_risk: { label: "Very Low Risk", tone: "success" },
-  low_risk: { label: "Low Risk", tone: "success" },
-  moderate_risk: { label: "Moderate Risk", tone: "warning" },
-  high_risk: { label: "High Risk", tone: "error" },
-  very_high_risk: { label: "Very High Risk", tone: "error" },
+const trustBandDisplay: Record<string, { tone: "success" | "warning" | "error" }> = {
+  very_low_risk: { tone: "success" },
+  low_risk: { tone: "success" },
+  moderate_risk: { tone: "warning" },
+  high_risk: { tone: "error" },
+  very_high_risk: { tone: "error" },
 };
-
-const factorNameLabel: Record<string, string> = {
-  repayment_history: "Repayment History",
-  financial_capacity: "Financial Capacity",
-  financial_behavior: "Financial Behavior",
-  identity_verification: "Identity & Verification",
-  credit_behavior: "Credit Behavior",
-};
-
-function purposeLabel(value: string | null) {
-  if (!value) return "Loan";
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
 
 export default function LenderOpportunitiesPageClient({ user }: { user: StoredUserProfile }) {
+  const { t } = useTranslation();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [fundAmounts, setFundAmounts] = useState<Record<string, string>>({});
@@ -143,9 +133,9 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
     >
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
         <PageHeader
-          eyebrow="Lender opportunities"
-          title={`Funding opportunities for ${firstName}`}
-          description="Review borrower applications that match the lending purposes you prioritize."
+          eyebrow={t("lender.fundingOpportunities")}
+          title={t("lender.fundingOpportunities")}
+          description={t("lender.fundingOpportunitiesHint")}
         />
 
         {error && (
@@ -156,14 +146,13 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
 
         {loading ? (
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-8 text-sm text-stone-500">
-            Loading funding opportunities…
+            {t("common.loading")}
           </div>
         ) : opportunities.length === 0 ? (
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-8">
-            <h2 className="text-sm font-semibold text-navy">No matching applications</h2>
+            <h2 className="text-sm font-semibold text-navy">{t("lender.noMatchingOpportunities")}</h2>
             <p className="text-sm text-stone-500 mt-1">
-              There are currently no eligible borrower applications matching your lending
-              priorities.
+              {t("lender.noMatchingOpportunities")}
             </p>
           </div>
         ) : (
@@ -187,16 +176,18 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <p className="text-base font-semibold text-navy truncate">
-                          {opportunity.borrowerName || "Borrower"}
+                          {opportunity.borrowerName || t("auth.roleBorrowerTitle")}
                         </p>
                         <p className="text-sm text-stone-500 mt-0.5">
-                          {purposeLabel(opportunity.category || opportunity.purpose)}
+                          {opportunity.category || opportunity.purpose
+                            ? t(enumKey("category", (opportunity.category || opportunity.purpose)!))
+                            : t("application.loanProduct")}
                           {opportunity.productName ? ` · ${opportunity.productName}` : ""}
                         </p>
                       </div>
                       {band && (
                         <Badge variant={band.tone} size="sm" dot>
-                          {band.label}
+                          {t(enumKey("trustBand", opportunity.trustBand!))}
                         </Badge>
                       )}
                     </div>
@@ -210,7 +201,7 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                       <div>
                         <p className="text-[11px] uppercase tracking-wide text-stone-400">
-                          Requested
+                          {t("lender.requested")}
                         </p>
                         <p className="text-sm font-semibold text-navy mt-0.5">
                           {formatTaka(opportunity.requestedAmount)}
@@ -218,7 +209,7 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                       </div>
                       <div>
                         <p className="text-[11px] uppercase tracking-wide text-stone-400">
-                          Remaining
+                          {t("lender.remaining")}
                         </p>
                         <p className="text-sm font-semibold text-navy mt-0.5">
                           {formatTaka(remaining)}
@@ -226,7 +217,7 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                       </div>
                       <div>
                         <p className="text-[11px] uppercase tracking-wide text-stone-400">
-                          Interest
+                          {t("loanDetails.interestRate")}
                         </p>
                         <p className="text-sm font-semibold text-navy mt-0.5">
                           {opportunity.interestRate == null
@@ -235,11 +226,13 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                         </p>
                       </div>
                       <div>
-                        <p className="text-[11px] uppercase tracking-wide text-stone-400">Tenure</p>
+                        <p className="text-[11px] uppercase tracking-wide text-stone-400">
+                          {t("loanDetails.tenure")}
+                        </p>
                         <p className="text-sm font-semibold text-navy mt-0.5">
                           {opportunity.durationMonths == null
                             ? "—"
-                            : `${opportunity.durationMonths} mo`}
+                            : t("loanDetails.monthsUnit", { count: opportunity.durationMonths })}
                         </p>
                       </div>
                     </div>
@@ -248,11 +241,11 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <p className="text-[11px] uppercase tracking-wide text-stone-400">
-                            Borrower trust score
+                            {t("lender.trustScore")}
                           </p>
                           <p className="text-xl font-semibold text-navy mt-0.5">
                             {opportunity.trustScore == null
-                              ? "Not available"
+                              ? t("common.notAvailable")
                               : `${opportunity.trustScore}/100`}
                           </p>
                         </div>
@@ -261,7 +254,7 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                           className="text-xs font-medium text-teal hover:underline"
                           onClick={() => toggle(opportunity.applicationId)}
                         >
-                          {isExpanded ? "Hide breakdown" : "View breakdown"}
+                          {isExpanded ? t("lender.hideBreakdown") : t("lender.showBreakdown")}
                         </button>
                       </div>
 
@@ -269,18 +262,18 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                         <div className="mt-4 border-t border-stone-200 pt-3 flex flex-col gap-2.5">
                           {opportunity.trustFactors.length === 0 ? (
                             <p className="text-xs text-stone-500">
-                              No factor-level trust data is available.
+                              {t("common.notAvailable")}
                             </p>
                           ) : (
                             opportunity.trustFactors.map((factor) => (
                               <div key={`${opportunity.applicationId}-${factor.name}`}>
                                 <div className="flex items-center justify-between gap-3 text-xs">
-                                  <span className="font-medium text-navy">{factorNameLabel[factor.name] ?? factor.name}</span>
+                                  <span className="font-medium text-navy">{t(enumKey("trustFactor", factor.name))}</span>
                                   <span className="tabular-nums text-stone-500">
                                     {factor.score}
                                     {factor.weight == null
                                       ? ""
-                                      : ` · ${Math.round(factor.weight * 100)}% weight`}
+                                      : ` · ${Math.round(factor.weight * 100)}%`}
                                   </span>
                                 </div>
                                 {factor.description && (
@@ -308,7 +301,7 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                             [opportunity.applicationId]: event.target.value,
                           }))
                         }
-                        placeholder={`Up to ${formatTaka(remaining)}`}
+                        placeholder={t("lender.upTo", { amount: formatTaka(remaining) })}
                         className="h-10 flex-1 rounded-[6px] border-[1.5px] border-stone-300 px-3 text-sm text-navy outline-none focus:border-teal"
                       />
                       <Button
@@ -317,14 +310,14 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                         onClick={() => void handleReject(opportunity)}
                         disabled={isFunding || rejectingId === opportunity.applicationId}
                       >
-                        {rejectingId === opportunity.applicationId ? "Rejecting…" : "Not now"}
+                        {rejectingId === opportunity.applicationId ? t("common.loading") : t("lender.notNow")}
                       </Button>
                       <Button
                         type="button"
                         onClick={() => void handleFund(opportunity)}
                         disabled={isFunding || remaining <= 0}
                       >
-                        {isFunding ? "Funding…" : "Fund application"}
+                        {isFunding ? t("common.loading") : t("lender.fund")}
                       </Button>
                     </div>
                   </article>

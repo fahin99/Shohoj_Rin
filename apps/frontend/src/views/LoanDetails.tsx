@@ -9,22 +9,14 @@ import { formatPercent, formatTaka, formatDate } from "../lib/format";
 import { loansApi } from "../lib/api/index";
 import type { PageName, RepaymentScheduleRow } from "../types";
 import type { LoanProduct } from "@shohojrin/shared";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
+
 interface Props {
   onNavigate: (page: PageName) => void;
   productId?: string;
 }
-const categoryLabel: Record<string, string> = {
-  education: "Education",
-  emergency: "Emergency",
-  business: "Small business",
-  personal: "Personal",
-  development: "Development",
-};
-const fees = [
-  { label: "Processing fee", value: "1% of loan amount (one-time)" },
-  { label: "Late payment fee", value: "৳250 per missed instalment" },
-  { label: "Prepayment fee", value: "None — repay early at any time" },
-];
+
 function calculateEmi(principal: number, annualRate: number, months: number) {
   const monthlyRate = annualRate / 12 / 100;
   if (monthlyRate === 0) return principal / months;
@@ -49,6 +41,7 @@ const defaultLoan: LoanProduct = {
 };
 
 export default function LoanDetails({ onNavigate, productId }: Props) {
+  const { t } = useTranslation();
   const [loan, setLoan] = useState<LoanProduct>(defaultLoan);
   const [loadingProduct, setLoadingProduct] = useState(true);
 
@@ -88,8 +81,9 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
     .filter((d) => d <= loan.durationMonths)
     .map((d) => ({
       value: String(d),
-      label: `${d} months`,
+      label: t("loanDetails.monthsUnit", { months: d }),
     }));
+
   const { emi, totalRepayment, totalInterest } = useMemo(() => {
     const months = Number(duration) || loan.durationMonths;
     const monthlyEmi = calculateEmi(amount, loan.interestRate, months);
@@ -100,6 +94,7 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
       totalInterest: total - amount,
     };
   }, [amount, duration, loan]);
+
   const previewRows: RepaymentScheduleRow[] = useMemo(() => {
     const count = Math.min(6, Number(duration) || loan.durationMonths);
     const monthlyRate = loan.interestRate / 12 / 100;
@@ -123,34 +118,40 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
     return rows;
   }, [amount, duration, loan, emi]);
 
+  const fees = [
+    { label: t("loanDetails.feeProcessing"), value: t("loanDetails.feeProcessingValue") },
+    { label: t("loanDetails.feeLate"), value: t("loanDetails.feeLateValue") },
+    { label: t("loanDetails.feePrepay"), value: t("loanDetails.feePrepayValue") },
+  ];
+
   const columns = [
-    { key: "month", header: "Month", render: (r: RepaymentScheduleRow) => `#${r.month}` },
+    { key: "month", header: t("activeLoan.scheduleMonth"), render: (r: RepaymentScheduleRow) => `#${r.month}` },
     {
       key: "dueDate",
-      header: "Due date",
+      header: t("activeLoan.scheduleDue"),
       render: (r: RepaymentScheduleRow) => formatDate(r.dueDate),
     },
     {
       key: "principal",
-      header: "Principal",
+      header: t("activeLoan.schedulePrincipal"),
       numeric: true,
       render: (r: RepaymentScheduleRow) => formatTaka(r.principal),
     },
     {
       key: "interest",
-      header: "Interest",
+      header: t("activeLoan.scheduleInterest"),
       numeric: true,
       render: (r: RepaymentScheduleRow) => formatTaka(r.interest),
     },
     {
       key: "total",
-      header: "Total",
+      header: t("activeLoan.scheduleTotal"),
       numeric: true,
       render: (r: RepaymentScheduleRow) => formatTaka(r.total),
     },
     {
       key: "status",
-      header: "Status",
+      header: t("activeLoan.scheduleStatus"),
       render: (r: RepaymentScheduleRow) => (
         <Badge
           size="sm"
@@ -164,11 +165,18 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
                   : "neutral"
           }
         >
-          {r.status}
+          {r.status === "paid"
+            ? t("activeLoan.statusPaid")
+            : r.status === "overdue"
+              ? t("activeLoan.statusOverdue")
+              : r.status === "due"
+                ? t("activeLoan.statusDue")
+                : t("activeLoan.statusUpcoming")}
         </Badge>
       ),
     },
   ];
+
   return (
     <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
@@ -186,57 +194,61 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
               strokeLinejoin="round"
             />
           </svg>
-          Back to marketplace
+          {t("loanDetails.backToMarketplace")}
         </button>
+
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <Badge variant="info" size="sm">
-                {categoryLabel[loan.category]}
+                {t(enumKey("category", loan.category))}
               </Badge>
-              {loan.tags.map((t) => (
-                <Badge key={t} variant="neutral" size="sm">
-                  {t}
+              {loan.tags.map((tItem) => (
+                <Badge key={tItem} variant="neutral" size="sm">
+                  {tItem}
                 </Badge>
               ))}
             </div>
-            <h1 className="text-2xl font-semibold text-navy sm:text-3xl">{loan.name}</h1>
+            <h1 className="text-2xl font-semibold text-navy sm:text-3xl">
+              {loadingProduct ? t("common.loading") : loan.name}
+            </h1>
             <p className="mt-1 text-sm text-stone-500">{loan.provider}</p>
           </div>
         </div>
+
         <div className="grid lg:grid-cols-[minmax(0,1fr)_20rem] gap-6">
-          {}
           <div className="flex flex-col gap-5 min-w-0">
             <Card>
-              <CardHeader title="About this loan" />
+              <CardHeader title={t("loanDetails.about")} />
               <CardBody>
                 <p className="text-sm leading-relaxed text-stone-600">{loan.description}</p>
               </CardBody>
             </Card>
+
             <Card>
-              <CardHeader title="Key facts" />
+              <CardHeader title={t("loanDetails.keyFacts")} />
               <CardBody>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div className="min-w-0">
-                    <p className="text-xs text-stone-500">Interest rate</p>
+                    <p className="text-xs text-stone-500">{t("loanDetails.interestRate")}</p>
                     <p className="tabular-nums text-base font-semibold text-navy mt-0.5">
                       {formatPercent(loan.interestRate)}
                     </p>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs text-stone-500">Loan range</p>
+                    <p className="text-xs text-stone-500">{t("loanDetails.loanRange")}</p>
                     <p className="tabular-nums text-base font-semibold text-navy mt-0.5">
                       {formatTaka(loan.minAmount)}–{formatTaka(loan.maxAmount)}
                     </p>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs text-stone-500">Tenure</p>
+                    <p className="text-xs text-stone-500">{t("loanDetails.tenure")}</p>
                     <p className="tabular-nums text-base font-semibold text-navy mt-0.5">
-                      Up to {loan.durationMonths} months
+                      {t("loanDetails.upToMonths", { months: loan.durationMonths })}
                     </p>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs text-stone-500">Provider</p>
+                    <p className="text-xs text-stone-500">{t("loanDetails.provider")}</p>
                     <p className="text-base font-semibold text-navy mt-0.5 truncate">
                       {loan.provider}
                     </p>
@@ -244,10 +256,11 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
                 </div>
               </CardBody>
             </Card>
+
             <Card>
               <CardHeader
-                title="Eligibility"
-                description="You should meet all of the following before applying."
+                title={t("loanDetails.eligibility")}
+                description={t("loanDetails.eligibilityHint")}
               />
               <CardBody>
                 <ul className="flex flex-col gap-2.5">
@@ -270,42 +283,45 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
                 </ul>
               </CardBody>
             </Card>
+
             <Card>
               <CardHeader
-                title="What you'll repay"
-                description="A plain-language breakdown based on your selection."
+                title={t("loanDetails.repaymentBreakdown")}
+                description={t("loanDetails.repaymentBreakdownHint")}
               />
               <CardBody>
-                <DataRow label="Loan amount" value={formatTaka(amount)} />
-                <DataRow label="Interest rate" value={formatPercent(loan.interestRate)} />
-                <DataRow label="Repayment period" value={`${duration} months`} />
+                <DataRow label={t("loanDetails.loanAmount")} value={formatTaka(amount)} />
+                <DataRow label={t("loanDetails.interestRate")} value={formatPercent(loan.interestRate)} />
+                <DataRow label={t("loanDetails.repaymentPeriod")} value={t("loanDetails.monthsUnit", { months: duration })} />
                 <div className="border-t border-stone-200 mt-2 pt-2">
                   <DataRow
-                    label="Total interest payable"
+                    label={t("loanDetails.totalInterest")}
                     value={formatTaka(Math.round(totalInterest))}
                   />
                   <DataRow
-                    label="Total repayment amount"
+                    label={t("loanDetails.totalRepayment")}
                     value={formatTaka(Math.round(totalRepayment))}
                     emphasis
                   />
                 </div>
               </CardBody>
             </Card>
+
             <Card>
               <CardHeader
-                title="Sample repayment schedule"
-                description="First 6 of your monthly instalments."
+                title={t("loanDetails.sampleSchedule")}
+                description={t("loanDetails.sampleScheduleHint")}
               />
               <DataTable
-                caption="Sample repayment schedule"
+                caption={t("loanDetails.sampleSchedule")}
                 columns={columns}
                 rows={previewRows}
                 rowKey={(r) => String(r.month)}
               />
             </Card>
+
             <Card>
-              <CardHeader title="Fees & charges" />
+              <CardHeader title={t("loanDetails.fees")} />
               <CardBody>
                 {fees.map((f) => (
                   <DataRow key={f.label} label={f.label} value={f.value} />
@@ -313,21 +329,21 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
               </CardBody>
             </Card>
           </div>
-          {}
+
           <div className="min-w-0">
             <div className="lg:sticky lg:top-6">
               <Card variant="raised">
-                <CardHeader title="Estimate your loan" />
+                <CardHeader title={t("loanDetails.estimate")} />
                 <CardBody>
                   <div className="flex flex-col gap-4">
                     <CurrencyInput
-                      label="Loan amount"
+                      label={t("loanDetails.loanAmount")}
                       value={amount}
                       min={loan.minAmount}
                       max={loan.maxAmount}
                       step={1000}
                       onChange={(e) => setAmount(Number(e.target.value) || loan.minAmount)}
-                      hint={`Between ${formatTaka(loan.minAmount)} and ${formatTaka(loan.maxAmount)}`}
+                      hint={t("loanDetails.estimateHint", { min: formatTaka(loan.minAmount), max: formatTaka(loan.maxAmount) })}
                     />
                     <input
                       type="range"
@@ -340,23 +356,23 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
                       className="w-full accent-teal"
                     />
                     <Select
-                      label="Repayment duration"
+                      label={t("loanDetails.repaymentDuration")}
                       options={durationOptions}
                       value={duration}
                       onChange={(e) => setDuration(e.target.value)}
                     />
                     <div className="border-t border-stone-200 pt-4 flex flex-col gap-1">
                       <DataRow
-                        label="Estimated monthly EMI"
+                        label={t("loanDetails.estimatedEmi")}
                         value={formatTaka(Math.round(emi))}
                         emphasis
                       />
                       <DataRow
-                        label="Total interest"
+                        label={t("loanDetails.totalInterest")}
                         value={formatTaka(Math.round(totalInterest))}
                       />
                       <DataRow
-                        label="Total repayment"
+                        label={t("loanDetails.totalRepayment")}
                         value={formatTaka(Math.round(totalRepayment))}
                       />
                     </div>
@@ -365,11 +381,10 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
                       fullWidth
                       onClick={() => onNavigate("loan-application")}
                     >
-                      Apply for this loan
+                      {t("loanDetails.applyForThisLoan")}
                     </Button>
                     <p className="text-xs text-stone-400 text-center">
-                      This is an estimate. Final terms are confirmed after your application is
-                      reviewed.
+                      {t("loanDetails.estimateDisclaimer")}
                     </p>
                   </div>
                 </CardBody>

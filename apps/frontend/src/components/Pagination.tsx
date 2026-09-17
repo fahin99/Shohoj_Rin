@@ -1,4 +1,8 @@
+"use client";
+
 import { IconButton } from "./Button";
+import { useTranslation } from "../lib/language-context";
+
 interface PaginationProps {
   page: number;
   totalPages: number;
@@ -7,6 +11,7 @@ interface PaginationProps {
   pageSize?: number;
   className?: string;
 }
+
 export function Pagination({
   page,
   totalPages,
@@ -15,6 +20,8 @@ export function Pagination({
   pageSize,
   className = "",
 }: PaginationProps) {
+  const { t } = useTranslation();
+
   if (totalPages <= 1) return null;
   const pages: (number | "...")[] = [];
   if (totalPages <= 7) {
@@ -34,14 +41,14 @@ export function Pagination({
     <div className={`flex items-center justify-between gap-4 ${className}`}>
       {totalItems && start && end ? (
         <p className="text-xs text-stone-500 tabular-nums">
-          {start}–{end} of {totalItems}
+          {t("pagination.of", { start, end, total: totalItems })}
         </p>
       ) : (
         <span />
       )}
       <div className="flex items-center gap-1">
         <IconButton
-          label="Previous"
+          label={t("pagination.previous")}
           size="sm"
           variant="ghost"
           disabled={page === 1}
@@ -81,7 +88,7 @@ export function Pagination({
           ),
         )}
         <IconButton
-          label="Next"
+          label={t("pagination.next")}
           size="sm"
           variant="ghost"
           disabled={page === totalPages}

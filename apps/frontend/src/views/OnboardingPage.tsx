@@ -1,4 +1,8 @@
+"use client";
+
 import { useEffect, useState } from "react";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
 import { Logo } from "../components/Logo";
 import { Button } from "../components/Button";
 import { TextInput, Select, Radio, Checkbox, FileUpload } from "../components/Input";
@@ -7,27 +11,32 @@ import InstitutionCombobox from "../components/InstitutionCombobox";
 import { profileApi, documentsApi, verificationApi, guarantorApi } from "../lib/api/index";
 import type { PageName } from "../types";
 import { gu } from "date-fns/locale";
+
 interface OnboardingPageProps {
   onNavigate: (page: PageName) => void;
 }
 
-const steps = [
-  { label: "Personal & ID", sublabel: "Identity" },
-  { label: "Financial", sublabel: "Profile" },
-  { label: "Employment", sublabel: "Status" },
-  { label: "Guarantor", sublabel: "Information" },
-  { label: "Goals", sublabel: "" },
-  { label: "Preferences", sublabel: "" },
-];
-const goalOptions = [
-  "Pay for education or training",
-  "Cover a medical emergency",
-  "Start or grow a business",
-  "Home repair or improvement",
-  "Personal development",
-  "Consolidate existing debt",
-];
 export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
+  const { t } = useTranslation();
+
+  const steps = [
+    { label: t("profile.personalIdentity"), sublabel: t("profile.identity") },
+    { label: t("profile.financialProfile"), sublabel: t("profile.profile") },
+    { label: t("application.stepEmployment"), sublabel: t("profile.status") },
+    { label: t("profile.guarantorInfo"), sublabel: t("profile.information") },
+    { label: t("onboarding.goals"), sublabel: "" },
+    { label: t("onboarding.preferences"), sublabel: "" },
+  ];
+
+  const goalOptions = [
+    t("onboarding.goalEducation"),
+    t("onboarding.goalMedical"),
+    t("onboarding.goalBusiness"),
+    t("onboarding.goalHome"),
+    t("onboarding.goalPersonal"),
+    t("onboarding.goalDebt"),
+  ];
+
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [doc_verif_req_id, set_doc_verif_req_id] = useState<string | null>(null);
@@ -245,14 +254,14 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
       <header className="border-b border-stone-200 bg-white px-6 py-3 flex items-center justify-between">
         <Logo size="sm" onClick={() => onNavigate("landing")} />
         <Button variant="ghost" size="sm" onClick={saveAndContinueLater} loading={saving}>
-          Save & continue later
+          {t("onboarding.saveAndContinueLater")}
         </Button>
       </header>
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-10">
         {}
         <div className="mb-10">
           <p className="text-xs text-stone-500 mb-4 text-center">
-            Step {step + 1} of {steps.length} — let us get to know you
+            {t("onboarding.stepOf", { step: step + 1, total: steps.length })} — {t("onboarding.letUsGetToKnowYou")}
           </p>
           <Stepper steps={steps} currentStep={step} />
         </div>
@@ -261,107 +270,105 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {step === 0 && (
             <div>
               <h2 className="text-2xl font-semibold text-navy mb-1">
-                Personal information &amp; Identity
+                {t("profile.personalIdentity")}
               </h2>
               <p className="text-sm text-stone-500 mb-6">
-                This information helps us verify your identity once so you never have to re-enter it
-                during loan applications.
+                {t("onboarding.identityHint")}
               </p>
               <div className="grid grid-cols-1 gap-5">
                 <TextInput
-                  label="Full name"
+                  label={t("profile.fullName")}
                   placeholder="Rahim Uddin Ahmed"
                   required
                   value={data.fullName}
                   onChange={(e) => update("fullName", e.target.value)}
-                  hint="As it appears on your NID"
+                  hint={t("profile.fullNameHint")}
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <TextInput
-                    label="Date of birth"
+                    label={t("profile.dateOfBirth")}
                     type="date"
                     value={data.dateOfBirth}
                     onChange={(e) => update("dateOfBirth", e.target.value)}
                     required
                   />
                   <Select
-                    label="Gender"
+                    label={t("profile.gender")}
                     value={data.gender}
                     onChange={(e) => update("gender", e.target.value)}
                     options={[
-                      { value: "male", label: "Male" },
-                      { value: "female", label: "Female" },
-                      { value: "other", label: "Prefer not to say" },
+                      { value: "male", label: t("profile.genderMale") },
+                      { value: "female", label: t("profile.genderFemale") },
+                      { value: "other", label: t("profile.genderOther") },
                     ]}
-                    placeholder="Select"
+                    placeholder={t("common.select")}
                   />
                 </div>
                 <TextInput
-                  label="National ID Number"
+                  label={t("profile.nidNumber")}
                   placeholder="1234567890"
                   value={data.nidNumber}
                   onChange={(e) => update("nidNumber", e.target.value)}
-                  hint="Your 10 or 17 digit NID number"
+                  hint={t("profile.nidHint")}
                 />
                 <TextInput
-                  label="Address"
+                  label={t("profile.address")}
                   placeholder="House 12, Road 5, Block C"
                   value={data.addressLine}
                   onChange={(e) => update("addressLine", e.target.value)}
                   required
                 />
                 <Select
-                  label="City / District"
+                  label={t("profile.cityDistrict")}
                   value={data.city}
                   onChange={(e) => {
                     update("city", e.target.value);
                     update("district", e.target.value);
                   }}
                   options={[
-                    { value: "dhaka", label: "Dhaka" },
-                    { value: "chittagong", label: "Chittagong" },
-                    { value: "sylhet", label: "Sylhet" },
-                    { value: "rajshahi", label: "Rajshahi" },
-                    { value: "khulna", label: "Khulna" },
-                    { value: "other", label: "Other" },
+                    { value: "dhaka", label: t("profile.cityDhaka") },
+                    { value: "chittagong", label: t("profile.cityChittagong") },
+                    { value: "sylhet", label: t("profile.citySylhet") },
+                    { value: "rajshahi", label: t("profile.cityRajshahi") },
+                    { value: "khulna", label: t("profile.cityKhulna") },
+                    { value: "other", label: t("profile.cityOther") },
                   ]}
-                  placeholder="Select city"
+                  placeholder={t("profile.selectCity")}
                 />
 
                 <div className="border-t border-stone-200 pt-5 mt-2">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <p className="text-sm font-semibold text-navy">National ID (NID) Photo</p>
+                      <p className="text-sm font-semibold text-navy">{t("profile.nidPhoto")}</p>
                       <p className="text-xs text-stone-500">
-                        Upload clear photos or scans of your original NID card for one-time
-                        verification.
+                        {t("profile.nidPhotoHint")}
                       </p>
                     </div>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded bg-teal-light text-teal border border-teal/30">
-                      One-time KYC
+                      {t("profile.oneTimeKyc")}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FileUpload
-                      label="NID Front Photo"
-                      hint="Front side with photo and NID no"
+                      label={t("profile.nidFrontPhoto")}
+                      hint={t("profile.nidFrontHint")}
                       onChange={(files) => handleFileUpload("nid_front", files, "nidFrontUploaded")}
                     />
                     <FileUpload
-                      label="NID Back Photo"
-                      hint="Back side with address"
+                      label={t("profile.nidBackPhoto")}
+                      hint={t("profile.nidBackHint")}
                       onChange={(files) => handleFileUpload("nid_back", files, "nidBackUploaded")}
                     />
                     <FileUpload
-                      label="Utility Bill"
-                      hint="Optional proof of address"
+                      label={t("profile.utilityBill")}
+                      hint={t("profile.utilityBillHint")}
                       onChange={(files) =>
                         handleFileUpload("utility_bill", files, "utilityBillUploaded")
                       }
                     />
                     <FileUpload
-                      label="Income Proof (salary slip, bank statement, or pay-stub)"
-                      hint="Used for all future loan applications — uploaded once"
+                      label={t("profile.incomeProof")}
+                      hint={t("profile.incomeProofHint")}
                       onChange={(files) =>
                         handleFileUpload("income_proof", files, "incomeProofUploaded")
                       }
@@ -370,9 +377,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   <div className="bg-sky-light/60 border border-sky/30 rounded-[6px] p-3 mt-3 flex items-start gap-2.5">
                     <span className="text-sm text-sky font-bold mt-0.5">ℹ</span>
                     <p className="text-xs text-stone-600 leading-relaxed">
-                      Your identity verification is saved securely. When applying for loans in the
-                      future, you will not need to provide your NID photo, full name, or address
-                      again.
+                      {t("profile.kycSavedSecurely")}
                     </p>
                   </div>
                 </div>
@@ -382,23 +387,22 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {}
           {step === 1 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">Financial profile</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">{t("profile.financialProfile")}</h2>
               <p className="text-sm text-stone-500 mb-6">
-                This helps us match you to loans you are likely to qualify for. It does not affect
-                your credit score.
+                {t("profile.financialProfileHint")}
               </p>
               <div className="grid grid-cols-1 gap-5">
                 <TextInput
-                  label="Monthly income (approx.)"
+                  label={t("application.monthlyIncome")}
                   type="number"
                   placeholder="25000"
                   value={data.monthlyIncome}
                   onChange={(e) => update("monthlyIncome", e.target.value)}
                   prefix="৳"
-                  hint="After tax, in BDT"
+                  hint={t("profile.monthlyIncomeHint")}
                 />
                 <TextInput
-                  label="Monthly savings (approx.)"
+                  label={t("profile.monthlySavings")}
                   type="number"
                   placeholder="5000"
                   value={data.savingsAmount}
@@ -407,18 +411,18 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                 />
                 <div>
                   <p className="text-sm font-medium text-navy mb-3">
-                    Do you have any existing loans?
+                    {t("profile.existingLoans")}
                   </p>
                   <div className="flex gap-6">
                     <Radio
-                      label="Yes"
+                      label={t("common.yes")}
                       name="existing-loans"
                       value="yes"
                       checked={data.existingLoans === "yes"}
                       onChange={(v) => update("existingLoans", v)}
                     />
                     <Radio
-                      label="No"
+                      label={t("common.no")}
                       name="existing-loans"
                       value="no"
                       checked={data.existingLoans === "no"}
@@ -427,10 +431,9 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   </div>
                 </div>
                 <div className="bg-sky-light border border-sky/30 rounded-[6px] p-4">
-                  <p className="text-xs font-medium text-sky mb-1">ℹ Why we ask this</p>
+                  <p className="text-xs font-medium text-sky mb-1">ℹ {t("profile.whyWeAskThis")}</p>
                   <p className="text-xs text-stone-600 leading-relaxed">
-                    This financial snapshot helps loan providers assess your application. We never
-                    sell your data, and this does not impact your credit report.
+                    {t("profile.financialSnapshotHint")}
                   </p>
                 </div>
               </div>
@@ -439,30 +442,30 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {}
           {step === 2 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">Employment & income</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">{t("application.stepEmployment")}</h2>
               <p className="text-sm text-stone-500 mb-6">
-                Tell us about your current work or study status.
+                {t("application.employmentHint")}
               </p>
               <div className="grid grid-cols-1 gap-5">
                 <Select
-                  label="Employment status"
+                  label={t("application.employmentType")}
                   value={data.employmentType}
                   onChange={(e) => update("employmentType", e.target.value)}
                   options={[
-                    { value: "employed-full", label: "Employed (Full-time)" },
-                    { value: "employed-part", label: "Employed (Part-time)" },
-                    { value: "self-employed", label: "Self-employed / Freelancer" },
-                    { value: "business", label: "Business owner" },
-                    { value: "student", label: "Student" },
-                    { value: "unemployed", label: "Currently not working" },
+                    { value: "employed-full", label: t(enumKey("employment", "employed-full")) },
+                    { value: "employed-part", label: t(enumKey("employment", "employed-part")) },
+                    { value: "self-employed", label: t(enumKey("employment", "self-employed")) },
+                    { value: "business", label: t(enumKey("employment", "business")) },
+                    { value: "student", label: t(enumKey("employment", "student")) },
+                    { value: "unemployed", label: t(enumKey("employment", "unemployed")) },
                   ]}
-                  placeholder="Select status"
+                  placeholder={t("application.selectStatus")}
                   required
                 />
                 {data.employmentType === "student" && (
                   <>
                     <InstitutionCombobox
-                      label="Institution"
+                      label={t("profile.institution")}
                       value={data.institutionName}
                       institutionId={data.institutionId}
                       onChange={({ id, name }) => {
@@ -470,10 +473,10 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                         update("institutionName", name);
                       }}
                       required
-                      hint="Search for your college or university"
+                      hint={t("profile.institutionHint")}
                     />
                     <TextInput
-                      label="Student ID"
+                      label={t("profile.studentId")}
                       placeholder="e.g., 2021-1-60-001"
                       value={data.studentId}
                       onChange={(e) => update("studentId", e.target.value)}
@@ -485,13 +488,13 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   data.employmentType !== "unemployed" && (
                     <>
                       <TextInput
-                        label="Employer / Business name"
+                        label={t("profile.employerName")}
                         placeholder="XYZ Company Ltd."
                         value={data.employerName}
                         onChange={(e) => update("employerName", e.target.value)}
                       />
                       <TextInput
-                        label="Occupation / Job title"
+                        label={t("profile.occupation")}
                         placeholder="Software Engineer"
                         value={data.occupation}
                         onChange={(e) => update("occupation", e.target.value)}
@@ -499,30 +502,30 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     </>
                   )}
                 <Select
-                  label="Primary income source"
+                  label={t("profile.incomeSource")}
                   value={data.incomeSource}
                   onChange={(e) => update("incomeSource", e.target.value)}
                   options={[
-                    { value: "salary", label: "Monthly salary" },
-                    { value: "business", label: "Business income" },
-                    { value: "freelance", label: "Freelance / Contract" },
-                    { value: "remittance", label: "Remittance" },
-                    { value: "parental", label: "Parental support" },
-                    { value: "other", label: "Other" },
+                    { value: "salary", label: t("profile.incomeSourceSalary") },
+                    { value: "business", label: t("profile.incomeSourceBusiness") },
+                    { value: "freelance", label: t("profile.incomeSourceFreelance") },
+                    { value: "remittance", label: t("profile.incomeSourceRemittance") },
+                    { value: "parental", label: t("profile.incomeSourceParental") },
+                    { value: "other", label: t("profile.incomeSourceOther") },
                   ]}
-                  placeholder="Select income source"
+                  placeholder={t("profile.selectIncomeSource")}
                 />
                 {data.employmentType === "student" && (
                   <FileUpload
-                    label="Student ID / enrollment evidence"
-                    hint="Required for student loan applications"
+                    label={t("profile.studentIdEvidence")}
+                    hint={t("profile.studentIdEvidenceHint")}
                     onChange={(files) => handleFileUpload("student_id", files, "studentIdUploaded")}
                   />
                 )}
                 {data.employmentType === "business" && (
                   <FileUpload
-                    label="Business / trade evidence"
-                    hint="Trade license, business registration, or similar"
+                    label={t("profile.businessEvidence")}
+                    hint={t("profile.businessEvidenceHint")}
                     onChange={(files) =>
                       handleFileUpload("business_evidence", files, "businessEvidenceUploaded")
                     }
@@ -535,46 +538,46 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {step === 3 && (
             <div>
               <h2 className="text-2xl font-semibold text-navy mb-1">
-                Guarantor information &amp; Identity
+                {t("profile.guarantorInfo")}
               </h2>
               <p className="text-sm text-stone-500 mb-6">
-                This information helps us verify and reiterate with your guarantor in case of emergency.
+                {t("profile.guarantorHint")}
               </p>
               <div className="grid grid-cols-1 gap-5">
                 <TextInput
-                  label="Full name"
+                  label={t("profile.fullName")}
                   placeholder="Rahim Uddin Ahmed"
                   required
                   value={data.guarantorFullName}
                   onChange={(e) => update("guarantorFullName", e.target.value)}
-                  hint="As it appears on their NID"
+                  hint={t("profile.guarantorFullNameHint")}
                 />
                 <Select
-                  label="Relationship to you"
+                  label={t("profile.relationship")}
                   required
                   value={data.guarantorRelationship}
                   onChange={(e) => update("guarantorRelationship", e.target.value)}
                   options={[
-                    { value: "parent", label: "Parent" },
-                    { value: "sibling", label: "Sibling" },
-                    { value: "spouse", label: "Spouse" },
-                    { value: "relative", label: "Relative" },
-                    { value: "employer", label: "Employer" },
-                    { value: "teacher", label: "Teacher" },
-                    { value: "friend", label: "Friend" },
-                    { value: "other", label: "Other" },
+                    { value: "parent", label: t("profile.relParent") },
+                    { value: "sibling", label: t("profile.relSibling") },
+                    { value: "spouse", label: t("profile.relSpouse") },
+                    { value: "relative", label: t("profile.relRelative") },
+                    { value: "employer", label: t("profile.relEmployer") },
+                    { value: "teacher", label: t("profile.relTeacher") },
+                    { value: "friend", label: t("profile.relFriend") },
+                    { value: "other", label: t("profile.relOther") },
                   ]}
-                  placeholder="Select relationship"
+                  placeholder={t("profile.selectRelationship")}
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <TextInput
-                    label="Guarantor phone"
+                    label={t("profile.guarantorPhone")}
                     placeholder="01712345678"
                     value={data.guarantorPhone}
                     onChange={(e) => update("guarantorPhone", e.target.value)}
                   />
                   <TextInput
-                    label="Guarantor email"
+                    label={t("profile.guarantorEmail")}
                     type="email"
                     placeholder="guarantor@example.com"
                     value={data.guarantorEmail}
@@ -583,76 +586,75 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <Select
-                    label="Gender"
+                    label={t("profile.gender")}
                     value={data.guarantorGender}
                     onChange={(e) => update("guarantorGender", e.target.value)}
                     options={[
-                      { value: "male", label: "Male" },
-                      { value: "female", label: "Female" },
-                      { value: "other", label: "Prefer not to say" },
+                      { value: "male", label: t("profile.genderMale") },
+                      { value: "female", label: t("profile.genderFemale") },
+                      { value: "other", label: t("profile.genderOther") },
                     ]}
-                    placeholder="Select"
+                    placeholder={t("common.select")}
                   />
                 </div>
                 <TextInput
-                  label="National ID Number"
+                  label={t("profile.nidNumber")}
                   placeholder="1234567890"
                   value={data.guarantorNidNumber}
                   onChange={(e) => update("guarantorNidNumber", e.target.value)}
-                  hint="Your 10 or 17 digit NID number"
+                  hint={t("profile.nidHint")}
                 />
                 <TextInput
-                  label="Address"
+                  label={t("profile.address")}
                   placeholder="House 12, Road 5, Block C"
                   value={data.guarantorAddressLine}
                   onChange={(e) => update("guarantorAddressLine", e.target.value)}
                   required
                 />
                 <Select
-                  label="City / District"
+                  label={t("profile.cityDistrict")}
                   value={data.guarantorCity}
                   onChange={(e) => {
                     update("guarantorCity", e.target.value);
                     update("guarantorDistrict", e.target.value);
                   }}
                   options={[
-                    { value: "dhaka", label: "Dhaka" },
-                    { value: "chittagong", label: "Chittagong" },
-                    { value: "sylhet", label: "Sylhet" },
-                    { value: "rajshahi", label: "Rajshahi" },
-                    { value: "khulna", label: "Khulna" },
-                    { value: "other", label: "Other" },
+                    { value: "dhaka", label: t("profile.cityDhaka") },
+                    { value: "chittagong", label: t("profile.cityChittagong") },
+                    { value: "sylhet", label: t("profile.citySylhet") },
+                    { value: "rajshahi", label: t("profile.cityRajshahi") },
+                    { value: "khulna", label: t("profile.cityKhulna") },
+                    { value: "other", label: t("profile.cityOther") },
                   ]}
-                  placeholder="Select city"
+                  placeholder={t("profile.selectCity")}
                 />
 
                 <div className="border-t border-stone-200 pt-5 mt-2">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <p className="text-sm font-semibold text-navy">National ID (NID) Photo</p>
+                      <p className="text-sm font-semibold text-navy">{t("profile.nidPhoto")}</p>
                       <p className="text-xs text-stone-500">
-                        Upload clear photos or scans of their original NID card for one-time
-                        verification.
+                        {t("profile.guarantorNidPhotoHint")}
                       </p>
                     </div>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded bg-teal-light text-teal border border-teal/30">
-                      One-time KYC
+                      {t("profile.oneTimeKyc")}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FileUpload
-                      label="NID Front Photo"
-                      hint="Front side with photo and NID no"
+                      label={t("profile.nidFrontPhoto")}
+                      hint={t("profile.nidFrontHint")}
                       onChange={(files) => handleFileUpload("guarantor_nid_front", files, "guarantorNidFrontUploaded")}
                     />
                     <FileUpload
-                      label="NID Back Photo"
-                      hint="Back side with address"
+                      label={t("profile.nidBackPhoto")}
+                      hint={t("profile.nidBackHint")}
                       onChange={(files) => handleFileUpload("guarantor_nid_back", files, "guarantorNidBackUploaded")}
                     />
                     <FileUpload
-                      label="Income Proof (salary slip, bank statement, or pay-stub)"
-                      hint="Used for all future insurance applications — uploaded once"
+                      label={t("profile.incomeProof")}
+                      hint={t("profile.guarantorIncomeProofHint")}
                       onChange={(files) =>
                         handleFileUpload("guarantor_income_proof", files, "guarantorIncomeProofUploaded")
                       }
@@ -661,9 +663,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   <div className="bg-sky-light/60 border border-sky/30 rounded-[6px] p-3 mt-3 flex items-start gap-2.5">
                     <span className="text-sm text-sky font-bold mt-0.5">ℹ</span>
                     <p className="text-xs text-stone-600 leading-relaxed">
-                      Their identity verification is saved securely. When applying for insurance in the
-                      future, or for any transaction in your absence, they will not need to provide their NID photo, full name, or address
-                      again.
+                      {t("profile.guarantorKycSavedSecurely")}
                     </p>
                   </div>
                 </div>
@@ -673,10 +673,9 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {}
           {step === 4 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">Your financial goals</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">{t("onboarding.financialGoals")}</h2>
               <p className="text-sm text-stone-500 mb-6">
-                What are you hoping to use a loan for? Select all that apply. This helps us show you
-                the most relevant products.
+                {t("onboarding.financialGoalsHint")}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {goalOptions.map((g) => (
@@ -696,7 +695,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
               </div>
               {data.goals.length > 0 && (
                 <p className="mt-4 text-xs text-teal">
-                  {data.goals.length} goal{data.goals.length !== 1 ? "s" : ""} selected
+                  {t("onboarding.goalsSelected", { count: data.goals.length })}
                 </p>
               )}
             </div>
@@ -704,40 +703,39 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {}
           {step === 5 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">Your preferences</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">{t("onboarding.preferences")}</h2>
               <p className="text-sm text-stone-500 mb-6">
-                Almost done — just a few last preferences to personalise your experience.
+                {t("onboarding.preferencesHint")}
               </p>
               <div className="flex flex-col gap-5">
                 <div>
-                  <p className="text-sm font-medium text-navy mb-3">Notification preferences</p>
+                  <p className="text-sm font-medium text-navy mb-3">{t("onboarding.notificationPreferences")}</p>
                   <div className="flex flex-col gap-3">
                     <Checkbox
-                      label="Email notifications for repayment reminders and updates"
+                      label={t("onboarding.emailNotifs")}
                       checked={data.notifEmail}
                       onChange={(v) => update("notifEmail", v)}
                     />
                     <Checkbox
-                      label="SMS reminders for upcoming payments"
+                      label={t("onboarding.smsNotifs")}
                       checked={data.notifSms}
                       onChange={(v) => update("notifSms", v)}
                     />
                   </div>
                 </div>
                 <Select
-                  label="Preferred language"
+                  label={t("onboarding.preferredLanguage")}
                   value={data.language}
                   onChange={(e) => update("language", e.target.value)}
                   options={[
-                    { value: "en", label: "English" },
-                    { value: "bn", label: "বাংলা (Bangla)" },
+                    { value: "en", label: t("onboarding.langEnglish") },
+                    { value: "bn", label: t("onboarding.langBangla") },
                   ]}
                 />
                 <div className="bg-emerald-light border border-emerald/30 rounded-[6px] p-4">
-                  <p className="text-sm font-semibold text-emerald mb-1">You are almost ready!</p>
+                  <p className="text-sm font-semibold text-emerald mb-1">{t("onboarding.almostReady")}</p>
                   <p className="text-xs text-stone-600 leading-relaxed">
-                    After completing setup, you will be taken to your personalised dashboard where
-                    you can explore loan products matched to your profile.
+                    {t("onboarding.almostReadyHint")}
                   </p>
                 </div>
               </div>
@@ -747,14 +745,14 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
         {}
         <div className="flex items-center justify-between mt-6">
           <Button variant="ghost" size="md" onClick={back} disabled={step === 0}>
-            ← Back
+            ← {t("common.back")}
           </Button>
           <div className="flex items-center gap-2">
             <span className="text-xs text-stone-400 tabular-nums">
               {step + 1}/{steps.length}
             </span>
             <Button variant="primary" size="md" onClick={next}>
-              {step === steps.length - 1 ? "Finish Setup →" : "Continue →"}
+              {step === steps.length - 1 ? t("onboarding.finishSetup") : t("common.continue")}
             </Button>
           </div>
         </div>

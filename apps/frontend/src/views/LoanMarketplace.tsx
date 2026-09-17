@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { PageHeader } from "../components/PageHeader";
@@ -8,25 +10,27 @@ import { SearchInput, Select } from "../components/Input";
 import { Tabs } from "../components/Tabs";
 import { loansApi } from "../lib/api/index";
 import type { PageName, LoanProduct } from "../types";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
 
 interface Props {
   onNavigate: (page: PageName) => void;
 }
 
-const categories: { id: string; label: string }[] = [
-  { id: "all", label: "All categories" },
-  { id: "education", label: "Education" },
-  { id: "emergency", label: "Emergency" },
-  { id: "business", label: "Small business" },
-  { id: "personal", label: "Personal" },
-  { id: "development", label: "Development" },
+const categories = [
+  { id: "all" },
+  { id: "education" },
+  { id: "emergency" },
+  { id: "business" },
+  { id: "personal" },
+  { id: "development" },
 ];
 
 const sortOptions = [
-  { value: "recommended", label: "Recommended" },
-  { value: "interest-asc", label: "Interest rate: low to high" },
-  { value: "amount-desc", label: "Max amount: high to low" },
-  { value: "tenure-asc", label: "Tenure: shortest first" },
+  { value: "recommended", labelKey: "marketplace.sortRecommended" },
+  { value: "interest-asc", labelKey: "marketplace.sortInterestAsc" },
+  { value: "amount-desc", labelKey: "marketplace.sortAmountDesc" },
+  { value: "tenure-asc", labelKey: "marketplace.sortTenureAsc" },
 ];
 
 function sortLoans(loans: LoanProduct[], sort: string): LoanProduct[] {
@@ -46,6 +50,7 @@ function sortLoans(loans: LoanProduct[], sort: string): LoanProduct[] {
 const PAGE_SIZE = 6;
 
 export default function LoanMarketplace({ onNavigate }: Props) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState("recommended");
@@ -86,13 +91,13 @@ export default function LoanMarketplace({ onNavigate }: Props) {
     <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
         <PageHeader
-          title="Loan marketplace"
-          description="Compare loan products from trusted lenders across Bangladesh and apply in minutes."
+          title={t("marketplace.title")}
+          description={t("marketplace.description")}
         />
         <div className="flex flex-col gap-4 mb-5">
           <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_14rem] gap-3">
             <SearchInput
-              placeholder="Search by loan name or provider"
+              placeholder={t("marketplace.searchPlaceholder")}
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
@@ -102,11 +107,14 @@ export default function LoanMarketplace({ onNavigate }: Props) {
                 setQuery("");
                 setPage(1);
               }}
-              aria-label="Search loan products"
+              aria-label={t("common.search")}
             />
             <Select
-              aria-label="Sort loan products"
-              options={sortOptions}
+              aria-label={t("marketplace.sort")}
+              options={sortOptions.map((opt) => ({
+                value: opt.value,
+                label: t(opt.labelKey as import("../translations/en").TranslationKey),
+              }))}
               value={sort}
               onChange={(e) => setSort(e.target.value)}
             />
@@ -114,7 +122,10 @@ export default function LoanMarketplace({ onNavigate }: Props) {
           <div className="overflow-x-auto">
             <Tabs
               variant="pill"
-              tabs={categories.map((c) => ({ id: c.id, label: c.label }))}
+              tabs={categories.map((c) => ({
+                id: c.id,
+                label: t(enumKey("category", c.id)),
+              }))}
               activeTab={category}
               onChange={(id) => {
                 setCategory(id);
@@ -124,15 +135,15 @@ export default function LoanMarketplace({ onNavigate }: Props) {
           </div>
         </div>
         <p className="text-sm text-stone-500 mb-4">
-          {total} loan{total === 1 ? "" : "s"} found
+          {t(total === 1 ? "marketplace.loansFound_one" : "marketplace.loansFound_other", { count: total })}
         </p>
         {pageItems.length === 0 ? (
           <EmptyState
             icon={EmptyIcons.search}
-            title="No loans match your filters"
-            description="Try a different category or clear your search to see all available loan products."
+            title={t("marketplace.emptyTitle")}
+            description={t("marketplace.emptyDescription")}
             action={{
-              label: "Clear filters",
+              label: t("marketplace.clearFilters"),
               onClick: () => {
                 setQuery("");
                 setCategory("all");

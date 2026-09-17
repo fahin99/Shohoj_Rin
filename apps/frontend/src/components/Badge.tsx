@@ -1,4 +1,8 @@
+"use client";
+
 import type { LoanStatus, AppStatus } from "../types";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
 
 type BadgeVariant = "success" | "warning" | "error" | "info" | "neutral" | "teal" | "sky";
 
@@ -50,6 +54,7 @@ export function Badge({
 }
 
 export function LoanStatusBadge({ status }: { status: LoanStatus }) {
+  const { t } = useTranslation();
   const map: Record<LoanStatus, { variant: BadgeVariant; label: string }> = {
     pending_disbursement: { variant: "warning", label: "Pending disbursement" },
     active: { variant: "teal", label: "Active" },
@@ -58,29 +63,23 @@ export function LoanStatusBadge({ status }: { status: LoanStatus }) {
     delinquent: { variant: "error", label: "Delinquent" },
     defaulted: { variant: "error", label: "Defaulted" },
   };
-
-  const { variant, label } = map[status];
-  return (
-    <Badge variant={variant} dot>
-      {label}
-    </Badge>
-  );
+  const { variant } = map[status];
+  return <Badge variant={variant} dot>{t(enumKey("loanStatus", status))}</Badge>;
 }
 
 export function AppStatusBadge({ status }: { status: AppStatus }) {
-  const map: Record<AppStatus, { variant: BadgeVariant; label: string }> = {
-    submitted: { variant: "info", label: "Submitted" },
-    "under-review": { variant: "warning", label: "Under Review" },
-    "info-required": { variant: "warning", label: "Info Required" },
-    approved: { variant: "success", label: "Approved" },
-    rejected: { variant: "error", label: "Rejected" },
-    disbursed: { variant: "teal", label: "Disbursed" },
+  const { t } = useTranslation();
+  const toneMap: Record<AppStatus, BadgeVariant> = {
+    submitted: "info",
+    "under-review": "warning",
+    "info-required": "warning",
+    approved: "success",
+    rejected: "error",
+    disbursed: "teal",
   };
-
-  const { variant, label } = map[status];
   return (
-    <Badge variant={variant} dot>
-      {label}
+    <Badge variant={toneMap[status]} dot>
+      {t(enumKey("appStatus", status))}
     </Badge>
   );
 }

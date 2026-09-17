@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppLayout } from "../components/AppLayout";
@@ -19,24 +21,13 @@ import {
 import { apiRequest } from "../lib/api";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
 import type { PageName } from "../types";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
 
 interface Props {
   onNavigate: (page: PageName) => void;
   user: StoredUserProfile;
 }
-
-const roleLabel: Record<string, string> = {
-  borrower: "Borrower",
-  lender: "Lender / Investor",
-  admin: "Administrator",
-  partner_agent: "Partner agent",
-};
-
-const accountStatusLabel: Record<string, string> = {
-  active: "Active",
-  suspended: "Suspended",
-  deactivated: "Deactivated",
-};
 
 const accountStatusVariant: Record<string, "success" | "warning" | "error" | "neutral"> = {
   active: "success",
@@ -45,10 +36,11 @@ const accountStatusVariant: Record<string, "success" | "warning" | "error" | "ne
 };
 
 export default function SettingsPage({ onNavigate, user }: Props) {
+  const { t } = useTranslation();
   const router = useRouter();
   const role = user.role ?? "borrower";
   const status = user.accountStatus ?? "active";
-  const userName = getDisplayName(user, user.username ? `@${user.username}` : "Account");
+  const userName = getDisplayName(user, user.username ? `@${user.username}` : t("settings.account"));
 
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
@@ -64,7 +56,7 @@ export default function SettingsPage({ onNavigate, user }: Props) {
       router.refresh();
     } catch (error) {
       setLogoutError(
-        error instanceof Error ? error.message : "Unable to log out. Please try again.",
+        error instanceof Error ? error.message : t("settings.logoutFailedTitle"),
       );
     } finally {
       setLogoutLoading(false);
@@ -80,57 +72,57 @@ export default function SettingsPage({ onNavigate, user }: Props) {
     >
       <div className="max-w-3xl mx-auto px-4 md:px-6 py-6">
         <PageHeader
-          eyebrow="Account"
-          title="Settings"
-          description="Manage your account details, security, and status."
+          eyebrow={t("settings.account")}
+          title={t("settings.title")}
+          description={t("settings.description")}
         />
 
         <div className="flex flex-col gap-5">
           <Card>
-            <CardHeader title="Account" description="Your basic account details." />
+            <CardHeader title={t("settings.account")} description={t("settings.accountDescription")} />
             <CardBody>
-              <DataRow label="Username" value={user.username ? `@${user.username}` : "Not set"} />
-              <DataRow label="Email" value={user.email || "—"} />
-              <DataRow label="Phone" value={user.phone || "Not set"} />
-              <DataRow label="Account role" value={roleLabel[role] ?? role} />
+              <DataRow label={t("settings.username")} value={user.username ? `@${user.username}` : t("common.notSet")} />
+              <DataRow label={t("settings.email")} value={user.email || "—"} />
+              <DataRow label={t("settings.phone")} value={user.phone || t("common.notSet")} />
+              <DataRow label={t("settings.role")} value={t(enumKey("role", role))} />
             </CardBody>
           </Card>
 
           <Card>
             <CardHeader
-              title="Account status"
-              description="The current standing of your account."
+              title={t("settings.accountStatus")}
+              description={t("settings.accountStatusDescription")}
             />
             <CardBody>
               <div className="flex items-center justify-between py-1.5">
-                <span className="text-sm text-stone-500">Status</span>
+                <span className="text-sm text-stone-500">{t("settings.status")}</span>
                 <Badge variant={accountStatusVariant[status] ?? "neutral"} dot>
-                  {accountStatusLabel[status] ?? status}
+                  {t(enumKey("accountStatus", status))}
                 </Badge>
               </div>
             </CardBody>
           </Card>
 
           <Card>
-            <CardHeader title="Security" description="Manage how you sign in to Shohoj Rin." />
+            <CardHeader title={t("settings.security")} description={t("settings.securityDescription")} />
             <CardBody className="flex flex-col gap-4">
-              <Alert variant="info" title="Change password">
-                Changing your password from this page isn&apos;t available yet. Check back soon.
+              <Alert variant="info" title={t("settings.changePasswordTitle")}>
+                {t("settings.changePasswordBody")}
               </Alert>
 
               {logoutError && (
-                <Alert variant="error" title="Couldn't log out">
+                <Alert variant="error" title={t("settings.logoutFailedTitle")}>
                   {logoutError}
                 </Alert>
               )}
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-4">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-navy">Log out</p>
-                  <p className="text-xs text-stone-500 mt-0.5">End your session on this device.</p>
+                  <p className="text-sm font-medium text-navy">{t("settings.logOutAction")}</p>
+                  <p className="text-xs text-stone-500 mt-0.5">{t("settings.logOutHint")}</p>
                 </div>
                 <Button variant="secondary" size="sm" onClick={() => setLogoutOpen(true)}>
-                  Log out
+                  {t("settings.logOutAction")}
                 </Button>
               </div>
             </CardBody>
@@ -146,11 +138,11 @@ export default function SettingsPage({ onNavigate, user }: Props) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Log Out?</AlertDialogTitle>
-            <AlertDialogDescription>Are you sure you want to log out?</AlertDialogDescription>
+            <AlertDialogTitle>{t("settings.logOutAction")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("settings.logOutHint")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={logoutLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={logoutLoading}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               disabled={logoutLoading}
               onClick={(event) => {
@@ -158,7 +150,7 @@ export default function SettingsPage({ onNavigate, user }: Props) {
                 void handleLogout();
               }}
             >
-              {logoutLoading ? "Logging out..." : "Log Out"}
+              {logoutLoading ? t("common.loading") : t("settings.logOutAction")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,4 +1,7 @@
+"use client";
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
 import { AppLayout } from "../components/AppLayout";
 import { useCurrentUser } from "../lib/user-context";
 import { PageHeader } from "../components/PageHeader";
@@ -30,11 +33,9 @@ function statusToStage(status: string): number {
     case "submitted":
       return 1;
     case "under-review":
-      return 2;
     case "info-required":
       return 2;
     case "approved":
-      return 3;
     case "rejected":
       return 3;
     case "disbursed":
@@ -48,41 +49,22 @@ interface Props {
   onNavigate: (page: PageName) => void;
 }
 type FilterId = "all" | "in-progress" | "approved" | "rejected";
-const stageLabels = ["Submitted", "Under review", "Decision", "Disbursed"];
+
 function matchesFilter(status: AppStatus, filter: FilterId) {
   if (filter === "all") return true;
   if (filter === "approved") return status === "approved" || status === "disbursed";
   if (filter === "rejected") return status === "rejected";
   return status === "submitted" || status === "under-review" || status === "info-required";
 }
-function timelineFor(app: StoredApplication) {
-  const steps = [
-    { label: "Application submitted", date: formatDate(app.submitted), done: true },
-    {
-      label: "Under review by " + app.provider,
-      date: app.stage >= 2 ? "Completed" : "Pending",
-      done: app.stage >= 2,
-    },
-    {
-      label: app.status === "rejected" ? "Application rejected" : "Verification & Decision",
-      date: app.stage >= 3 ? "Completed" : "In review",
-      done: app.stage >= 3,
-    },
-    {
-      label: "Funds disbursed to account",
-      date: app.stage >= 4 ? "Completed" : "Pending verification",
-      done: app.stage >= 4,
-    },
-  ];
-  return steps;
-}
+
 export default function ApplicationStatus({ onNavigate }: Props) {
+  const { t } = useTranslation();
   const [applications, setApplications] = useState<StoredApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterId>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
-  const [verifiedAlert, setVerifiedAlert] = useState<string | null>(null);
+  const [verifiedAlert, setVerifiedAlert] = useState<boolean>(false);
   const currentUser = useCurrentUser();
   const currentUserRole = currentUser?.role;
   const isPrivilegedUser = currentUserRole === "lender" || currentUserRole === "admin";
@@ -93,7 +75,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
       const mapped = (data.applications || []).map((a) => ({
         id: a.applicationId ?? "",
         referenceCode: a.referenceCode,
-        product: a.productName || a.purpose || "Loan Application",
+        product: a.productName || a.purpose || t("application.loanProduct"),
         provider: a.partnerName || "Shohoj Rin",
         amount: a.requestedAmount ?? 0,
         status: a.status as AppStatus,
@@ -106,7 +88,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchApplications();
@@ -128,35 +110,64 @@ export default function ApplicationStatus({ onNavigate }: Props) {
     setVerifyingId(appId);
     setTimeout(() => {
       setVerifyingId(null);
-      setVerifiedAlert(`Your application has been submitted for verification!`);
+      setVerifiedAlert(true);
       fetchApplications();
     }, 600);
   };
+
+  const stageLabels = [
+    t("appStatusPage.stage1"),
+    t("appStatusPage.stage2"),
+    t("appStatusPage.stage3"),
+    t("appStatusPage.stage4")
+  ];
+
+  function getTimelineFor(app: StoredApplication) {
+    const steps = [
+      { label: t("appStatusPage.stage1"), date: formatDate(app.submitted), done: true },
+      {
+        label: t("appStatusPage.stage2", { provider: app.provider }),
+        date: app.stage >= 2 ? t("loanStatus.completed") : t("verification.pending"),
+        done: app.stage >= 2,
+      },
+      {
+        label: app.status === "rejected" ? t(enumKey("appStatus", "rejected")) : t("appStatusPage.stage3"),
+        date: app.stage >= 3 ? t("loanStatus.completed") : t(enumKey("appStatus", "under-review")),
+        done: app.stage >= 3,
+      },
+      {
+        label: t("appStatusPage.stage4"),
+        date: app.stage >= 4 ? t("loanStatus.completed") : t("verification.pending"),
+        done: app.stage >= 4,
+      },
+    ];
+    return steps;
+  }
 
   return (
     <AppLayout onNavigate={onNavigate} currentPage="application-status">
       <div className="max-w-4xl mx-auto px-4 md:px-6 py-6">
         <PageHeader
-          title="My applications"
-          description="Track every loan application from submission to disbursement."
+          title={t("appStatusPage.title")}
+          description={t("appStatusPage.description")}
           actions={
             <Button variant="primary" size="sm" onClick={() => onNavigate("loan-marketplace")}>
-              + New application
+              + {t("appStatusPage.newApplication")}
             </Button>
           }
         />
 
         {verifiedAlert && (
-          <Alert variant="success" title="Loan Verified & Activated" dismissible className="mb-6">
+          <Alert variant="success" title={t("appStatusPage.verifiedAlert")} dismissible className="mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <span>{verifiedAlert}</span>
+              <span>{t("appStatusPage.verifiedAlert")}</span>
               <Button
                 variant="primary"
                 size="xs"
                 className="shrink-0"
                 onClick={() => onNavigate("active-loan")}
               >
-                View in My Loans →
+                {t("appStatusPage.goToMyLoans")} →
               </Button>
             </div>
           </Alert>
@@ -166,20 +177,20 @@ export default function ApplicationStatus({ onNavigate }: Props) {
           className="mb-5"
           variant="pill"
           tabs={[
-            { id: "all", label: "All", count: applications.length },
+            { id: "all", label: t("appStatusPage.filterAll"), count: applications.length },
             {
               id: "in-progress",
-              label: "In progress",
+              label: t("appStatusPage.filterInProgress"),
               count: applications.filter((a) => matchesFilter(a.status, "in-progress")).length,
             },
             {
               id: "approved",
-              label: "Approved & Disbursed",
+              label: t("appStatusPage.filterApproved"),
               count: applications.filter((a) => matchesFilter(a.status, "approved")).length,
             },
             {
               id: "rejected",
-              label: "Rejected",
+              label: t("appStatusPage.filterRejected"),
               count: applications.filter((a) => matchesFilter(a.status, "rejected")).length,
             },
           ]}
@@ -190,9 +201,9 @@ export default function ApplicationStatus({ onNavigate }: Props) {
           <Card variant="plain">
             <EmptyState
               icon={EmptyIcons.search}
-              title="No applications here"
-              description="Try a different filter, or start a new loan application."
-              action={{ label: "Explore loans", onClick: () => onNavigate("loan-marketplace") }}
+              title={t("appStatusPage.emptyTitle")}
+              description={t("appStatusPage.emptyDescription")}
+              action={{ label: t("dashboard.exploreLoans"), onClick: () => onNavigate("loan-marketplace") }}
             />
           </Card>
         ) : (
@@ -207,13 +218,13 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                         <p className="text-base font-semibold text-navy truncate">{app.product}</p>
                         {isDisbursed && (
                           <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-light text-emerald border border-emerald/30">
-                            Active in My Loans
+                            {t("appStatusPage.activeInMyLoans")}
                           </span>
                         )}
                       </div>
                       <p className="text-sm text-stone-500 truncate">{app.provider}</p>
                       <p className="text-xs tabular-nums text-stone-400 mt-1">
-                        {app.referenceCode ? `${app.referenceCode} · ` : ""}Submitted {formatDate(app.submitted)}
+                        {app.referenceCode ? `${app.referenceCode} · ` : ""}{t("appStatusPage.submittedOn")} {formatDate(app.submitted)}
                       </p>
                     </div>
                     <div className="shrink-0 flex flex-col items-end gap-2">
@@ -225,11 +236,10 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                   </div>
 
                   {app.status === "info-required" && (
-                    <Alert variant="warning" title="Additional information needed" className="mt-4">
+                    <Alert variant="warning" title={t("appStatusPage.infoRequiredTitle")} className="mt-4">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
                         <span>
-                          {app.provider} needs an updated bank statement to continue reviewing this
-                          application.
+                          {t("appStatusPage.infoRequiredBody", { provider: app.provider })}
                         </span>
                         <Button
                           variant="secondary"
@@ -237,7 +247,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                           className="shrink-0"
                           onClick={() => setSelectedId(app.id)}
                         >
-                          Submit documents
+                          {t("appStatusPage.submitDocuments")}
                         </Button>
                       </div>
                     </Alert>
@@ -259,7 +269,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                           loading={verifyingId === app.id}
                           onClick={() => handleVerify(app.id)}
                         >
-                          Verify &amp; Disburse Loan
+                          {t("appStatusPage.verifyAndDisburse")}
                         </Button>
                       ) : isDisbursed ? (
                         <Button
@@ -267,7 +277,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                           size="xs"
                           onClick={() => onNavigate("active-loan")}
                         >
-                          View in My Loans →
+                          {t("appStatusPage.goToMyLoans")} →
                         </Button>
                       ) : null}
                     </div>
@@ -276,7 +286,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                       className="text-xs text-teal hover:underline"
                       onClick={() => setSelectedId(app.id)}
                     >
-                      View timeline details
+                      {t("appStatusPage.viewTimeline")}
                     </button>
                   </div>
                 </Card>
@@ -287,7 +297,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
         <Modal
           open={!!selected}
           onClose={() => setSelectedId(null)}
-          title={selected ? `${selected.product} — timeline` : ""}
+          title={selected ? `${selected.product} — ${t("appStatusPage.viewTimeline")}` : ""}
           footer={
             <div className="flex items-center justify-between w-full">
               {selected &&
@@ -303,7 +313,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                     setSelectedId(null);
                   }}
                 >
-                  Verify &amp; Disburse Now
+                  {t("appStatusPage.verifyAndDisburse")}
                 </Button>
               ) : selected &&
                 (selected.status === "disbursed" || selected.status === "approved") ? (
@@ -315,11 +325,11 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                     onNavigate("active-loan");
                   }}
                 >
-                  Go to My Loans
+                  {t("appStatusPage.goToMyLoans")}
                 </Button>
               ) : null}
               <Button variant="secondary" size="sm" onClick={() => setSelectedId(null)}>
-                Close
+                {t("common.close")}
               </Button>
             </div>
           }
@@ -329,12 +339,12 @@ export default function ApplicationStatus({ onNavigate }: Props) {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs text-stone-500">{selected.provider}</p>
-                  <p className="text-sm text-stone-400">Application details</p>
+                  <p className="text-sm text-stone-400">{t("application.title")}</p>
                 </div>
                 <AppStatusBadge status={selected.status} />
               </div>
               <ol className="flex flex-col gap-3">
-                {timelineFor(selected).map((step, i) => (
+                {getTimelineFor(selected).map((step, i) => (
                   <li
                     key={i}
                     className="flex items-start gap-3"
