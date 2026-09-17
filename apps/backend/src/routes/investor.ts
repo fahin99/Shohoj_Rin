@@ -3,6 +3,7 @@ import { z } from "zod";
 import { pool } from "../lib/db.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
 import { investorProfileSchema } from "@shohojrin/shared";
+import { calculateReducingBalanceSchedule } from "../services/interest.service.js";
 
 const router = Router();
 
@@ -14,6 +15,35 @@ function requireLender(req: RequestWithAuth, res: any, next: any) {
     });
   }
   return next();
+}
+
+async function ensureRepaymentSchedules(
+  client: Pick<import("pg").PoolClient, "query">,
+  loanId: string,
+  principal: number,
+  interestRate: number,
+  tenureMonths: number,
+  startDate: Date | string,
+) {
+  const existing = await client.query(
+    `SELECT 1 FROM repayment_schedules WHERE loan_id = $1 LIMIT 1`,
+    [loanId],
+  );
+  if (existing.rowCount) return;
+
+  const schedule = calculateReducingBalanceSchedule(
+    principal,
+    interestRate,
+    tenureMonths,
+    new Date(startDate),
+  );
+  for (const item of schedule) {
+    await client.query(
+      `INSERT INTO repayment_schedules (loan_id, installment_number, due_date, expected_amount, status)
+       VALUES ($1, $2, $3, $4, 'pending')`,
+      [loanId, item.installmentNumber, item.dueDate.toISOString().split("T")[0], Number(item.totalInstallment)],
+    );
+  }
 }
 
 async function fetchLenderCompany(userId: string) {
@@ -375,6 +405,154 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
       [applicationId, userId, fundingAmount],
     );
     const commitment = commitmentResult.rows[0] as any;
+    const totalCommittedAmount = Number(committedResult.rows[0].committed_amount) + fundingAmount;
+    const applicationStatus = totalCommittedAmount >= Number(app.requested_amount) ? "approved" : app.status;
+
+    if (applicationStatus === "approved" && app.status !== "approved") {
+      await client.query(
+        `UPDATE loan_applications SET status = 'approved', updated_at = NOW() WHERE application_id = $1`,
+        [applicationId],
+      );
+    }
+
+    let loanId: string | null = null;
+    if (applicationStatus === "approved") {
+      const existingLoan = await client.query(
+        `SELECT loan_id FROM loans WHERE application_id = $1 FOR UPDATE`,
+        [applicationId],
+      );
+
+      if (existingLoan.rowCount === 0) {
+        const partnerResult = await client.query(
+          `SELECT COALESCE(la.partner_id, u.partner_id) AS partner_id
+           FROM loan_applications la
+           LEFT JOIN users u ON u.user_id = $2
+           WHERE la.application_id = $1`,
+          [applicationId, userId],
+        );
+        const partnerId = partnerResult.rows[0]?.partner_id;
+        if (!partnerId) {
+          throw new Error("Unable to determine a funding partner for this application");
+        }
+
+        const productResult = await client.query(
+          `SELECT lp.interest_rate, lp.duration_months
+           FROM loan_applications la
+           LEFT JOIN loan_products lp ON lp.product_id = la.product_id
+           WHERE la.application_id = $1`,
+          [applicationId],
+        );
+        const interestRate = Number(productResult.rows[0]?.interest_rate ?? 12);
+        const tenureMonths = Number(productResult.rows[0]?.duration_months ?? 12);
+        const principal = Number(app.requested_amount);
+        const startDate = new Date();
+        const expectedEndDate = new Date(startDate);
+        expectedEndDate.setMonth(expectedEndDate.getMonth() + tenureMonths);
+
+        const offerResult = await client.query(
+          `INSERT INTO loan_offers
+            (application_id, partner_id, offered_amount, interest_rate, tenure_months, conditions, status, offered_at)
+           VALUES ($1, $2, $3, $4, $5, $6, 'accepted', NOW())
+           RETURNING offer_id`,
+          [applicationId, partnerId, principal, interestRate, tenureMonths, "Standard terms"],
+        );
+        const loanResult = await client.query(
+          `INSERT INTO loans
+            (application_id, offer_id, user_id, partner_id, principal_amount, interest_rate, tenure_months, status, start_date, expected_end_date)
+           SELECT $1, $2, la.user_id, $3, $4, $5, $6, 'pending_disbursement', $7, $8
+           FROM loan_applications la
+           WHERE la.application_id = $1
+           RETURNING loan_id`,
+          [
+            applicationId,
+            offerResult.rows[0].offer_id,
+            partnerId,
+            principal,
+            interestRate,
+            tenureMonths,
+            startDate.toISOString().split("T")[0],
+            expectedEndDate.toISOString().split("T")[0],
+          ],
+        );
+        loanId = loanResult.rows[0].loan_id;
+        if (!loanId) {
+          throw new Error("Loan was not created");
+        }
+
+        await client.query(
+          `INSERT INTO loan_disbursements
+            (loan_id, amount, disbursement_method, reference_number, disbursed_at)
+           VALUES ($1, $2, 'platform_transfer', $3, NOW())`,
+          [loanId, principal, `AUTO-${applicationId}`],
+        );
+        await client.query(
+          `UPDATE loans SET status = 'active', updated_at = NOW() WHERE loan_id = $1`,
+          [loanId],
+        );
+        await client.query(
+          `UPDATE loan_applications SET status = 'disbursed', updated_at = NOW() WHERE application_id = $1`,
+          [applicationId],
+        );
+        await ensureRepaymentSchedules(
+          client,
+          loanId,
+          principal,
+          interestRate,
+          tenureMonths,
+          startDate,
+        );
+
+        await client.query(
+          `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, after_state)
+           VALUES ($1, 'loan_created', 'loan', $2, jsonb_build_object('applicationId', $3::uuid, 'principalAmount', $4::numeric, 'tenureMonths', $5::integer, 'status', 'active'))`,
+          [userId, loanId, applicationId, principal, tenureMonths],
+        );
+      } else {
+        loanId = existingLoan.rows[0].loan_id;
+      }
+      if (!loanId) {
+        throw new Error("Loan was not found after funding");
+      }
+
+      const loanState = await client.query(
+        `SELECT principal_amount, interest_rate, tenure_months, start_date, status
+         FROM loans WHERE loan_id = $1 FOR UPDATE`,
+        [loanId],
+      );
+      if (loanState.rows[0]?.status === "pending_disbursement") {
+        const disbursementResult = await client.query(
+          `SELECT COALESCE(SUM(amount), 0) AS total_disbursed
+           FROM loan_disbursements
+           WHERE loan_id = $1`,
+          [loanId],
+        );
+        const principalAmount = Number(loanState.rows[0].principal_amount);
+        if (Number(disbursementResult.rows[0].total_disbursed) < principalAmount) {
+          await client.query(
+            `INSERT INTO loan_disbursements
+              (loan_id, amount, disbursement_method, reference_number, disbursed_at)
+             VALUES ($1, $2, 'platform_transfer', $3, NOW())`,
+            [loanId, principalAmount, `AUTO-${applicationId}`],
+          );
+          await client.query(
+            `UPDATE loans SET status = 'active', updated_at = NOW() WHERE loan_id = $1`,
+            [loanId],
+          );
+          await client.query(
+            `UPDATE loan_applications SET status = 'disbursed', updated_at = NOW() WHERE application_id = $1`,
+            [applicationId],
+          );
+        }
+        await ensureRepaymentSchedules(
+          client,
+          loanId,
+          principalAmount,
+          Number(loanState.rows[0].interest_rate),
+          Number(loanState.rows[0].tenure_months),
+          loanState.rows[0].start_date,
+        );
+      }
+    }
 
     await client.query(
       `UPDATE lender_application_matches
@@ -405,6 +583,8 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
         commitmentId: commitment.commitment_id,
         fundedAmount: Number(commitment.amount),
         status: commitment.status,
+        applicationStatus,
+        loanId,
         fundedAt: commitment.created_at,
         message: "Funding commitment recorded",
       },
@@ -509,7 +689,14 @@ router.get("/portfolio", requireAuth, requireLender, async (req, res) => {
        LEFT JOIN LATERAL (
          SELECT
            COALESCE(SUM(rsched.expected_amount), 0) AS "totalExpected",
-           COALESCE(SUM(rsched.expected_amount) FILTER (WHERE rsched.status = 'paid'), 0) AS "totalPaid",
+           COALESCE((
+             SELECT SUM(r.amount_paid)
+             FROM repayments r
+             WHERE r.schedule_id IN (
+               SELECT schedule_id FROM repayment_schedules WHERE loan_id = l.loan_id
+             )
+               AND r.status = 'completed'
+           ), 0) AS "totalPaid",
            MIN(rsched.due_date) FILTER (WHERE rsched.status IN ('pending', 'overdue', 'partially_paid')) AS "nextDueDate"
          FROM repayment_schedules rsched
          WHERE rsched.loan_id = l.loan_id
@@ -540,10 +727,29 @@ router.get("/portfolio", requireAuth, requireLender, async (req, res) => {
 
     const totalDeployed = fundedLoans.reduce((sum: number, loan: any) => sum + loan.fundedAmount, 0);
     const activeLoans = fundedLoans.filter((loan: any) => loan.loanStatus === "active").length;
+    const totalExpected = fundedLoans.reduce((sum: number, loan: any) => sum + loan.totalExpected, 0);
+    const totalPaid = fundedLoans.reduce((sum: number, loan: any) => sum + loan.totalPaid, 0);
+    const weightedYield = fundedLoans.reduce(
+      (sum: number, loan: any) => sum + (Number(loan.interestRate) || 0) * loan.fundedAmount,
+      0,
+    );
+    const averageYield = totalDeployed > 0 ? Math.round((weightedYield / totalDeployed) * 100) / 100 : 0;
+    const repaymentRate = totalExpected > 0 ? Math.round((totalPaid / totalExpected) * 10000) / 100 : 0;
+    const atRiskExposure = fundedLoans
+      .filter((loan: any) => ["overdue", "delinquent", "defaulted"].includes(loan.loanStatus))
+      .reduce((sum: number, loan: any) => sum + loan.remainingAmount, 0);
 
     return res.status(200).json({
       success: true,
-      data: { totalDeployed, activeLoans, fundedLoans, totalFunded: fundedLoans.length },
+      data: {
+        totalDeployed,
+        activeLoans,
+        averageYield,
+        repaymentRate,
+        atRiskExposure: Math.round(atRiskExposure * 100) / 100,
+        fundedLoans,
+        totalFunded: fundedLoans.length,
+      },
     });
   } catch (error) {
     console.error("Failed to fetch portfolio:", error);

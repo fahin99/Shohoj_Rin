@@ -65,7 +65,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
     async function loadData() {
       setIsLoading(true);
       try {
-        const loansRes = await loansApi.getActiveLoans();
+        const loansRes = await loansApi.getActiveLoans(true);
         const loan = loansRes[0] || null;
         setActiveLoan(loan);
 
@@ -74,7 +74,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
             loansApi.getLoanTransactions(loan.id),
             loansApi.getRepaymentSchedule(loan.id),
           ]);
-          setTransactions(txs || []);
+            setTransactions(txs || []);
           setRepaymentSchedule(sched || []);
         }
       } catch (e) {
@@ -126,7 +126,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between sm:items-start mb-6">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-1">
-              Active Loan
+              {activeLoan.status === "pending_disbursement" ? "Approved Loan" : "Active Loan"}
             </p>
             <h1 className="text-2xl sm:text-3xl font-semibold text-navy truncate">
               {activeLoan.name}
@@ -134,7 +134,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
             <p className="text-sm text-stone-500 mt-1">{activeLoan.provider}</p>
           </div>
           <div className="shrink-0 flex items-start">
-            <LoanStatusBadge status="active" />
+            <LoanStatusBadge status={activeLoan.status ?? "active"} />
           </div>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -184,9 +184,13 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
               </span>{" "}
               · {remaining} months remaining
             </p>
-            <Button variant="primary" size="sm" onClick={() => onNavigate("repayment")}>
-              Make a payment
-            </Button>
+            {activeLoan.status === "pending_disbursement" ? (
+              <p className="text-sm font-medium text-stone-500">Available after disbursement</p>
+            ) : (
+              <Button variant="primary" size="sm" onClick={() => onNavigate("repayment")}>
+                Make a payment
+              </Button>
+            )}
           </div>
         </Card>
         <Card variant="plain" className="mb-6">
@@ -224,7 +228,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
             <DataTable
               caption="Repayment schedule"
               rows={repaymentSchedule}
-              rowKey={(r) => String(r.month)}
+              rowKey={(r) => String((r as RepaymentScheduleRow & { scheduleId: string }).scheduleId)}
               columns={[
                 { key: "month", header: "Month", render: (r) => r.month },
                 { key: "due", header: "Due date", render: (r) => formatDate(r.dueDate) },

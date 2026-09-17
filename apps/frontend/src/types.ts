@@ -18,7 +18,13 @@ export type PageName =
   | "profile"
   | "settings";
 
-export type LoanStatus = "active" | "completed" | "overdue" | "delinquent" | "defaulted";
+export type LoanStatus =
+  | "pending_disbursement"
+  | "active"
+  | "completed"
+  | "overdue"
+  | "delinquent"
+  | "defaulted";
 export type AppStatus =
   "submitted" | "under-review" | "info-required" | "approved" | "rejected" | "disbursed";
 export type TransactionType = "payment" | "repayment" | "disbursement" | "fee" | "refund";
@@ -57,6 +63,7 @@ export interface RepaymentScheduleRow {
 
 export interface ActiveLoan {
   id: string;
+  status: LoanStatus;
   name: string;
   provider: string;
   principal: number;

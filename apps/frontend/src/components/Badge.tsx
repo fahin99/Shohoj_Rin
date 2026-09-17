@@ -51,6 +51,7 @@ export function Badge({
 
 export function LoanStatusBadge({ status }: { status: LoanStatus }) {
   const map: Record<LoanStatus, { variant: BadgeVariant; label: string }> = {
+    pending_disbursement: { variant: "warning", label: "Pending disbursement" },
     active: { variant: "teal", label: "Active" },
     completed: { variant: "neutral", label: "Completed" },
     overdue: { variant: "error", label: "Overdue" },

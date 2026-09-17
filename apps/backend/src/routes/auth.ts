@@ -39,7 +39,7 @@ const loginSchema = z
 const refreshSchema = z.object({
   refreshToken: z.string().optional(),
 });
-type UserQueryRow = {
+type AuthUserRow = {
   user_id: string;
   username: string | null;
   email: string;
@@ -49,27 +49,8 @@ type UserQueryRow = {
   email_verified: boolean;
   created_at: Date | string;
   updated_at: Date | string;
-  full_name: string | null;
-  date_of_birth: Date | string | null;
-  gender: string | null;
-  city: string | null;
-  district: string | null;
-  occupation: string | null;
-  nid_number: string | null;
-  address_line: string | null;
-  postal_code: string | null;
-  monthly_family_income: number | string | null;
-  employment_type: string | null;
-  employer_name: string | null;
-  monthly_income: number | string | null;
-  income_source: string | null;
-  student_id: string | null;
-  enrollment_year: number | null;
-  institution_id: string | null;
-  profile_photo_url: string | null;
-  profile_completion_status: string | null;
 };
-function serializeUser(row: UserQueryRow) {
+function serializeUser(row: AuthUserRow) {
   return {
     userId: row.user_id,
     username: row.username,
@@ -78,52 +59,30 @@ function serializeUser(row: UserQueryRow) {
     role: row.role,
     accountStatus: row.account_status,
     emailVerified: row.email_verified,
-    profileCompletionStatus: row.profile_completion_status,
+    profileCompletionStatus: null,
     createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : new Date(row.created_at).toISOString(),
     updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : new Date(row.updated_at).toISOString(),
     profile: {
-      fullName: row.full_name,
-      dateOfBirth: row.date_of_birth
-        ? row.date_of_birth instanceof Date
-          ? row.date_of_birth.toISOString().slice(0, 10)
-          : String(row.date_of_birth).slice(0, 10)
-        : null,
-      gender: row.gender,
-      city: row.city,
-      district: row.district,
-      occupation: row.occupation,
-      nidNumber: row.nid_number,
-      addressLine: row.address_line,
-      postalCode: row.postal_code,
-      monthlyFamilyIncome: row.monthly_family_income == null ? null : Number(row.monthly_family_income),
-      employmentType: row.employment_type,
-      employerName: row.employer_name,
-      monthlyIncome: row.monthly_income == null ? null : Number(row.monthly_income),
-      incomeSource: row.income_source,
-      studentId: row.student_id,
-      enrollmentYear: row.enrollment_year,
-      institutionId: row.institution_id,
-      profilePhotoUrl: row.profile_photo_url,
+      fullName: null,
+      dateOfBirth: null,
+      gender: null,
+      city: null,
+      district: null,
+      occupation: null,
+      nidNumber: null,
+      addressLine: null,
+      postalCode: null,
+      monthlyFamilyIncome: null,
+      employmentType: null,
+      employerName: null,
+      monthlyIncome: null,
+      incomeSource: null,
+      studentId: null,
+      enrollmentYear: null,
+      institutionId: null,
+      profilePhotoUrl: null,
     },
   };
-}
-async function fetchUserById(userId: string) {
-  const result = await pool.query<UserQueryRow>(
-    `SELECT
-      u.user_id, u.username, u.email, u.phone, u.role, u.account_status,
-      u.email_verified, u.created_at, u.updated_at,
-      p.full_name, p.date_of_birth, p.gender, p.city, p.district, p.occupation,
-      p.nid_number, p.address_line, p.postal_code, p.monthly_family_income,
-      p.employment_type, p.employer_name, p.monthly_income, p.income_source,
-      p.student_id, p.enrollment_year, p.institution_id, p.profile_photo_url,
-      p.profile_completion_status
-    FROM users u
-    LEFT JOIN user_profiles p ON p.user_id = u.user_id
-    WHERE u.user_id = $1
-    LIMIT 1`,
-    [userId],
-  );
-  return result.rows[0] ?? null;
 }
 async function createSession(db: Pick<PoolClient, "query">, userId: string, role: string, sessionId: string) {
   const accessToken = createAccessToken(userId, sessionId, role);
@@ -158,19 +117,22 @@ router.post("/register", async (req, res) => {
       return res.status(409).json({ success: false, error: { message: "An account with this username, email, or phone already exists" } });
     }
     const role = parsed.data.role || "borrower";
-    const userResult = await client.query(
+    const userResult = await client.query<AuthUserRow & { role: string }>(
       `INSERT INTO users (username, email, phone, password_hash, role)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING user_id, email, phone, role, account_status, email_verified, created_at, updated_at`,
+       RETURNING user_id, username, email, phone, role, account_status, email_verified,
+         created_at, updated_at`,
       [username, email, phone, passwordHash, role],
     );
-    const user = userResult.rows[0] as { user_id: string; role: string };
+    const user = userResult.rows[0];
     await client.query(`INSERT INTO user_profiles (user_id) VALUES ($1)`, [user.user_id]);
     const session = await createSession(client, user.user_id, user.role, sessionId);
     await client.query("COMMIT");
     setAuthCookies(res, session.accessToken, session.refreshToken);
-    const profile = await fetchUserById(user.user_id);
-    return res.status(201).json({ success: true, data: { user: profile ? serializeUser(profile) : null } });
+    return res.status(201).json({
+      success: true,
+      data: { user: serializeUser(user) },
+    });
   } catch (error) {
     await client.query("ROLLBACK");
     if (typeof error === "object" && error && "code" in error && (error as { code?: string }).code === "23505") {
@@ -193,13 +155,13 @@ router.post("/login", async (req, res) => {
   const identifier = parsed.data.identifier ? parsed.data.identifier.trim() : null;
   const client = await pool.connect();
   try {
-    const userResult = await client.query<{
-      user_id: string; email: string; phone: string | null; role: string; account_status: string; password_hash: string;
-    }>(
-      `SELECT user_id, email, phone, role, account_status, password_hash
-       FROM users
-       WHERE email = $1 OR phone = $2 OR username = $3
-          OR ($4::text IS NOT NULL AND (email = $4 OR phone = $4 OR username = $4))
+     const userResult = await client.query<AuthUserRow & { password_hash: string }>(
+      `SELECT u.user_id, u.username, u.email, u.phone, u.role, u.account_status,
+         u.email_verified, u.created_at, u.updated_at,
+        u.password_hash
+       FROM users u
+       WHERE u.email = $1 OR u.phone = $2 OR u.username = $3
+          OR ($4::text IS NOT NULL AND (u.email = $4 OR u.phone = $4 OR u.username = $4))
        LIMIT 1`,
       [email, phone, username, identifier],
     );
@@ -210,8 +172,7 @@ router.post("/login", async (req, res) => {
     const sessionId = generateSessionId();
     const session = await createSession(client, user.user_id, user.role, sessionId);
     setAuthCookies(res, session.accessToken, session.refreshToken);
-    const profile = await fetchUserById(user.user_id);
-    return res.status(200).json({ success: true, data: { user: profile ? serializeUser(profile) : null } });
+    return res.status(200).json({ success: true, data: { user: serializeUser(user) } });
   } catch (error) {
     console.error("Login failed:", error);
     return res.status(500).json({ success: false, error: { message: "Failed to log in" } });
@@ -227,8 +188,10 @@ router.post("/refresh", async (req, res) => {
   try {
     const claims = verifyRefreshToken(refreshToken) as { tokenType?: string; sub?: string; jti?: string };
     if (claims.tokenType !== "refresh" || !claims.sub || !claims.jti) return res.status(401).json({ success: false, error: { message: "Invalid refresh token" } });
-    const sessionResult = await pool.query<{ session_id: string; user_id: string; refresh_token_hash: string; is_revoked: boolean; expires_at: Date | string; role: string }>(
-      `SELECT s.session_id, s.user_id, s.refresh_token_hash, s.is_revoked, s.expires_at, u.role
+    const sessionResult = await pool.query<AuthUserRow & { session_id: string; refresh_token_hash: string; is_revoked: boolean; expires_at: Date | string }>(
+      `SELECT s.session_id, s.user_id, s.refresh_token_hash, s.is_revoked, s.expires_at,
+         u.username, u.email, u.phone, u.role, u.account_status, u.email_verified,
+         u.created_at, u.updated_at
        FROM login_sessions s INNER JOIN users u ON u.user_id = s.user_id
        WHERE s.session_id = $1 AND s.user_id = $2 LIMIT 1`,
       [claims.jti, claims.sub],
@@ -242,8 +205,7 @@ router.post("/refresh", async (req, res) => {
     const nextRefreshToken = createRefreshToken(session.user_id, session.session_id);
     await pool.query(`UPDATE login_sessions SET refresh_token_hash = $1, expires_at = $2 WHERE session_id = $3`, [hashToken(nextRefreshToken), new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), session.session_id]);
     setAuthCookies(res, accessToken, nextRefreshToken);
-    const profile = await fetchUserById(session.user_id);
-    return res.status(200).json({ success: true, data: { user: profile ? serializeUser(profile) : null } });
+    return res.status(200).json({ success: true, data: { user: serializeUser(session) } });
   } catch {
     return res.status(401).json({ success: false, error: { message: "Invalid or expired refresh token" } });
   }

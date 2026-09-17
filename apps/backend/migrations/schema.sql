@@ -171,6 +171,7 @@ CREATE TABLE IF NOT EXISTS loan_products (
  
 CREATE TABLE IF NOT EXISTS loan_applications (
   application_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reference_code VARCHAR(20),
   user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
   partner_id UUID REFERENCES funding_partners (partner_id) ON DELETE SET NULL,
   requested_amount DECIMAL(12,2) NOT NULL,
@@ -183,6 +184,9 @@ CREATE TABLE IF NOT EXISTS loan_applications (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_loan_applications_reference_code
+  ON loan_applications (reference_code) WHERE reference_code IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS funding_commitments (
   commitment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

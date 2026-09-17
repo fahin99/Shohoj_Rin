@@ -43,6 +43,7 @@ const methodInfo: Record<
 
 export default function RepaymentPage({ onNavigate }: Props) {
   const [activeLoan, setActiveLoan] = useState<ActiveLoan | null>(null);
+  const [nextInstallmentAmount, setNextInstallmentAmount] = useState<number | null>(null);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -71,8 +72,13 @@ export default function RepaymentPage({ onNavigate }: Props) {
         setActiveLoan(loan);
 
         if (loan) {
-          const txs = await loansApi.getLoanTransactions(loan.id);
+          const [txs, schedules] = await Promise.all([
+            loansApi.getLoanTransactions(loan.id),
+            loansApi.getRepaymentSchedule(loan.id),
+          ]);
           setAllTransactions(txs || []);
+          const nextSchedule = schedules.find((schedule) => schedule.outstandingAmount > 0);
+          setNextInstallmentAmount(nextSchedule?.outstandingAmount ?? null);
         }
       } catch (e) {
         console.error("Failed to fetch repayment data", e);
@@ -163,9 +169,10 @@ export default function RepaymentPage({ onNavigate }: Props) {
   }
 
   const isOverdue = false;
+  const fullInstallmentAmount = nextInstallmentAmount ?? activeLoan.monthlyPayment;
   const instalmentAmount =
     amountOption === "full"
-      ? activeLoan.monthlyPayment
+      ? fullInstallmentAmount
       : amountOption === "payoff"
         ? activeLoan.remainingBalance
         : Math.max(0, Number(customAmount) || 0);
@@ -189,7 +196,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
                     Amount due
                   </p>
                   <p className="font-display tabular-nums text-3xl font-semibold text-navy mt-1">
-                    {formatTaka(activeLoan.monthlyPayment)}
+                    {formatTaka(fullInstallmentAmount)}
                   </p>
                   <p className="text-sm text-stone-500 mt-1">
                     Due {formatDate(activeLoan.nextPaymentDate)}
@@ -213,7 +220,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
               <CardBody className="flex flex-col gap-4">
                 <Radio
                   name="amount-option"
-                  label={`Pay full instalment — ${formatTaka(activeLoan.monthlyPayment)}`}
+                  label={`Pay full instalment — ${formatTaka(fullInstallmentAmount)}`}
                   value="full"
                   checked={amountOption === "full"}
                   onChange={() => setAmountOption("full")}
@@ -364,6 +371,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
                       activeLoan.id,
                       instalmentAmount,
                       method,
+                      amountOption === "payoff",
                     );
                     setReceiptData({
                       receiptId: result.receiptId || "RCPT-" + Math.floor(Math.random() * 10000),

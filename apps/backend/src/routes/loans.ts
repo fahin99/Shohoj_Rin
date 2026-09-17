@@ -270,7 +270,11 @@ router.get("/", requireAuth, async (req, res) => {
         fp.name AS "partnerName",
         up.full_name AS "borrowerName",
         la.purpose,
-        lp.name AS "productName"
+        lp.name AS "productName",
+        (SELECT COUNT(*)::int FROM repayment_schedules rs WHERE rs.loan_id = l.loan_id) AS "totalInstallments",
+        (SELECT COUNT(*)::int FROM repayment_schedules rs WHERE rs.loan_id = l.loan_id AND rs.status = 'paid') AS "paidInstallments",
+        COALESCE((SELECT SUM(rs.expected_amount) FROM repayment_schedules rs WHERE rs.loan_id = l.loan_id), 0) AS "totalExpected",
+        COALESCE((SELECT SUM(r.amount_paid) FROM repayments r JOIN repayment_schedules rs ON rs.schedule_id = r.schedule_id WHERE rs.loan_id = l.loan_id AND r.status = 'completed'), 0) AS "totalPaid"
        FROM loans l
        JOIN funding_partners fp ON fp.partner_id = l.partner_id
        LEFT JOIN user_profiles up ON up.user_id = l.user_id
@@ -286,6 +290,10 @@ router.get("/", requireAuth, async (req, res) => {
       ...row,
       principalAmount: parseFloat(row.principalAmount),
       interestRate: parseFloat(row.interestRate),
+      totalInstallments: Number(row.totalInstallments),
+      paidInstallments: Number(row.paidInstallments),
+      totalExpected: parseFloat(row.totalExpected),
+      totalPaid: parseFloat(row.totalPaid),
     }));
 
     return res.status(200).json({

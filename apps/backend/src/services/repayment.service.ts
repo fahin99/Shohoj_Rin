@@ -1,6 +1,6 @@
 import type { PoolClient } from "pg";
 import { z } from "zod";
-import { calculateLateFee } from "./interest.service.js";
+import { calculateLateFee, calculateReducingBalanceSchedule } from "./interest.service.js";
 import { recalculateAndPersistTrustScore } from "./trust-persistence.service.js";
 const repaymentMethodSchema = z.enum(["bank_transfer", "mobile_money", "cash", "other"]);
 export const createRepaymentSchema = z.object({
@@ -145,7 +145,36 @@ export async function getRepaymentSchedulesForLoan(
     [loanId],
   );
   if (!schedules.rowCount) {
-    return [];
+    const loanResult = await client.query<{
+      principal_amount: string | number;
+      interest_rate: string | number;
+      tenure_months: number;
+      start_date: Date | string;
+      status: string;
+    }>(
+      `SELECT principal_amount, interest_rate, tenure_months, start_date, status
+       FROM loans
+       WHERE loan_id = $1`,
+      [loanId],
+    );
+    const loan = loanResult.rows[0];
+    if (!loan || loan.status !== "active") return [];
+
+    const generated = calculateReducingBalanceSchedule(
+      toNumber(loan.principal_amount),
+      toNumber(loan.interest_rate),
+      loan.tenure_months,
+      new Date(loan.start_date),
+    );
+    for (const item of generated) {
+      await client.query(
+        `INSERT INTO repayment_schedules (loan_id, installment_number, due_date, expected_amount, status)
+         VALUES ($1, $2, $3, $4, 'pending')
+         ON CONFLICT (loan_id, installment_number) DO NOTHING`,
+        [loanId, item.installmentNumber, item.dueDate.toISOString().split("T")[0], Number(item.totalInstallment)],
+      );
+    }
+    return getRepaymentSchedulesForLoan(client, loanId);
   }
   const repayments = await client.query<RepaymentRow>(
     `SELECT repayment_id, schedule_id, amount_paid, payment_method, transaction_reference, status, paid_at

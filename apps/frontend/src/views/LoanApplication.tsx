@@ -83,6 +83,7 @@ export default function LoanApplication({ onNavigate }: Props) {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState("");
   const [form, setForm] = useState<FormState>({
     loanId: "",
     amount: 0,
@@ -151,16 +152,19 @@ export default function LoanApplication({ onNavigate }: Props) {
   async function handleSubmit() {
     if (!validateStep(step)) return;
     setSubmitting(true);
+    setSubmitError("");
     try {
-      await applicationsApi.createApplication({
+      const applicationData = {
         requestedAmount: form.amount,
         purpose: selectedLoan.category ?? "personal",
         purposeDescription: form.purpose,
-        productId: form.loanId,
-      });
+        ...(form.loanId ? { productId: form.loanId } : {}),
+      };
+      await applicationsApi.createApplication(applicationData);
       onNavigate("application-status");
     } catch (e) {
       console.error("Submission failed", e);
+      setSubmitError(e instanceof Error ? e.message : "Failed to submit your application");
     } finally {
       setSubmitting(false);
     }
@@ -358,6 +362,11 @@ export default function LoanApplication({ onNavigate }: Props) {
                 </div>
               </CardBody>
             </Card>
+            {submitError && (
+              <Alert variant="error" title="Application could not be submitted">
+                {submitError}
+              </Alert>
+            )}
             <div className="flex flex-wrap items-center justify-between gap-3 mt-5">
               <Button variant="secondary" onClick={handleBack} disabled={step === 0 || submitting}>
                 Back

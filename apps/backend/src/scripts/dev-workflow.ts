@@ -516,7 +516,8 @@ async function runStage(name: string, fn: () => Promise<void>) {
       const overFund = await api(`/investor/fund/${appAId}`, { method: "POST", token: la2.token, body: { amount: 160000 } });
       check("rule_d_overfund_rejected", overFund.status === 400, `over-funding attempt (160000 vs remaining 150000) → ${overFund.status} (${overFund.payload?.error?.message ?? ""})`);
 
-      await fundOpportunity(la2.token, appAId, 150000);
+      const fullyFunded = await fundOpportunity(la2.token, appAId, 150000);
+      ctx.loanId = fullyFunded.loanId;
       const mentsRows = await dbRows(
         `SELECT COALESCE(SUM(amount),0)::numeric::float8 AS total, COUNT(*)::int AS n FROM funding_commitments WHERE application_id = $1 AND status='committed'`,
         [appAId],
@@ -559,19 +560,17 @@ async function runStage(name: string, fn: () => Promise<void>) {
       const nonParticipant = await api("/loans", { method: "POST", token: lb.token, body: { applicationId: appAId } });
       check("rule_b_non_participant_loan_creation", nonParticipant.status === 403, `lenderB loan creation on appA → ${nonParticipant.status}`);
 
-      const loan = await createLoan(la1.token, appAId);
-      ctx.loanId = loan.loanId;
+      const loan = await getLoan(la1.token, ctx.loanId);
       console.log(`  ✅ Loan created: ${loan.loanId} (principal ${loan.principalAmount} BDT)`);
 
       const loanRows = await dbRows(`SELECT loan_id, status, principal_amount FROM loans WHERE loan_id = $1`, [ctx.loanId]);
       check("loan_in_db", loanRows.length > 0 && Number(loanRows[0].principal_amount) === 180000, `loan persisted in PostgreSQL (status=${loanRows[0]?.status})`);
 
-      // Rule G: loan creation must NOT mark the application disbursed; a real
-      // disbursement row is required before 'disbursed'.
+      // Full funding automatically creates and disburses the loan.
       const appStatusAfter = await dbRows(`SELECT status FROM loan_applications WHERE application_id = $1`, [appAId]);
-      check("rule_g_app_approved_not_disbursed", appStatusAfter[0]?.status === "approved", `application state after loan creation = '${appStatusAfter[0]?.status}' (approved, not disbursed)`);
+      check("rule_g_app_disbursed", appStatusAfter[0]?.status === "disbursed", `application state after full funding = '${appStatusAfter[0]?.status}' (disbursed)`);
       const disbCount = await dbCount(`SELECT COUNT(*)::int AS count FROM loan_disbursements WHERE loan_id = $1`, [ctx.loanId]);
-      check("rule_g_no_disbursement_row_yet", disbCount === 0, `loan_disbursements rows after loan creation: ${disbCount}`);
+      check("rule_g_disbursement_row_created", disbCount === 1, `loan_disbursements rows after full funding: ${disbCount}`);
 
       // Rule E: duplicate loan creation rejected.
       const dupLoan = await api("/loans", { method: "POST", token: la2.token, body: { applicationId: appAId } });

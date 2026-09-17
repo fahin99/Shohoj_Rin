@@ -112,6 +112,15 @@ export default function ApplicationStatus({ onNavigate }: Props) {
     fetchApplications();
   }, [fetchApplications]);
 
+  useEffect(() => {
+    const refreshOnFocus = () => {
+      void fetchApplications();
+    };
+
+    window.addEventListener("focus", refreshOnFocus);
+    return () => window.removeEventListener("focus", refreshOnFocus);
+  }, [fetchApplications]);
+
   const filtered = applications.filter((a) => matchesFilter(a.status, filter));
   const selected = applications.find((a) => a.id === selectedId) ?? null;
 
