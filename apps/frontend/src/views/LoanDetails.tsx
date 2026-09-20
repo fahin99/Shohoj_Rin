@@ -107,11 +107,15 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
       balance = Math.max(0, balance - principalPart);
       const dueDate = new Date(now.getFullYear(), now.getMonth() + i, 15);
       rows.push({
+        scheduleId: `preview-${i}`,
         month: i,
         dueDate: dueDate.toISOString().slice(0, 10),
         principal: principalPart,
         interest: interestPart,
         total: Math.round(emi),
+        expectedAmount: Math.round(emi),
+        paidAmount: 0,
+        outstandingAmount: Math.round(emi),
         status: i === 1 ? "due" : "upcoming",
       });
     }

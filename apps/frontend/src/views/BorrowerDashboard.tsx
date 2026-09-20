@@ -67,7 +67,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
       try {
         setIsLoading(true);
         const [loansRes, appsRes] = await Promise.all([
-          loansApi.getActiveLoans(),
+          loansApi.getActiveLoans(true),
           applicationsApi.getApplications(),
         ]);
 
@@ -102,7 +102,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
   const hour = now.getHours();
   const greeting = hour < 12 ? t("dashboard.greetingMorning") : hour < 17 ? t("dashboard.greetingAfternoon") : t("dashboard.greetingEvening");
   const openApplications = applications.filter(
-    (a) => a.status === "under-review" || a.status === "info-required" || a.status === "submitted",
+    (a) => a.status === "under-review" || a.status === "info-required" || a.status === "submitted" || a.status === "approved",
   );
   const userName = getDisplayName(user, user?.profile?.fullName || "User");
   const firstName = userName.split(" ")[0] ?? userName;
@@ -192,53 +192,95 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                 <div className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                   <div className="min-w-0">
                     <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
-                      {t("dashboard.activeLoan")}
+                      {activeLoan.status === "pending_disbursement"
+                        ? t("dashboard.approvedLoan")
+                        : t("dashboard.activeLoan")}
                     </p>
                     <h2 className="mt-0.5 text-base font-semibold leading-snug text-navy">
                       {activeLoan.name}
                     </h2>
                   </div>
-                  <LoanStatusBadge status="active" />
+                  <LoanStatusBadge status={activeLoan.status ?? "active"} />
                 </div>
-                <dl className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <div className="min-w-0">
-                    <dt className="text-xs text-stone-500">{t("dashboard.amountBorrowed")}</dt>
-                    <dd className="mt-0.5 tabular-nums font-semibold text-navy">
-                      {formatTaka(activeLoan.principal)}
-                    </dd>
-                  </div>
-                  <div className="min-w-0">
-                    <dt className="text-xs text-stone-500">{t("dashboard.remainingBalance")}</dt>
-                    <dd className="mt-0.5 tabular-nums font-semibold text-navy">
-                      {formatTaka(activeLoan.remainingBalance)}
-                    </dd>
-                  </div>
-                  <div className="min-w-0">
-                    <dt className="text-xs text-stone-500">{t("loanDetails.interestRate")}</dt>
-                    <dd className="mt-0.5 tabular-nums font-semibold text-navy">
-                      {formatPercent(activeLoan.interestRate)}
-                    </dd>
-                  </div>
-                </dl>
-                <ProgressBar
-                  value={activeLoan.paidMonths}
-                  max={activeLoan.durationMonths}
-                  label={`${t("activeLoan.repaymentProgress")} — ${activeLoan.paidMonths} ${t("pagination.of")} ${activeLoan.durationMonths} ${t("loanDetails.monthsUnit")}`}
-                  showValue
-                  size="lg"
-                  color="teal"
-                />
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-4">
-                  <p className="min-w-0 text-xs text-stone-500">
-                    {t("activeLoan.nextPayment")} {formatDate(activeLoan.nextPaymentDate)} —{" "}
-                    <span className="tabular-nums font-medium text-navy">
-                      {formatTaka(activeLoan.monthlyPayment)}
-                    </span>
-                  </p>
-                  <Button variant="tertiary" size="sm" onClick={() => onNavigate("active-loan")}>
-                    {t("dashboard.viewLoanDetails")}
-                  </Button>
-                </div>
+                {activeLoan.status === "pending_disbursement" ? (
+                  <>
+                    <div className="rounded-[6px] border border-emerald/30 bg-emerald-light p-4 mb-4">
+                      <p className="text-sm font-semibold text-emerald-dark text-navy">
+                        ✓ {t("dashboard.approvedLoanDescription")}
+                      </p>
+                      <p className="text-xs text-stone-500 mt-1">
+                        {t("dashboard.awaitingDisbursement")}
+                      </p>
+                    </div>
+                    <dl className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <div className="min-w-0">
+                        <dt className="text-xs text-stone-500">{t("dashboard.amountBorrowed")}</dt>
+                        <dd className="mt-0.5 tabular-nums font-semibold text-navy">
+                          {formatTaka(activeLoan.principal)}
+                        </dd>
+                      </div>
+                      <div className="min-w-0">
+                        <dt className="text-xs text-stone-500">{t("loanDetails.interestRate")}</dt>
+                        <dd className="mt-0.5 tabular-nums font-semibold text-navy">
+                          {formatPercent(activeLoan.interestRate)}
+                        </dd>
+                      </div>
+                      <div className="min-w-0">
+                        <dt className="text-xs text-stone-500">{t("loanDetails.repaymentDuration")}</dt>
+                        <dd className="mt-0.5 tabular-nums font-semibold text-navy">
+                          {activeLoan.durationMonths} {t("loanDetails.monthsUnit")}
+                        </dd>
+                      </div>
+                    </dl>
+                    <div className="mt-4 flex flex-wrap items-center justify-end gap-3 border-t border-stone-100 pt-4">
+                      <Button variant="tertiary" size="sm" onClick={() => onNavigate("active-loan")}>
+                        {t("dashboard.viewLoanDetails")}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <dl className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <div className="min-w-0">
+                        <dt className="text-xs text-stone-500">{t("dashboard.amountBorrowed")}</dt>
+                        <dd className="mt-0.5 tabular-nums font-semibold text-navy">
+                          {formatTaka(activeLoan.principal)}
+                        </dd>
+                      </div>
+                      <div className="min-w-0">
+                        <dt className="text-xs text-stone-500">{t("dashboard.remainingBalance")}</dt>
+                        <dd className="mt-0.5 tabular-nums font-semibold text-navy">
+                          {formatTaka(activeLoan.remainingBalance)}
+                        </dd>
+                      </div>
+                      <div className="min-w-0">
+                        <dt className="text-xs text-stone-500">{t("loanDetails.interestRate")}</dt>
+                        <dd className="mt-0.5 tabular-nums font-semibold text-navy">
+                          {formatPercent(activeLoan.interestRate)}
+                        </dd>
+                      </div>
+                    </dl>
+                    <ProgressBar
+                      value={activeLoan.paidMonths}
+                      max={activeLoan.durationMonths}
+                      label={`${t("activeLoan.repaymentProgress")} — ${activeLoan.paidMonths} ${t("pagination.of")} ${activeLoan.durationMonths} ${t("loanDetails.monthsUnit")}`}
+                      showValue
+                      size="lg"
+                      color="teal"
+                    />
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-4">
+                      <p className="min-w-0 text-xs text-stone-500">
+                        {t("activeLoan.nextPayment")} {formatDate(activeLoan.nextPaymentDate)} —{" "}
+                        <span className="tabular-nums font-medium text-navy">
+                          {formatTaka(activeLoan.monthlyPayment)}
+                        </span>
+                      </p>
+                      <Button variant="tertiary" size="sm" onClick={() => onNavigate("active-loan")}>
+                        {t("dashboard.viewLoanDetails")}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </section>
             ) : (
               <div className="min-w-0 rounded-[8px] border-[1.5px] border-stone-200 bg-white shadow-nb">
@@ -370,9 +412,11 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                           variant={
                             app.status === "disbursed"
                               ? "teal"
-                              : app.status === "rejected"
-                                ? "error"
-                                : "warning"
+                              : app.status === "approved"
+                                ? "success"
+                                : app.status === "rejected"
+                                  ? "error"
+                                  : "warning"
                           }
                           size="sm"
                           dot
@@ -381,9 +425,11 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                             ? t("dashboard.appInReview")
                             : app.status === "info-required"
                               ? t("dashboard.appInfoNeeded")
-                              : app.status === "disbursed"
-                                ? t("dashboard.appDisbursed")
-                                : t("dashboard.appRejected")}
+                              : app.status === "approved"
+                                ? t("dashboard.appApproved")
+                                : app.status === "disbursed"
+                                  ? t("dashboard.appDisbursed")
+                                  : t("dashboard.appRejected")}
                         </Badge>
                       </div>
                       <p className="mt-1.5 text-xs text-stone-500">
@@ -398,7 +444,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                 )}
               </CardBody>
             </Card>
-            {activeLoan ? (
+            {activeLoan && activeLoan.status !== "pending_disbursement" ? (
               <section className="rounded-[8px] border-[1.5px] border-yellow bg-yellow-light p-4">
                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-yellow-dark">
                   {t("dashboard.upcomingPayment")}
@@ -418,6 +464,15 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                 >
                   {t("dashboard.payNow")}
                 </Button>
+              </section>
+            ) : activeLoan && activeLoan.status === "pending_disbursement" ? (
+              <section className="rounded-[8px] border-[1.5px] border-emerald/30 bg-emerald-light p-4">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-dark">
+                  {t("dashboard.approvedLoan")}
+                </p>
+                <p className="font-display text-base font-semibold text-navy">
+                  {t("dashboard.awaitingDisbursement")}
+                </p>
               </section>
             ) : (
               <section className="rounded-[8px] border-[1.5px] border-teal/30 bg-teal-light p-4">

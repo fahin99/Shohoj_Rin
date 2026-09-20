@@ -53,12 +53,16 @@ export interface Transaction {
 }
 
 export interface RepaymentScheduleRow {
+  scheduleId: string;
   month: number;
   dueDate: string;
   principal: number;
   interest: number;
   total: number;
-  status: "paid" | "due" | "upcoming" | "overdue";
+  expectedAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+  status: "paid" | "due" | "upcoming" | "overdue" | "partially_paid";
 }
 
 export interface ActiveLoan {

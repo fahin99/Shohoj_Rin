@@ -35,6 +35,7 @@ const scheduleStatusVariant: Record<
   due: "warning",
   upcoming: "neutral",
   overdue: "error",
+  partially_paid: "warning",
 };
 
 const txStatusVariant: Record<Transaction["status"], "success" | "warning" | "error"> = {
@@ -238,6 +239,18 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
                   render: (r) => formatTaka(r.total),
                 },
                 {
+                  key: "paid",
+                  header: t("activeLoan.schedulePaid"),
+                  numeric: true,
+                  render: (r) => <span className={r.paidAmount > 0 ? "text-emerald" : ""}>{formatTaka(r.paidAmount)}</span>,
+                },
+                {
+                  key: "outstanding",
+                  header: t("activeLoan.scheduleOutstanding"),
+                  numeric: true,
+                  render: (r) => <span className={r.outstandingAmount > 0 ? "text-coral font-medium" : ""}>{formatTaka(r.outstandingAmount)}</span>,
+                },
+                {
                   key: "status",
                   header: t("activeLoan.scheduleStatus"),
                   render: (r) => (
@@ -249,7 +262,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
                       >
                         {t(enumKey("activeLoan.status", r.status))}
                       </Badge>
-                      {r.status === "due" && (
+                      {r.outstandingAmount > 0 && (
                         <Button
                           variant="tertiary"
                           size="xs"

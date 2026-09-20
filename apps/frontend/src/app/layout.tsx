@@ -5,6 +5,7 @@ import "@fontsource/stack-sans-notch/600.css";
 import "@fontsource/stack-sans-notch/700.css";
 import { Providers } from "./providers";
 import { getCurrentUser } from "../lib/auth.server";
+import { LanguageToggle } from "../components/LanguageToggle";
 import "../styles.css";
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -43,6 +44,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             Skip to main content
           </a>
           <main id="main-content">{children}</main>
+          <div className="fixed bottom-4 left-4 z-[99] bg-white border border-stone-200 shadow-sm rounded-[6px] p-1 flex items-center justify-center">
+            <LanguageToggle />
+          </div>
         </Providers>
       </body>
     </html>

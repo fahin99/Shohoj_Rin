@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { Logo } from "./Logo";
 import { Badge } from "./Badge";
 import { IconButton } from "./Button";
-import { LanguageToggle } from "./LanguageToggle";
 import type { PageName } from "../types";
 import { useCurrentUser } from "../lib/user-context";
 import { useTranslation } from "../lib/language-context";
@@ -346,7 +345,6 @@ export function AppLayout({
           <p className="min-w-0 flex-1 truncate text-sm font-medium text-stone-500">
             {navItems.find((i) => i.page === currentPage)?.label ?? t("app.name")}
           </p>
-          <LanguageToggle />
           <div className="relative">
             <IconButton
               label="Notifications"

@@ -209,7 +209,9 @@ export default function ApplicationStatus({ onNavigate }: Props) {
         ) : (
           <div className="flex flex-col gap-4">
             {filtered.map((app) => {
-              const isDisbursed = app.status === "disbursed" || app.status === "approved";
+              const isDisbursed = app.status === "disbursed";
+              const isApproved = app.status === "approved";
+              const showGoToLoans = isDisbursed || isApproved;
               return (
                 <Card key={app.id} variant="plain" className="p-4 sm:p-5">
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between sm:items-start">
@@ -219,6 +221,11 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                         {isDisbursed && (
                           <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-light text-emerald border border-emerald/30">
                             {t("appStatusPage.activeInMyLoans")}
+                          </span>
+                        )}
+                        {isApproved && (
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-yellow-light text-yellow-dark border border-yellow/30">
+                            {t("dashboard.approvedLoan")}
                           </span>
                         )}
                       </div>
@@ -260,9 +267,9 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                     />
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between">
+                    <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between">
                     <div>
-                      {!isDisbursed && isPrivilegedUser ? (
+                      {!showGoToLoans && isPrivilegedUser ? (
                         <Button
                           variant="primary"
                           size="xs"
@@ -271,7 +278,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                         >
                           {t("appStatusPage.verifyAndDisburse")}
                         </Button>
-                      ) : isDisbursed ? (
+                      ) : showGoToLoans ? (
                         <Button
                           variant="secondary"
                           size="xs"
