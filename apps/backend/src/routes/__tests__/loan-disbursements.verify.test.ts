@@ -9,7 +9,7 @@ vi.mock("../../lib/db.js", () => ({
 
 vi.mock("../../middleware/authenticate.js", () => ({
   requireAuth: (req: any, _res: any, next: () => void) => {
-    req.user = {
+    req.auth = {
       userId: req.header("x-test-user") ?? "unknown",
       role: req.header("x-test-role") ?? "borrower",
     };

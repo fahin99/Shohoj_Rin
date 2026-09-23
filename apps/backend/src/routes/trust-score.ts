@@ -11,12 +11,12 @@ router.use(requireAuth);
 
 router.get("/", async (req: RequestWithAuth, res) => {
   try {
-    await initializeTrustScoreIfNeeded(req.user!.userId);
+    await initializeTrustScoreIfNeeded(req.auth!.userId);
 
     const summary = await pool.query(
       `SELECT score, trust_band, confidence_score, calculated_at, is_first_time_borrower, factors
        FROM borrower_trust_summary WHERE user_id = $1`,
-      [req.user!.userId],
+      [req.auth!.userId],
     );
     if (summary.rowCount === 0 || summary.rows[0].score === null) {
       return res.status(404).json({ success: false, error: { message: "Score could not be initialized" } });
@@ -46,12 +46,12 @@ router.get("/", async (req: RequestWithAuth, res) => {
 
 router.post("/recalculate", async (req: RequestWithAuth, res) => {
   try {
-    await recalculateAndPersistTrustScore(req.user!.userId, "manual_recalculation");
+    await recalculateAndPersistTrustScore(req.auth!.userId, "manual_recalculation");
 
     const summary = await pool.query(
       `SELECT score, trust_band, confidence_score, calculated_at, is_first_time_borrower, factors
        FROM borrower_trust_summary WHERE user_id = $1`,
-      [req.user!.userId],
+      [req.auth!.userId],
     );
     if (summary.rowCount === 0 || summary.rows[0].score === null) {
       return res

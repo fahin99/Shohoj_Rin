@@ -15,7 +15,7 @@ import {
   setAuthCookies,
   verifyRefreshToken,
 } from "../lib/auth.js";
-import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
+import { requireAuth, requireUserProfile, type RequestWithAuth } from "../middleware/authenticate.js";
 const router = Router();
 const registerSchema = z.object({
   username: z.string().trim().min(3, "Username must be at least 3 characters").max(50),
@@ -221,11 +221,11 @@ router.post("/logout", async (req, res) => {
   clearAuthCookies(res);
   return res.status(200).json({ success: true, data: { message: "Logged out successfully" } });
 });
-router.get("/me", requireAuth, (req, res) => {
+router.get("/me", requireAuth, requireUserProfile, (req, res) => {
   const authReq = req as RequestWithAuth;
   return res.status(200).json({ success: true, data: { user: authReq.user, session: authReq.auth } });
 });
-router.get("/session", requireAuth, (req, res) => {
+router.get("/session", requireAuth, requireUserProfile, (req, res) => {
   const authReq = req as RequestWithAuth;
   return res.status(200).json({ success: true, data: { authenticated: true, user: authReq.user, session: authReq.auth } });
 });

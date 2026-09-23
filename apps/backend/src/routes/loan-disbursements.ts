@@ -37,16 +37,16 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
 
     const loan = loanResult.rows[0];
     
-    if (req.user!.role === "borrower") {
+    if (req.auth!.role === "borrower") {
       await client.query("ROLLBACK");
       return res.status(403).json({ success: false, error: { message: "Access denied" } });
     }
 
-    if (req.user!.role !== "admin") {
+    if (req.auth!.role !== "admin") {
       const funderCheck = await client.query(
         `SELECT 1 FROM funding_commitments
          WHERE application_id = $1 AND lender_user_id = $2 AND status = 'committed'`,
-        [loan.application_id, req.user!.userId],
+        [loan.application_id, req.auth!.userId],
       );
       if (funderCheck.rowCount === 0) {
         await client.query("ROLLBACK");
@@ -102,7 +102,7 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
     await client.query(
       `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, after_state)
        VALUES ($1, 'disbursement_created', 'loan_disbursement', $2, jsonb_build_object('loanId', $3::uuid, 'amount', $4::numeric))`,
-      [req.user!.userId, disbResult.rows[0].disbursementId, parsed.data.loanId, parsed.data.amount],
+      [req.auth!.userId, disbResult.rows[0].disbursementId, parsed.data.loanId, parsed.data.amount],
     );
 
     await client.query("COMMIT");

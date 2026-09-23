@@ -29,11 +29,11 @@ router.get("/loans/:loanId/schedules", async (req: RequestWithAuth, res) => {
       return res.status(404).json({ success: false, error: { message: "Loan not found" } });
     }
     const loan = loanCheck.rows[0];
-    if (loan.user_id !== req.user!.userId && req.user!.role !== "admin") {
+    if (loan.user_id !== req.auth!.userId && req.auth!.role !== "admin") {
       const funderCheck = await client.query(
         `SELECT 1 FROM funding_commitments
          WHERE application_id = $1 AND lender_user_id = $2 AND status = 'committed'`,
-        [loan.application_id, req.user!.userId],
+        [loan.application_id, req.auth!.userId],
       );
       if (funderCheck.rowCount === 0) {
         return res.status(403).json({ success: false, error: { message: "Forbidden" } });
@@ -82,7 +82,7 @@ router.post("/payments", async (req: RequestWithAuth, res) => {
     if (schedCheck.rowCount === 0) {
       return res.status(404).json({ success: false, error: { message: "Schedule not found" } });
     }
-    if (schedCheck.rows[0].user_id !== req.user!.userId && req.user!.role !== "admin") {
+    if (schedCheck.rows[0].user_id !== req.auth!.userId && req.auth!.role !== "admin") {
       return res.status(403).json({ success: false, error: { message: "Forbidden" } });
     }
 

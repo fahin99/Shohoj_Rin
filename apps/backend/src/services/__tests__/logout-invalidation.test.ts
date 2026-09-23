@@ -70,7 +70,6 @@ describe("Logout & Session Invalidation", () => {
     expect(nextCalled).toBe(true);
     expect(req.auth?.userId).toBe(userId);
     expect(req.auth?.sessionId).toBe(sessionId);
-    expect(req.user?.email).toBe(testEmail);
   });
 
   it("rejects access immediately when session is marked is_revoked = true", async () => {
@@ -95,7 +94,7 @@ describe("Logout & Session Invalidation", () => {
     expect(res.statusCode).toBe(401);
     expect(res.responseData).toEqual({
       success: false,
-      error: { message: "Session is no longer valid or has been revoked" },
+      error: { message: "Session expired or revoked" },
     });
   });
 
@@ -118,7 +117,7 @@ describe("Logout & Session Invalidation", () => {
     expect(res.statusCode).toBe(401);
     expect(res.responseData).toEqual({
       success: false,
-      error: { message: "Session is no longer valid or has been revoked" },
+      error: { message: "Session expired or revoked" },
     });
   });
 });
