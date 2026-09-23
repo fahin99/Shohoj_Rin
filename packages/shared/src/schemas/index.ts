@@ -1,9 +1,17 @@
 import { z } from "zod";
 
+export const usernameSchema = z
+  .string()
+  .trim()
+  .min(3, "Username must be at least 3 characters")
+  .max(50, "Username must be at most 50 characters")
+  .regex(/^[a-zA-Z0-9_.-]+$/, "Username can only contain letters, numbers, dots, underscores, or hyphens");
+
 export const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  username: usernameSchema,
+  email: z.string().trim().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  phone: z.string().optional(),
+  phone: z.string().trim().min(5).optional().nullable(),
   role: z.enum(["borrower", "lender"]).optional().default("borrower"),
 });
 

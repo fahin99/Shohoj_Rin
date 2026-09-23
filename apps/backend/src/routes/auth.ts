@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import type { PoolClient } from "pg";
+import { registerSchema } from "@shohojrin/shared";
 import { pool } from "../lib/db.js";
 import {
   clearAuthCookies,
@@ -17,13 +18,6 @@ import {
 } from "../lib/auth.js";
 import { requireAuth, requireUserProfile, type RequestWithAuth } from "../middleware/authenticate.js";
 const router = Router();
-const registerSchema = z.object({
-  username: z.string().trim().min(3, "Username must be at least 3 characters").max(50),
-  email: z.string().trim().email("A valid email address is required"),
-  phone: z.string().trim().min(5).optional().nullable(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  role: z.enum(["borrower", "lender"]).optional().default("borrower"),
-});
 const loginSchema = z
   .object({
     email: z.string().trim().email().optional(),

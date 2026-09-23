@@ -8,9 +8,10 @@ async function migrateAccountIdentity() {
     // Existing accounts may not have a username. Keep it nullable for backward
     // compatibility; new registrations are required to provide one.
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(50)`);
+    await client.query(`DROP INDEX IF EXISTS idx_users_username_unique`);
     await client.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique
-      ON users (username)
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_lower
+      ON users (LOWER(username))
       WHERE username IS NOT NULL
     `);
 

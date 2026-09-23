@@ -51,9 +51,10 @@ async function hasCanonicalSchema(client: PoolClient) {
 async function ensureAccountIdentitySchema(client: PoolClient) {
   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(50)`);
   await client.query(`ALTER TABLE users ALTER COLUMN username DROP NOT NULL`);
+  await client.query(`DROP INDEX IF EXISTS idx_users_username_unique`);
   await client.query(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique
-    ON users (username)
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_lower
+    ON users (LOWER(username))
     WHERE username IS NOT NULL
   `);
   await client.query(`ALTER TABLE user_profiles ALTER COLUMN full_name DROP NOT NULL`);
