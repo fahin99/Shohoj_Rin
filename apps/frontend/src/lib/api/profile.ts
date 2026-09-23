@@ -2,6 +2,7 @@ import { apiRequest } from "../api";
 import type { ProfileCompletionItem } from "@shohojrin/shared";
 
 export interface ProfileData {
+  username?: string | null;
   full_name: string | null;
   date_of_birth: string | null;
   gender: string | null;
@@ -41,6 +42,13 @@ export async function updateProfile(data: Record<string, unknown>) {
   return apiRequest<ProfileData>("/profile", {
     method: "PUT",
     body: JSON.stringify(data),
+  });
+}
+
+export async function updateUsername(username: string) {
+  return apiRequest<{ username: string }>("/profile/username", {
+    method: "PUT",
+    body: JSON.stringify({ username }),
   });
 }
 

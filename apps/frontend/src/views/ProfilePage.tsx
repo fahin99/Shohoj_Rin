@@ -17,6 +17,7 @@ import type { TrustScoreData } from "../lib/api/trust";
 import { useTranslation } from "../lib/language-context";
 import { enumKey } from "../lib/enum-labels";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface Props {
   onNavigate: (page: PageName) => void;
@@ -24,6 +25,7 @@ interface Props {
 }
 
 interface ProfileRecord {
+  username?: string | null;
   full_name: string | null;
   date_of_birth: string | null;
   gender: string | null;
@@ -51,6 +53,7 @@ interface ProfileRecord {
 }
 
 interface FormState {
+  username: string;
   fullName: string;
   dateOfBirth: string;
   gender: string;
@@ -73,6 +76,7 @@ interface FormState {
 }
 
 interface LenderFormState {
+  username: string;
   displayName: string;
   companyName: string;
   companyAddress: string;
@@ -190,7 +194,9 @@ function toFormValue(value: string | number | null | undefined) {
 
 export default function ProfilePage({ onNavigate, user }: Props) {
   const { t } = useTranslation();
+  const router = useRouter();
   const isLender = user.role === "lender";
+  const [currentUsername, setCurrentUsername] = useState<string>(user.username?.trim() || "");
 
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [completionItems, setCompletionItems] = useState<ProfileCompletionItem[]>([]);
@@ -226,28 +232,31 @@ export default function ProfilePage({ onNavigate, user }: Props) {
   const [lenderSaveSuccess, setLenderSaveSuccess] = useState(false);
 
   const loadProfile = useCallback(async () => {
-  setLoadingProfile(true);
-  setProfileError(null);
+    setLoadingProfile(true);
+    setProfileError(null);
 
-  try {
-    const data = await profileApi.getProfile();
-    setProfile(data.profile);
-    setCompletionItems(data.completionItems ?? []);
-  } catch (e) {
-    setProfileError(e instanceof Error ? e.message : "Failed to load profile");
-  } finally {
-    setLoadingProfile(false);
-  }
-}, []);
+    try {
+      const data = await profileApi.getProfile();
+      setProfile(data.profile);
+      if (data.profile?.username) {
+        setCurrentUsername(data.profile.username);
+      }
+      setCompletionItems(data.completionItems ?? []);
+    } catch (e) {
+      setProfileError(e instanceof Error ? e.message : "Failed to load profile");
+    } finally {
+      setLoadingProfile(false);
+    }
+  }, []);
 
   useEffect(() => {
-  if (isLender) {
-    setLoadingProfile(false);
-    return;
-  }
+    if (isLender) {
+      setLoadingProfile(false);
+      return;
+    }
 
-  loadProfile();
-}, [isLender, loadProfile]);
+    loadProfile();
+  }, [isLender, loadProfile]);
 
   useEffect(() => {
     if (isLender) {
@@ -297,7 +306,12 @@ export default function ProfilePage({ onNavigate, user }: Props) {
       setInvestorError(null);
       try {
         const data = await investorApi.getInvestorProfile();
-        if (!cancelled) setInvestorProfile(data);
+        if (!cancelled) {
+          setInvestorProfile(data);
+          if (data.username) {
+            setCurrentUsername(data.username);
+          }
+        }
       } catch (e) {
         if (!cancelled) {
           setInvestorError(e instanceof Error ? e.message : "Failed to load investor profile");
@@ -334,6 +348,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
   function startLenderEdit() {
     if (!investorProfile) return;
     setLenderForm({
+      username: toFormValue(currentUsername || investorProfile.username || user.username),
       displayName: toFormValue(investorProfile.displayName),
       companyName: toFormValue(investorProfile.company?.name),
       companyAddress: toFormValue(investorProfile.company?.address),
@@ -374,10 +389,18 @@ export default function ProfilePage({ onNavigate, user }: Props) {
 
   async function handleLenderSave() {
     if (!lenderForm) return;
+    const cleanUsername = lenderForm.username.trim();
+    if (cleanUsername) {
+      if (cleanUsername.length < 3 || cleanUsername.length > 50 || !/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)) {
+        setLenderSaveError("Username must be 3-50 letters, numbers, dots, underscores, or hyphens");
+        return;
+      }
+    }
     setLenderSaving(true);
     setLenderSaveError(null);
     try {
       const data = await investorApi.updateInvestorProfile({
+        username: cleanUsername || undefined,
         displayName: lenderForm.displayName.trim() || undefined,
         companyName: lenderForm.companyName.trim() || undefined,
         companyAddress: lenderForm.companyAddress.trim() || undefined,
@@ -390,9 +413,13 @@ export default function ProfilePage({ onNavigate, user }: Props) {
         preferredCategories: lenderForm.preferredCategories,
       });
       setInvestorProfile(data);
+      if (cleanUsername) {
+        setCurrentUsername(cleanUsername);
+      }
       setLenderIsEditing(false);
       setLenderForm(null);
       setLenderSaveSuccess(true);
+      router.refresh();
     } catch (e) {
       setLenderSaveError(e instanceof Error ? e.message : "Failed to save profile");
     } finally {
@@ -403,6 +430,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
   function startEdit() {
     if (!profile) return;
     setForm({
+      username: toFormValue(currentUsername || profile.username || user.username),
       fullName: toFormValue(profile.full_name),
       dateOfBirth: profile.date_of_birth ? profile.date_of_birth.slice(0, 10) : "",
       gender: toFormValue(profile.gender),
@@ -440,10 +468,18 @@ export default function ProfilePage({ onNavigate, user }: Props) {
 
   async function handleSave() {
     if (!form) return;
+    const cleanUsername = form.username.trim();
+    if (cleanUsername) {
+      if (cleanUsername.length < 3 || cleanUsername.length > 50 || !/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)) {
+        setSaveError("Username must be 3-50 letters, numbers, dots, underscores, or hyphens");
+        return;
+      }
+    }
     setSaving(true);
     setSaveError(null);
     try {
       const payload: Record<string, unknown> = {
+        username: cleanUsername || undefined,
         fullName: form.fullName.trim() || undefined,
         dateOfBirth: form.dateOfBirth || undefined,
         gender: form.gender || undefined,
@@ -465,10 +501,14 @@ export default function ProfilePage({ onNavigate, user }: Props) {
         enrollmentYear: form.enrollmentYear !== "" ? parseInt(form.enrollmentYear, 10) : undefined,
       };
       await profileApi.updateProfile(payload);
+      if (cleanUsername) {
+        setCurrentUsername(cleanUsername);
+      }
       await loadProfile();
       setIsEditing(false);
       setForm(null);
       setSaveSuccess(true);
+      router.refresh();
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Failed to save profile");
     } finally {
@@ -476,8 +516,8 @@ export default function ProfilePage({ onNavigate, user }: Props) {
     }
   }
 
-  const userName = getDisplayName(user, user.username ?? "Account");
-  const username = user.username?.trim() || "Not set";
+  const userName = getDisplayName(user, currentUsername || user.username || "Account");
+  const username = currentUsername || user.username?.trim() || "Not set";
   const avatarInitials = (
     (isLender ? investorProfile?.displayName : null) ||
     profile?.full_name ||
@@ -605,6 +645,14 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                   <CardBody className="flex flex-col gap-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <TextInput
+                        label={t("auth.username") || "Username"}
+                        value={lenderForm.username}
+                        onChange={(e) => updateLenderForm("username", e.target.value)}
+                        hint="3-50 letters, numbers, dots, underscores, or hyphens"
+                        autoComplete="username"
+                        required
+                      />
+                      <TextInput
                         label="Display name"
                         value={lenderForm.displayName}
                         onChange={(e) => updateLenderForm("displayName", e.target.value)}
@@ -678,6 +726,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                   description={t("profile.companyHint")}
                 />
                 <CardBody>
+                  <DataRow label={t("auth.username") || "Username"} value={currentUsername ? `@${currentUsername}` : "—"} />
                   <DataRow label="Company name" value={investorProfile.company?.name || "—"} />
                   <DataRow label="Address" value={investorProfile.company?.address || "—"} />
                   <DataRow label="Branch" value={investorProfile.company?.branch || "—"} />
@@ -846,6 +895,14 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                 <CardBody className="flex flex-col gap-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <TextInput
+                      label={t("auth.username") || "Username"}
+                      value={form.username}
+                      onChange={(e) => updateForm("username", e.target.value)}
+                      hint="3-50 letters, numbers, dots, underscores, or hyphens"
+                      autoComplete="username"
+                      required
+                    />
+                    <TextInput
                       label="Full name"
                       value={form.fullName}
                       onChange={(e) => updateForm("fullName", e.target.value)}
@@ -966,6 +1023,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                 <Card>
                   <CardHeader title={t("profile.personalIdentity")} />
                   <CardBody>
+                    <DataRow label={t("auth.username") || "Username"} value={currentUsername ? `@${currentUsername}` : "—"} />
                     <DataRow label="Full name" value={profile.full_name || "—"} />
                     <DataRow
                       label="Date of birth"

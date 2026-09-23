@@ -72,45 +72,55 @@ router.get("/profile", requireAuth, requireLender, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT
-         investor_profile_id AS "investorProfileId",
-         user_id AS "userId",
-         display_name AS "displayName",
-         verification_status AS "verificationStatus",
-         funding_capacity AS "fundingCapacity",
-         preferred_categories AS "preferredCategories",
-         risk_preference AS "riskPreference",
-         max_exposure AS "maxExposure",
-         account_status AS "accountStatus",
-         kyc_status AS "kycStatus",
-         created_at AS "createdAt",
-         updated_at AS "updatedAt"
-       FROM investor_profiles
-       WHERE user_id = $1`,
+         ip.investor_profile_id AS "investorProfileId",
+         ip.user_id AS "userId",
+         u.username AS "username",
+         ip.display_name AS "displayName",
+         ip.verification_status AS "verificationStatus",
+         ip.funding_capacity AS "fundingCapacity",
+         ip.preferred_categories AS "preferredCategories",
+         ip.risk_preference AS "riskPreference",
+         ip.max_exposure AS "maxExposure",
+         ip.account_status AS "accountStatus",
+         ip.kyc_status AS "kycStatus",
+         ip.created_at AS "createdAt",
+         ip.updated_at AS "updatedAt"
+       FROM investor_profiles ip
+       JOIN users u ON u.user_id = ip.user_id
+       WHERE ip.user_id = $1`,
       [userId],
     );
 
     const company = await fetchLenderCompany(userId);
 
     if (result.rowCount === 0) {
-      const insert = await pool.query(
+      await pool.query(
         `INSERT INTO investor_profiles (user_id, verification_status, kyc_status, account_status)
          VALUES ($1, 'pending', 'incomplete', 'active')
-         RETURNING
-           investor_profile_id AS "investorProfileId",
-           user_id AS "userId",
-           display_name AS "displayName",
-           verification_status AS "verificationStatus",
-           funding_capacity AS "fundingCapacity",
-           preferred_categories AS "preferredCategories",
-           risk_preference AS "riskPreference",
-           max_exposure AS "maxExposure",
-           account_status AS "accountStatus",
-           kyc_status AS "kycStatus",
-           created_at AS "createdAt",
-           updated_at AS "updatedAt"`,
+         ON CONFLICT (user_id) DO NOTHING`,
         [userId],
       );
-      return res.status(200).json({ success: true, data: { ...insert.rows[0], company } });
+      const inserted = await pool.query(
+        `SELECT
+           ip.investor_profile_id AS "investorProfileId",
+           ip.user_id AS "userId",
+           u.username AS "username",
+           ip.display_name AS "displayName",
+           ip.verification_status AS "verificationStatus",
+           ip.funding_capacity AS "fundingCapacity",
+           ip.preferred_categories AS "preferredCategories",
+           ip.risk_preference AS "riskPreference",
+           ip.max_exposure AS "maxExposure",
+           ip.account_status AS "accountStatus",
+           ip.kyc_status AS "kycStatus",
+           ip.created_at AS "createdAt",
+           ip.updated_at AS "updatedAt"
+         FROM investor_profiles ip
+         JOIN users u ON u.user_id = ip.user_id
+         WHERE ip.user_id = $1`,
+        [userId],
+      );
+      return res.status(200).json({ success: true, data: { ...inserted.rows[0], company } });
     }
 
     return res.status(200).json({ success: true, data: { ...result.rows[0], company } });
@@ -145,6 +155,19 @@ router.put("/profile", requireAuth, requireLender, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+
+    if (data.username !== undefined) {
+      const newUsername = data.username.trim();
+      const existing = await client.query(
+        `SELECT user_id FROM users WHERE LOWER(username) = LOWER($1) AND user_id != $2 LIMIT 1`,
+        [newUsername, userId],
+      );
+      if (existing.rowCount && existing.rowCount > 0) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ success: false, error: { message: "This username is already taken" } });
+      }
+      await client.query(`UPDATE users SET username = $1, updated_at = NOW() WHERE user_id = $2`, [newUsername, userId]);
+    }
 
     if (data.companyName) {
       const companyName = data.companyName.trim().replace(/\s+/g, " ");
@@ -200,10 +223,13 @@ router.put("/profile", requireAuth, requireLender, async (req, res) => {
       ],
     );
 
+    const userRow = await client.query(`SELECT username FROM users WHERE user_id = $1`, [userId]);
+    const username = userRow.rows[0]?.username ?? null;
+
     await client.query("COMMIT");
 
     const company = await fetchLenderCompany(userId);
-    return res.status(200).json({ success: true, data: { ...result.rows[0], company } });
+    return res.status(200).json({ success: true, data: { ...result.rows[0], username, company } });
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Failed to update investor profile:", error);

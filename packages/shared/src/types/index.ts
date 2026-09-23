@@ -68,6 +68,7 @@ export interface LoanProductDetail extends LoanProduct {
 export interface InvestorProfile {
   investorProfileId: string;
   userId: string;
+  username?: string | null;
   displayName: string | null;
   verificationStatus: VerificationStatus;
   fundingCapacity: number | string | null;

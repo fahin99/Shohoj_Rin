@@ -2,7 +2,7 @@ import { pool } from "../lib/db.js";
 import type { ProfileCompletionItem, ProfileUpdateInput } from "@shohojrin/shared";
 const docu_verific_flag = false;
 export const auto_verify_docs = true;
-const profileColumnByField = {
+const profileColumnByField: Record<string, string> = {
   fullName: "full_name",
   dateOfBirth: "date_of_birth",
   gender: "gender",
@@ -21,15 +21,15 @@ const profileColumnByField = {
   institutionId: "institution_id",
   studentId: "student_id",
   enrollmentYear: "enrollment_year",
-} as const satisfies Record<keyof ProfileUpdateInput, string>;
+};
 
 export async function getProfileWithCompletion(userId: string) {
   const result = await pool.query(
-    `SELECT p.*, u.email, u.phone, u.role, i.name AS institution_name 
-     FROM user_profiles p
-     JOIN users u ON u.user_id = p.user_id
+    `SELECT p.*, u.username, u.email, u.phone, u.role, i.name AS institution_name 
+     FROM users u
+     LEFT JOIN user_profiles p ON p.user_id = u.user_id
      LEFT JOIN institutions i ON i.institution_id = p.institution_id
-     WHERE p.user_id = $1`,
+     WHERE u.user_id = $1`,
     [userId],
   );
   const profile = result.rows[0];
@@ -48,39 +48,79 @@ export async function getProfileWithCompletion(userId: string) {
 }
 
 export async function updateProfile(userId: string, data: ProfileUpdateInput) {
+  const hasUsername = data.username !== undefined;
   const fields = (Object.keys(data) as Array<keyof ProfileUpdateInput>).filter(
-    (field) => data[field] !== undefined,
-  );
-  if (fields.length === 0) return null;
-  const setClause = fields
-    .map((field, index) => `${profileColumnByField[field]} = $${index + 2}`)
-    .join(", ");
-  const values = [userId, ...fields.map((field) => data[field])];
-
-  const result = await pool.query(
-    `UPDATE user_profiles 
-     SET ${setClause}, updated_at = NOW() 
-     WHERE user_id = $1 
-     RETURNING *`,
-    values,
+    (field) => field !== "username" && data[field] !== undefined,
   );
 
-  if (!result.rows[0]) {
-    await pool.query(
-      `INSERT INTO user_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
-      [userId],
+  if (!hasUsername && fields.length === 0) return null;
+
+  // If username is provided, validate uniqueness and update users table
+  if (hasUsername) {
+    const trimmedUsername = data.username!.trim();
+    const existing = await pool.query(
+      `SELECT user_id FROM users WHERE LOWER(username) = LOWER($1) AND user_id != $2 LIMIT 1`,
+      [trimmedUsername, userId],
     );
-    const retryResult = await pool.query(
+    if (existing.rowCount && existing.rowCount > 0) {
+      const error: any = new Error("This username is already taken");
+      error.code = "USERNAME_TAKEN";
+      throw error;
+    }
+    await pool.query(
+      `UPDATE users SET username = $1, updated_at = NOW() WHERE user_id = $2`,
+      [trimmedUsername, userId],
+    );
+  }
+
+  let profileRow = null;
+  if (fields.length > 0) {
+    const setClause = fields
+      .map((field, index) => `${profileColumnByField[field]} = $${index + 2}`)
+      .join(", ");
+    const values = [userId, ...fields.map((field) => data[field])];
+
+    const result = await pool.query(
       `UPDATE user_profiles 
        SET ${setClause}, updated_at = NOW() 
        WHERE user_id = $1 
        RETURNING *`,
       values,
     );
-    return retryResult.rows[0] ?? null;
+
+    if (!result?.rows?.[0]) {
+      await pool.query(
+        `INSERT INTO user_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
+        [userId],
+      );
+      const retryResult = await pool.query(
+        `UPDATE user_profiles 
+         SET ${setClause}, updated_at = NOW() 
+         WHERE user_id = $1 
+         RETURNING *`,
+        values,
+      );
+      profileRow = retryResult?.rows?.[0] ?? null;
+    } else {
+      profileRow = result.rows[0];
+    }
   }
 
-  return result.rows[0];
+  if (!hasUsername) {
+    return profileRow;
+  }
+
+  // Fetch full updated profile so username and email are included
+  const refreshed = await pool.query(
+    `SELECT p.*, u.username, u.email, u.phone, u.role, i.name AS institution_name 
+     FROM users u
+     LEFT JOIN user_profiles p ON p.user_id = u.user_id
+     LEFT JOIN institutions i ON i.institution_id = p.institution_id
+     WHERE u.user_id = $1`,
+    [userId],
+  );
+
+  return refreshed?.rows?.[0] ?? profileRow;
 }
 
 export function getDocumentRequirements(role: string, occupationType: string | null | undefined) {

@@ -10,6 +10,7 @@ import { useTranslation } from "../lib/language-context";
 import type { TranslationKey } from "../translations/en";
 import { getDisplayName } from "../lib/session";
 import { apiRequest } from "../lib/api";
+import { LanguageToggle } from "./LanguageToggle";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -345,6 +346,9 @@ export function AppLayout({
           <p className="min-w-0 flex-1 truncate text-sm font-medium text-stone-500">
             {navItems.find((i) => i.page === currentPage)?.label ?? t("app.name")}
           </p>
+          <div className="flex items-center justify-center bg-white border border-stone-200 shadow-sm rounded-[6px] p-1 mr-2">
+            <LanguageToggle />
+          </div>
           <div className="relative">
             <IconButton
               label="Notifications"

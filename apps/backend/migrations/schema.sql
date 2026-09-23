@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_lower ON users (LOWER(username)) WHERE username IS NOT NULL;
  
 CREATE TABLE IF NOT EXISTS login_sessions (
   session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

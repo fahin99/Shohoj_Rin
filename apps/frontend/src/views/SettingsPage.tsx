@@ -8,6 +8,7 @@ import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Alert } from "../components/Alert";
+import { TextInput } from "../components/Input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
 import { apiRequest } from "../lib/api";
+import { profileApi } from "../lib/api/index";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
 import type { PageName } from "../types";
 import { useTranslation } from "../lib/language-context";
@@ -40,11 +42,44 @@ export default function SettingsPage({ onNavigate, user }: Props) {
   const router = useRouter();
   const role = user.role ?? "borrower";
   const status = user.accountStatus ?? "active";
-  const userName = getDisplayName(user, user.username ? `@${user.username}` : t("settings.account"));
+
+  const [currentUsername, setCurrentUsername] = useState(user.username?.trim() || "");
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [usernameInput, setUsernameInput] = useState(user.username?.trim() || "");
+  const [usernameSaving, setUsernameSaving] = useState(false);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [usernameSuccess, setUsernameSuccess] = useState(false);
+
+  const userName = getDisplayName(user, currentUsername ? `@${currentUsername}` : t("settings.account"));
 
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
+
+  const handleSaveUsername = async () => {
+    const clean = usernameInput.trim();
+    if (!clean) {
+      setUsernameError("Username is required");
+      return;
+    }
+    if (clean.length < 3 || clean.length > 50 || !/^[a-zA-Z0-9_.-]+$/.test(clean)) {
+      setUsernameError("Use 3-50 letters, numbers, dots, underscores, or hyphens");
+      return;
+    }
+    setUsernameSaving(true);
+    setUsernameError(null);
+    try {
+      await profileApi.updateUsername(clean);
+      setCurrentUsername(clean);
+      setIsEditingUsername(false);
+      setUsernameSuccess(true);
+      router.refresh();
+    } catch (err: any) {
+      setUsernameError(err?.message || "Failed to update username");
+    } finally {
+      setUsernameSaving(false);
+    }
+  };
 
   const handleLogout = async () => {
     setLogoutLoading(true);
@@ -79,9 +114,72 @@ export default function SettingsPage({ onNavigate, user }: Props) {
 
         <div className="flex flex-col gap-5">
           <Card>
-            <CardHeader title={t("settings.account")} description={t("settings.accountDescription")} />
+            <CardHeader
+              title={t("settings.account")}
+              description={t("settings.accountDescription")}
+              action={
+                !isEditingUsername ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setUsernameInput(currentUsername);
+                      setUsernameError(null);
+                      setUsernameSuccess(false);
+                      setIsEditingUsername(true);
+                    }}
+                  >
+                    {currentUsername ? "Edit username" : "Set username"}
+                  </Button>
+                ) : null
+              }
+            />
             <CardBody>
-              <DataRow label={t("settings.username")} value={user.username ? `@${user.username}` : t("common.notSet")} />
+              {usernameSuccess && !isEditingUsername && (
+                <Alert variant="success" title="Username updated successfully" dismissible className="mb-4">
+                  Your username has been updated to @{currentUsername}.
+                </Alert>
+              )}
+
+              {isEditingUsername ? (
+                <div className="py-2 flex flex-col gap-3 border-b border-stone-100 pb-4 mb-2">
+                  <TextInput
+                    label={t("settings.username") || "Username"}
+                    value={usernameInput}
+                    onChange={(e) => setUsernameInput(e.target.value)}
+                    error={usernameError || undefined}
+                    hint="3-50 letters, numbers, dots, underscores, or hyphens"
+                    autoComplete="username"
+                    required
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSaveUsername}
+                      loading={usernameSaving}
+                    >
+                      {t("common.save") || "Save"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setIsEditingUsername(false);
+                        setUsernameError(null);
+                      }}
+                      disabled={usernameSaving}
+                    >
+                      {t("common.cancel") || "Cancel"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <DataRow
+                  label={t("settings.username")}
+                  value={currentUsername ? `@${currentUsername}` : t("common.notSet")}
+                />
+              )}
               <DataRow label={t("settings.email")} value={user.email || "—"} />
               <DataRow label={t("settings.phone")} value={user.phone || t("common.notSet")} />
               <DataRow label={t("settings.role")} value={t(enumKey("role", role))} />

@@ -6,6 +6,7 @@ import { Button } from "./Button";
 import type { PageName } from "../types";
 import { getDisplayName, type StoredUserProfile } from "../lib/session";
 import { apiRequest } from "../lib/api";
+import { LanguageToggle } from "./LanguageToggle";
 interface NavbarProps {
   onNavigate: (page: PageName) => void;
   transparent?: boolean;
@@ -65,6 +66,9 @@ export function Navbar({ onNavigate, transparent = false, user = null }: NavbarP
           )}
         </nav>
         <div className="hidden md:flex items-center gap-2">
+          <div className="flex items-center justify-center bg-white border border-stone-200 shadow-sm rounded-[6px] p-1 mr-1">
+            <LanguageToggle />
+          </div>
           {isAuthenticated ? (
             <>
               <Button variant="ghost" size="sm" onClick={() => onNavigate("borrower-dashboard")}>

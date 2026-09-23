@@ -40,7 +40,23 @@ export const loanListSearchSchema = z.object({
   sort: z.enum(["interest-asc", "interest-desc", "amount-asc", "amount-desc"]).optional(),
 });
 
+export const usernameUpdateSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(3, "Username must be at least 3 characters")
+    .max(50, "Username must be at most 50 characters")
+    .regex(/^[a-zA-Z0-9_.-]+$/, "Username can only contain letters, numbers, dots, underscores, or hyphens"),
+});
+
 export const profileUpdateSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(3, "Username must be at least 3 characters")
+    .max(50, "Username must be at most 50 characters")
+    .regex(/^[a-zA-Z0-9_.-]+$/, "Username can only contain letters, numbers, dots, underscores, or hyphens")
+    .optional(),
   fullName: z.string().trim().min(2).optional(),
   dateOfBirth: z.string().optional(),
   gender: z.string().optional(),
@@ -62,6 +78,13 @@ export const profileUpdateSchema = z.object({
 });
 
 export const investorProfileSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(3, "Username must be at least 3 characters")
+    .max(50, "Username must be at most 50 characters")
+    .regex(/^[a-zA-Z0-9_.-]+$/, "Username can only contain letters, numbers, dots, underscores, or hyphens")
+    .optional(),
   displayName: z.string().trim().min(2).optional(),
   phone: z.string().trim().min(5).optional(),
   fundingCapacity: z.number().positive().optional(),
@@ -106,5 +129,6 @@ export type DashboardSearch = z.infer<typeof dashboardSearchSchema>;
 export type LoanListSearch = z.infer<typeof loanListSearchSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 export type InvestorProfileInput = z.infer<typeof investorProfileSchema>;
+export type UsernameUpdateInput = z.infer<typeof usernameUpdateSchema>;
 export type DocumentUploadInput = z.infer<typeof documentUploadSchema>;
 export type VerificationRequestInput = z.infer<typeof verificationRequestSchema>;

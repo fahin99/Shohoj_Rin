@@ -109,7 +109,11 @@ router.post("/register", async (req, res) => {
   try {
     await client.query("BEGIN");
     const existingUser = await client.query(
-      `SELECT user_id FROM users WHERE username = $1 OR email = $2 OR ($3::varchar IS NOT NULL AND phone = $3) LIMIT 1`,
+      `SELECT user_id FROM users
+       WHERE (username IS NOT NULL AND LOWER(username) = LOWER($1))
+          OR LOWER(email) = LOWER($2)
+          OR ($3::varchar IS NOT NULL AND phone = $3)
+       LIMIT 1`,
       [username, email, phone],
     );
     if (existingUser.rowCount && existingUser.rowCount > 0) {
@@ -160,8 +164,14 @@ router.post("/login", async (req, res) => {
          u.email_verified, u.created_at, u.updated_at,
         u.password_hash
        FROM users u
-       WHERE u.email = $1 OR u.phone = $2 OR u.username = $3
-          OR ($4::text IS NOT NULL AND (u.email = $4 OR u.phone = $4 OR u.username = $4))
+       WHERE LOWER(u.email) = LOWER($1)
+          OR u.phone = $2
+          OR (u.username IS NOT NULL AND LOWER(u.username) = LOWER($3))
+          OR ($4::text IS NOT NULL AND (
+               LOWER(u.email) = LOWER($4)
+               OR u.phone = $4
+               OR (u.username IS NOT NULL AND LOWER(u.username) = LOWER($4))
+             ))
        LIMIT 1`,
       [email, phone, username, identifier],
     );

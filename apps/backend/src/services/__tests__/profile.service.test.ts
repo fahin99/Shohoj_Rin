@@ -128,4 +128,35 @@ describe("updateProfile", () => {
     expect(sql).toContain("income_source = $5");
     expect(values).toEqual(["user-1", "dhaka", "dhaka", "Software Engineer", "salary"]);
   });
+
+  it("updates users.username when username is provided", async () => {
+    // 1st query: uniqueness check -> 0 rows
+    // 2nd query: update users
+    // 3rd query: refresh full profile
+    query
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ username: "new_username", email: "test@example.com" }] });
+
+    const result = await updateProfile("user-1", { username: "new_username" });
+
+    expect(query).toHaveBeenCalledTimes(3);
+    const [checkSql, checkValues] = query.mock.calls[0];
+    expect(checkSql).toContain("SELECT user_id FROM users WHERE LOWER(username) = LOWER($1)");
+    expect(checkValues).toEqual(["new_username", "user-1"]);
+
+    const [updateSql, updateValues] = query.mock.calls[1];
+    expect(updateSql).toContain("UPDATE users SET username = $1");
+    expect(updateValues).toEqual(["new_username", "user-1"]);
+
+    expect(result).toEqual({ username: "new_username", email: "test@example.com" });
+  });
+
+  it("throws USERNAME_TAKEN if username already belongs to another user", async () => {
+    query.mockResolvedValueOnce({ rowCount: 1, rows: [{ user_id: "other-user" }] });
+
+    await expect(updateProfile("user-1", { username: "taken_username" })).rejects.toThrow(
+      "This username is already taken",
+    );
+  });
 });

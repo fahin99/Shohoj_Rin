@@ -4,7 +4,7 @@ import { requireRole } from "../middleware/authorize.js";
 import { getProfileWithCompletion, updateProfile } from "../services/profile.service.js";
 import { logAuditEvent } from "../services/audit.service.js";
 import { pool } from "../lib/db.js";
-import { profileUpdateSchema } from "@shohojrin/shared";
+import { profileUpdateSchema, usernameUpdateSchema } from "@shohojrin/shared";
 
 const router = Router();
 
@@ -18,6 +18,55 @@ router.get("/", requireAuth, async (req, res) => {
     return res.json({ success: true, data: profileData });
   } catch (error) {
     return res.status(500).json({ success: false, error: { message: "Failed to get profile" } });
+  }
+});
+
+router.put("/username", requireAuth, async (req, res) => {
+  const authReq = req as RequestWithAuth;
+  const userId = authReq.auth!.userId;
+  const parsed = usernameUpdateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      success: false,
+      error: { message: "Invalid username", details: parsed.error.flatten() },
+    });
+  }
+
+  const newUsername = parsed.data.username.trim();
+  const client = await pool.connect();
+  try {
+    const existing = await client.query(
+      `SELECT user_id FROM users WHERE LOWER(username) = LOWER($1) AND user_id != $2 LIMIT 1`,
+      [newUsername, userId],
+    );
+    if (existing.rowCount && existing.rowCount > 0) {
+      return res.status(409).json({
+        success: false,
+        error: { message: "This username is already taken" },
+      });
+    }
+
+    await client.query(
+      `UPDATE users SET username = $1, updated_at = NOW() WHERE user_id = $2`,
+      [newUsername, userId],
+    );
+
+    await logAuditEvent(
+      userId,
+      "update_username",
+      "user",
+      userId,
+      null,
+      { username: newUsername },
+      req,
+    );
+
+    return res.json({ success: true, data: { username: newUsername } });
+  } catch (error) {
+    console.error("Failed to update username:", error);
+    return res.status(500).json({ success: false, error: { message: "Failed to update username" } });
+  } finally {
+    client.release();
   }
 });
 
@@ -39,10 +88,16 @@ router.put("/", requireAuth, requireRole("borrower", "lender"), async (req, res)
     return res.json({ success: true, data: updated });
   } catch (error: any) {
     console.error("Failed to update profile:", error);
+    if (error?.code === "USERNAME_TAKEN") {
+      return res.status(409).json({
+        success: false,
+        error: { message: "This username is already taken" },
+      });
+    }
     if (error?.code === "23505") {
       return res.status(409).json({
         success: false,
-        error: { message: "This National ID number is already registered to another account" },
+        error: { message: "This National ID number or username is already registered to another account" },
       });
     }
     if (error?.code === "23503") {
