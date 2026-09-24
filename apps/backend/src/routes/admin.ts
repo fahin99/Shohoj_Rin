@@ -232,8 +232,10 @@ router.put("/verification/:id/review", requireAuth, requireAdmin, async (req, re
     });
   }
 
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
+    await client.query("BEGIN");
+    const result = await client.query(
       `UPDATE verification_requests
        SET status = $1, reviewer_id = $2, reviewer_notes = $3, reviewed_at = NOW()
        WHERE request_id = $4
@@ -242,6 +244,7 @@ router.put("/verification/:id/review", requireAuth, requireAdmin, async (req, re
     );
 
     if (result.rowCount === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({
         success: false,
         error: { message: "Verification request not found" },
@@ -250,29 +253,33 @@ router.put("/verification/:id/review", requireAuth, requireAdmin, async (req, re
 
     // Update document statuses if approving/rejecting
     if (status === "approved") {
-      await pool.query(
+      await client.query(
         `UPDATE verification_documents SET document_status = 'verified'
          WHERE request_id = $1 AND document_status IN ('uploaded', 'under_review')`,
         [req.params.id],
       );
     } else if (status === "rejected") {
-      await pool.query(
+      await client.query(
         `UPDATE verification_documents SET document_status = 'rejected'
          WHERE request_id = $1 AND document_status IN ('uploaded', 'under_review')`,
         [req.params.id],
       );
     }
 
+    await client.query("COMMIT");
     return res.status(200).json({
       success: true,
       data: result.rows[0],
     });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Failed to review verification:", error);
     return res.status(500).json({
       success: false,
       error: { message: "Failed to review verification request" },
     });
+  } finally {
+    client.release();
   }
 });
 

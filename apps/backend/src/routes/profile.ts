@@ -35,11 +35,13 @@ router.put("/username", requireAuth, async (req, res) => {
   const newUsername = parsed.data.username.trim();
   const client = await pool.connect();
   try {
+    await client.query("BEGIN");
     const existing = await client.query(
       `SELECT user_id FROM users WHERE LOWER(username) = LOWER($1) AND user_id != $2 LIMIT 1`,
       [newUsername, userId],
     );
     if (existing.rowCount && existing.rowCount > 0) {
+      await client.query("ROLLBACK");
       return res.status(409).json({
         success: false,
         error: { message: "This username is already taken" },
@@ -59,10 +61,13 @@ router.put("/username", requireAuth, async (req, res) => {
       null,
       { username: newUsername },
       req,
+      client,
     );
 
+    await client.query("COMMIT");
     return res.json({ success: true, data: { username: newUsername } });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Failed to update username:", error);
     return res.status(500).json({ success: false, error: { message: "Failed to update username" } });
   } finally {
@@ -134,8 +139,10 @@ router.get("/completion", requireAuth, async (req, res) => {
 router.post("/submit-verification", requireAuth, async (req, res) => {
   const authReq = req as RequestWithAuth;
   const userId = authReq.auth!.userId;
+  const client = await pool.connect();
   try {
-    await pool.query(
+    await client.query("BEGIN");
+    await client.query(
       `UPDATE user_profiles SET profile_completion_status = 'pending_verification' WHERE user_id = $1`,
       [userId],
     );
@@ -147,12 +154,17 @@ router.post("/submit-verification", requireAuth, async (req, res) => {
       null,
       { status: "pending_verification" },
       req,
+      client,
     );
+    await client.query("COMMIT");
     return res.json({ success: true, data: { status: "pending_verification" } });
   } catch (error) {
+    await client.query("ROLLBACK");
     return res
       .status(500)
       .json({ success: false, error: { message: "Failed to submit verification" } });
+  } finally {
+    client.release();
   }
 });
 

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../lib/db.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
+import { requireRole } from "../middleware/authorize.js";
 import { matchApplicationToLenders } from "../services/lender-matching.service.js";
 
 const router = Router();
@@ -14,7 +15,7 @@ const createApplicationSchema = z.object({
   productId: z.string().uuid().optional(),
 });
 
-router.post("/", requireAuth, async (req, res) => {
+router.post("/", requireAuth, requireRole("borrower"), async (req, res) => {
   const authReq = req as RequestWithAuth;
   const userId = authReq.auth!.userId;
 

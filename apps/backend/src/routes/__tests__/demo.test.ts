@@ -110,6 +110,7 @@ describe("demo document skip", () => {
       null,
       { skipped: true },
       expect.anything(),
+      expect.anything(),
     );
   });
 });

@@ -59,11 +59,14 @@ export async function requireAuth(req: RequestWithAuth, res: Response, next: Nex
     );
     const row = userResult.rows[0];
     if (!row) return res.status(401).json({ success: false, error: { message: "User not found" } });
-    if (row.isRevoked === true || new Date(row.sessionExpiresAt).getTime() < Date.now()) {
+    if (row.isRevoked === true || !row.sessionExpiresAt || new Date(row.sessionExpiresAt).getTime() < Date.now()) {
       return res.status(401).json({ success: false, error: { message: "Session expired or revoked" } });
     }
+    if (row.accountStatus !== "active") {
+      return res.status(403).json({ success: false, error: { message: "Account is not active" } });
+    }
 
-    req.auth = { userId: decoded.sub, sessionId: decoded.jti, role: decoded.role };
+    req.auth = { userId: decoded.sub, sessionId: decoded.jti, role: row.role };
     return next();
   } catch {
     return res.status(401).json({ success: false, error: { message: "Invalid or expired access token" } });

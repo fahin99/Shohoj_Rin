@@ -55,72 +55,82 @@ export async function updateProfile(userId: string, data: ProfileUpdateInput) {
 
   if (!hasUsername && fields.length === 0) return null;
 
-  // If username is provided, validate uniqueness and update users table
-  if (hasUsername) {
-    const trimmedUsername = data.username!.trim();
-    const existing = await pool.query(
-      `SELECT user_id FROM users WHERE LOWER(username) = LOWER($1) AND user_id != $2 LIMIT 1`,
-      [trimmedUsername, userId],
-    );
-    if (existing.rowCount && existing.rowCount > 0) {
-      const error: any = new Error("This username is already taken");
-      error.code = "USERNAME_TAKEN";
-      throw error;
-    }
-    await pool.query(
-      `UPDATE users SET username = $1, updated_at = NOW() WHERE user_id = $2`,
-      [trimmedUsername, userId],
-    );
-  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-  let profileRow = null;
-  if (fields.length > 0) {
-    const setClause = fields
-      .map((field, index) => `${profileColumnByField[field]} = $${index + 2}`)
-      .join(", ");
-    const values = [userId, ...fields.map((field) => data[field])];
-
-    const result = await pool.query(
-      `UPDATE user_profiles 
-       SET ${setClause}, updated_at = NOW() 
-       WHERE user_id = $1 
-       RETURNING *`,
-      values,
-    );
-
-    if (!result?.rows?.[0]) {
-      await pool.query(
-        `INSERT INTO user_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
-        [userId],
+    if (hasUsername) {
+      const trimmedUsername = data.username!.trim();
+      const existing = await client.query(
+        `SELECT user_id FROM users WHERE LOWER(username) = LOWER($1) AND user_id != $2 LIMIT 1`,
+        [trimmedUsername, userId],
       );
-      const retryResult = await pool.query(
-        `UPDATE user_profiles 
-         SET ${setClause}, updated_at = NOW() 
-         WHERE user_id = $1 
+      if (existing.rowCount && existing.rowCount > 0) {
+        const error: any = new Error("This username is already taken");
+        error.code = "USERNAME_TAKEN";
+        throw error;
+      }
+      await client.query(
+        `UPDATE users SET username = $1, updated_at = NOW() WHERE user_id = $2`,
+        [trimmedUsername, userId],
+      );
+    }
+
+    let profileRow = null;
+    if (fields.length > 0) {
+      const setClause = fields
+        .map((field, index) => `${profileColumnByField[field]} = $${index + 2}`)
+        .join(", ");
+      const values = [userId, ...fields.map((field) => data[field])];
+
+      const result = await client.query(
+        `UPDATE user_profiles
+         SET ${setClause}, updated_at = NOW()
+         WHERE user_id = $1
          RETURNING *`,
         values,
       );
-      profileRow = retryResult?.rows?.[0] ?? null;
-    } else {
-      profileRow = result.rows[0];
+
+      if (!result?.rows?.[0]) {
+        await client.query(
+          `INSERT INTO user_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
+          [userId],
+        );
+        const retryResult = await client.query(
+          `UPDATE user_profiles
+           SET ${setClause}, updated_at = NOW()
+           WHERE user_id = $1
+           RETURNING *`,
+          values,
+        );
+        profileRow = retryResult?.rows?.[0] ?? null;
+      } else {
+        profileRow = result.rows[0];
+      }
     }
+
+    if (!hasUsername) {
+      await client.query("COMMIT");
+      return profileRow;
+    }
+
+    const refreshed = await client.query(
+      `SELECT p.*, u.username, u.email, u.phone, u.role, i.name AS institution_name
+       FROM users u
+       LEFT JOIN user_profiles p ON p.user_id = u.user_id
+       LEFT JOIN institutions i ON i.institution_id = p.institution_id
+       WHERE u.user_id = $1`,
+      [userId],
+    );
+
+    await client.query("COMMIT");
+    return refreshed?.rows?.[0] ?? profileRow;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
-
-  if (!hasUsername) {
-    return profileRow;
-  }
-
-  // Fetch full updated profile so username and email are included
-  const refreshed = await pool.query(
-    `SELECT p.*, u.username, u.email, u.phone, u.role, i.name AS institution_name 
-     FROM users u
-     LEFT JOIN user_profiles p ON p.user_id = u.user_id
-     LEFT JOIN institutions i ON i.institution_id = p.institution_id
-     WHERE u.user_id = $1`,
-    [userId],
-  );
-
-  return refreshed?.rows?.[0] ?? profileRow;
 }
 
 export function getDocumentRequirements(role: string, occupationType: string | null | undefined) {

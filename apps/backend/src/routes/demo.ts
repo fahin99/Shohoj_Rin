@@ -82,6 +82,7 @@ router.post("/skip-documents", requireAuth, requireRole("borrower"), async (req,
       null,
       { skipped: true },
       req,
+      client,
     );
 
     await client.query("COMMIT");

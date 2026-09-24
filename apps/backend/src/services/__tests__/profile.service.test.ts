@@ -2,17 +2,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { profileUpdateSchema } from "@shohojrin/shared";
 
 vi.mock("../../lib/db.js", () => ({
-  pool: { query: vi.fn() },
+  pool: { query: vi.fn(), connect: vi.fn() },
 }));
 
 import { pool } from "../../lib/db.js";
 import { updateProfile } from "../profile.service.js";
 
 const query = pool.query as unknown as ReturnType<typeof vi.fn>;
+const connect = pool.connect as unknown as ReturnType<typeof vi.fn>;
+const client = { query, release: vi.fn() };
 
 describe("updateProfile", () => {
   beforeEach(() => {
     query.mockReset();
+    client.release.mockReset();
+    connect.mockReset();
+    connect.mockResolvedValue(client);
   });
 
   it("maps allowed camelCase fields to parameterized snake_case columns", async () => {
@@ -24,7 +29,7 @@ describe("updateProfile", () => {
       institutionId: null,
     });
 
-    const [sql, values] = query.mock.calls[0];
+    const [sql, values] = query.mock.calls.find(([sql]) => String(sql).includes("UPDATE user_profiles"))!;
     expect(sql).toContain("full_name = $2");
     expect(sql).toContain("monthly_income = $3");
     expect(sql).toContain("institution_id = $4");
@@ -121,7 +126,7 @@ describe("updateProfile", () => {
       incomeSource: "salary",
     });
 
-    const [sql, values] = query.mock.calls[0];
+    const [sql, values] = query.mock.calls.find(([sql]) => String(sql).includes("UPDATE user_profiles"))!;
     expect(sql).toContain("city = $2");
     expect(sql).toContain("district = $3");
     expect(sql).toContain("occupation = $4");
@@ -135,17 +140,19 @@ describe("updateProfile", () => {
     // 3rd query: refresh full profile
     query
       .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ username: "new_username", email: "test@example.com" }] });
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ username: "new_username", email: "test@example.com" }] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] });
 
     const result = await updateProfile("user-1", { username: "new_username" });
 
-    expect(query).toHaveBeenCalledTimes(3);
-    const [checkSql, checkValues] = query.mock.calls[0];
+    expect(query).toHaveBeenCalledTimes(5);
+    const [checkSql, checkValues] = query.mock.calls[1];
     expect(checkSql).toContain("SELECT user_id FROM users WHERE LOWER(username) = LOWER($1)");
     expect(checkValues).toEqual(["new_username", "user-1"]);
 
-    const [updateSql, updateValues] = query.mock.calls[1];
+    const [updateSql, updateValues] = query.mock.calls[2];
     expect(updateSql).toContain("UPDATE users SET username = $1");
     expect(updateValues).toEqual(["new_username", "user-1"]);
 
@@ -153,7 +160,10 @@ describe("updateProfile", () => {
   });
 
   it("throws USERNAME_TAKEN if username already belongs to another user", async () => {
-    query.mockResolvedValueOnce({ rowCount: 1, rows: [{ user_id: "other-user" }] });
+    query
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ user_id: "other-user" }] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] });
 
     await expect(updateProfile("user-1", { username: "taken_username" })).rejects.toThrow(
       "This username is already taken",

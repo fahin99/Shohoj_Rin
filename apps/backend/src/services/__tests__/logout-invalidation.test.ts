@@ -72,6 +72,45 @@ describe("Logout & Session Invalidation", () => {
     expect(req.auth?.sessionId).toBe(sessionId);
   });
 
+  it("uses the current database role and rejects a deactivated account", async () => {
+    await pool.query(`UPDATE users SET role = 'lender' WHERE user_id = $1`, [userId]);
+    const roleReq = {
+      cookies: { shohojrin_access_token: validAccessToken },
+      header: () => undefined,
+    } as unknown as RequestWithAuth;
+    const roleRes = createMockResponse();
+    let roleNextCalled = false;
+
+    await requireAuth(roleReq, roleRes, () => {
+      roleNextCalled = true;
+    });
+    expect(roleNextCalled).toBe(true);
+    expect(roleReq.auth?.role).toBe("lender");
+
+    await pool.query(`UPDATE users SET account_status = 'suspended' WHERE user_id = $1`, [userId]);
+    const inactiveReq = {
+      cookies: { shohojrin_access_token: validAccessToken },
+      header: () => undefined,
+    } as unknown as RequestWithAuth;
+    const inactiveRes = createMockResponse();
+    let inactiveNextCalled = false;
+
+    await requireAuth(inactiveReq, inactiveRes, () => {
+      inactiveNextCalled = true;
+    });
+    expect(inactiveNextCalled).toBe(false);
+    expect(inactiveRes.statusCode).toBe(403);
+    expect(inactiveRes.responseData).toEqual({
+      success: false,
+      error: { message: "Account is not active" },
+    });
+
+    await pool.query(
+      `UPDATE users SET role = 'borrower', account_status = 'active' WHERE user_id = $1`,
+      [userId],
+    );
+  });
+
   it("rejects access immediately when session is marked is_revoked = true", async () => {
     // Simulate what /logout does
     await pool.query(
