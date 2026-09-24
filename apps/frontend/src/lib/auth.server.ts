@@ -10,17 +10,35 @@ const API_BASE_URL = (
 ).replace(/\/$/, "");
 type BackendUser = {
   userId: string;
+  username?: string | null;
   email: string;
   phone: string | null;
   role: string;
   accountStatus: string;
   emailVerified: boolean;
-  fullName: string | null;
-  dateOfBirth: string | null;
-  gender: string | null;
-  city: string | null;
-  district: string | null;
-  occupation: string | null;
+  profileCompletionStatus?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  profile?: {
+    fullName?: string | null;
+    dateOfBirth?: string | null;
+    gender?: string | null;
+    city?: string | null;
+    district?: string | null;
+    occupation?: string | null;
+    nidNumber?: string | null;
+    addressLine?: string | null;
+    postalCode?: string | null;
+    monthlyFamilyIncome?: number | null;
+    employmentType?: string | null;
+    employerName?: string | null;
+    monthlyIncome?: number | null;
+    incomeSource?: string | null;
+    studentId?: string | null;
+    enrollmentYear?: number | null;
+    institutionId?: string | null;
+    profilePhotoUrl?: string | null;
+  };
 };
 type MeResponse = {
   success: boolean;
@@ -29,22 +47,40 @@ type MeResponse = {
 function toStoredUser(user: BackendUser): StoredUserProfile {
   return {
     userId: user.userId,
+    username: user.username,
     email: user.email,
     phone: user.phone,
     role: user.role,
     accountStatus: user.accountStatus,
     emailVerified: user.emailVerified,
-    profile: {
-      fullName: user.fullName,
-      dateOfBirth: user.dateOfBirth,
-      gender: user.gender,
-      city: user.city,
-      district: user.district,
-      occupation: user.occupation,
-    },
+    profileCompletionStatus: user.profileCompletionStatus,
+    profile: user.profile
+      ? {
+          fullName: user.profile.fullName,
+          dateOfBirth: user.profile.dateOfBirth,
+          gender: user.profile.gender,
+          city: user.profile.city,
+          district: user.profile.district,
+          occupation: user.profile.occupation,
+          nidNumber: user.profile.nidNumber,
+          addressLine: user.profile.addressLine,
+          postalCode: user.profile.postalCode,
+          monthlyFamilyIncome: user.profile.monthlyFamilyIncome,
+          employmentType: user.profile.employmentType,
+          employerName: user.profile.employerName,
+          monthlyIncome: user.profile.monthlyIncome,
+          incomeSource: user.profile.incomeSource,
+          studentId: user.profile.studentId,
+          enrollmentYear: user.profile.enrollmentYear,
+          institutionId: user.profile.institutionId,
+          profilePhotoUrl: user.profile.profilePhotoUrl,
+        }
+      : undefined,
   };
 }
-export async function getCurrentUser(): Promise<StoredUserProfile | null> {
+import { cache } from "react";
+
+async function _getCurrentUser(): Promise<StoredUserProfile | null> {
   const cookieStore = await cookies();
   if (!cookieStore.has("shohojrin_session")) {
     return null;
@@ -64,10 +100,20 @@ export async function getCurrentUser(): Promise<StoredUserProfile | null> {
     return null;
   }
 }
+
+export const getCurrentUser = cache(_getCurrentUser);
 export async function requireAuthenticatedUser() {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/auth");
+  }
+  return user;
+}
+
+export async function requireAdminUser() {
+  const user =await requireAuthenticatedUser();
+  if (user.role !== "admin") {
+    redirect("/dashboard");
   }
   return user;
 }

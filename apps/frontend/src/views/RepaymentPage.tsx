@@ -1,207 +1,521 @@
-import { useMemo, useState } from 'react';
-import { AppLayout } from '../components/AppLayout';
-import { PageHeader } from '../components/PageHeader';
-import { Card, CardHeader, CardBody, DataRow } from '../components/Card';
-import { Badge } from '../components/Badge';
-import { Alert } from '../components/Alert';
-import { Radio, CurrencyInput } from '../components/Input';
-import { Button } from '../components/Button';
-import { Modal } from '../components/Modal';
-import { DataTable } from '../components/DataTable';
-import { activeLoan, transactions } from '../lib/mock-data';
-import { formatTaka, formatDate } from '../lib/format';
-import type { PageName, Transaction } from '../types';
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
+import { AppLayout } from "../components/AppLayout";
+import { PageHeader } from "../components/PageHeader";
+import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
+import { Badge } from "../components/Badge";
+import { Alert } from "../components/Alert";
+import { CurrencyInput } from "../components/Input";
+import { Button } from "../components/Button";
+import { Modal } from "../components/Modal";
+import { DataTable } from "../components/DataTable";
+import { ProgressBar } from "../components/Progress";
+import { EmptyState, EmptyIcons } from "../components/EmptyState";
+import { loansApi } from "../lib/api/index";
+import type { MvpRepaymentResult } from "../lib/api/loans";
+import { formatTaka, formatDate } from "../lib/format";
+import type { PageName, RepaymentScheduleRow, ActiveLoan } from "../types";
+
 interface Props {
   onNavigate: (page: PageName) => void;
 }
-type AmountOption = 'full' | 'custom' | 'payoff';
-type PaymentMethod = 'bkash' | 'nagad' | 'bank' | 'card';
-const methodInfo: Record<PaymentMethod, { label: string; fee: (amt: number) => number; hint: string }> = {
-  bkash: { label: 'bKash', fee: (amt) => Math.round(amt * 0.015), hint: '1.5% bKash processing fee' },
-  nagad: { label: 'Nagad', fee: (amt) => Math.round(amt * 0.012), hint: '1.2% Nagad processing fee' },
-  bank: { label: 'Bank transfer', fee: () => 0, hint: 'No fee — funds may take 1 business day' },
-  card: { label: 'Debit/credit card', fee: (amt) => Math.round(amt * 0.02) + 10, hint: '2% + ৳10 card processing fee' },
+
+const scheduleStatusVariant: Record<
+  RepaymentScheduleRow["status"],
+  "success" | "warning" | "error" | "neutral"
+> = {
+  paid: "success",
+  due: "warning",
+  upcoming: "neutral",
+  overdue: "error",
+  partially_paid: "warning",
 };
-const recentPayments: Transaction[] = transactions.filter((t) => t.type === 'repayment' || t.type === 'fee');
+
 export default function RepaymentPage({ onNavigate }: Props) {
-  const [amountOption, setAmountOption] = useState<AmountOption>('full');
-  const [customAmount, setCustomAmount] = useState<string>(String(activeLoan.monthlyPayment));
-  const [method, setMethod] = useState<PaymentMethod>('bkash');
+  const { t } = useTranslation();
+
+  const [activeLoan, setActiveLoan] = useState<ActiveLoan | null>(null);
+  const [schedules, setSchedules] = useState<RepaymentScheduleRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [selectedSchedule, setSelectedSchedule] = useState<RepaymentScheduleRow | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const [success, setSuccess] = useState(false);
-  const isOverdue = false; 
-  const instalmentAmount =
-    amountOption === 'full'
-      ? activeLoan.monthlyPayment
-      : amountOption === 'payoff'
-      ? activeLoan.remainingBalance
-      : Math.max(0, Number(customAmount) || 0);
-  const fee = methodInfo[method].fee(instalmentAmount);
-  const totalCharged = instalmentAmount + fee;
-  const remainingAfter = Math.max(0, activeLoan.remainingBalance - instalmentAmount);
-  const receiptId = useMemo(() => `RCPT-${Math.floor(100000 + Math.random() * 900000)}`, [success]);
-  if (success) {
+  const [successData, setSuccessData] = useState<{
+    repaymentId: string;
+    amountPaid: number;
+    installmentNumber: number;
+    loanCompleted: boolean;
+    remainingAfter: number;
+    trustScore: { score: number; band: string } | null;
+  } | null>(null);
+
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const loansRes = await loansApi.getActiveLoans();
+      const loan = loansRes[0] || null;
+      setActiveLoan(loan);
+
+      if (loan) {
+        const sched = await loansApi.getRepaymentSchedule(loan.id);
+        setSchedules(sched);
+      }
+    } catch (e) {
+      console.error("Failed to fetch repayment data", e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const outstandingSchedules = schedules.filter((s) => s.outstandingAmount > 0);
+  const totalOutstanding = schedules.reduce((sum, s) => sum + s.outstandingAmount, 0);
+  const totalPaid = schedules.reduce((sum, s) => sum + s.paidAmount, 0);
+  const totalExpected = schedules.reduce((sum, s) => sum + s.expectedAmount, 0);
+
+  const parsedAmount = Math.max(0, Number(paymentAmount) || 0);
+  const maxPayable = selectedSchedule?.outstandingAmount ?? 0;
+  const isAmountValid = parsedAmount > 0 && parsedAmount <= maxPayable;
+
+  function handleSelectSchedule(schedule: RepaymentScheduleRow) {
+    setSelectedSchedule(schedule);
+    setPaymentAmount(String(schedule.outstandingAmount));
+    setErrorMessage(null);
+  }
+
+  function handleOpenConfirm() {
+    if (!isAmountValid) {
+      setErrorMessage(t("repayment.amountExceedsOutstanding"));
+      return;
+    }
+    setErrorMessage(null);
+    setConfirmOpen(true);
+  }
+
+  async function handleSubmitPayment() {
+    if (!selectedSchedule || !isAmountValid) return;
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    try {
+      const result: MvpRepaymentResult = await loansApi.createRepayment(
+        selectedSchedule.scheduleId,
+        parsedAmount,
+      );
+      setSuccessData({
+        repaymentId: result.repayment.repaymentId,
+        amountPaid: result.repayment.amountPaid,
+        installmentNumber: selectedSchedule.month,
+        loanCompleted: result.loan.status === "completed",
+        remainingAfter: result.loan.totalOutstanding,
+        trustScore: result.trustScore,
+      });
+      setConfirmOpen(false);
+      setSuccess(true);
+    } catch (e) {
+      setConfirmOpen(false);
+      setErrorMessage(
+        e instanceof Error ? e.message : t("repayment.paymentFailed"),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  // ── Loading state ──
+  if (isLoading) {
+    return (
+      <AppLayout onNavigate={onNavigate} currentPage="repayment">
+        <div className="max-w-2xl mx-auto px-4 md:px-6 py-10 flex justify-center items-center h-64">
+          <p className="text-stone-500">{t("common.loading")}</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // ── Success state ──
+  if (success && successData) {
     return (
       <AppLayout onNavigate={onNavigate} currentPage="repayment">
         <div className="max-w-2xl mx-auto px-4 md:px-6 py-10">
           <Card variant="raised" className="p-6 text-center">
-            <div className="w-14 h-14 rounded-full bg-emerald-light border-[1.5px] border-emerald flex items-center justify-center text-2xl text-emerald mx-auto mb-4">✓</div>
-            <h1 className="text-2xl font-semibold text-navy mb-1">Payment successful</h1>
-            <p className="text-sm text-stone-500 mb-6">Your payment has been received and applied to loan {activeLoan.id}.</p>
+            <div className="w-14 h-14 rounded-full bg-emerald-light border-[1.5px] border-emerald flex items-center justify-center text-2xl text-emerald mx-auto mb-4">
+              ✓
+            </div>
+            <h1 className="text-2xl font-semibold text-navy mb-1">
+              {successData.loanCompleted
+                ? t("repayment.successTitleCompleted")
+                : t("repayment.successTitle")}
+            </h1>
+            <p className="text-sm text-stone-500 mb-6">
+              {successData.loanCompleted
+                ? t("repayment.successBodyCompleted")
+                : t("repayment.successBody")}
+            </p>
             <div className="text-left bg-stone-50 border border-stone-200 rounded-[8px] p-4">
-              <DataRow label="Receipt no." value={receiptId} />
-              <DataRow label="Paid via" value={methodInfo[method].label} />
-              <DataRow label="Instalment" value={formatTaka(instalmentAmount)} />
-              <DataRow label="Processing fee" value={formatTaka(fee)} />
-              <DataRow label="Total charged" value={formatTaka(totalCharged)} emphasis />
-              <DataRow label="Remaining balance" value={formatTaka(remainingAfter)} />
+              <DataRow label={t("repayment.receiptNo")} value={successData.repaymentId} />
+              <DataRow
+                label={t("repayment.instalment")}
+                value={`#${successData.installmentNumber}`}
+              />
+              <DataRow
+                label={t("repayment.paidAmount")}
+                value={formatTaka(successData.amountPaid)}
+                emphasis
+              />
+              <DataRow
+                label={t("repayment.remainingAfter")}
+                value={formatTaka(successData.remainingAfter)}
+              />
+              {successData.trustScore && (
+                <DataRow
+                  label={t("repayment.trustScoreUpdated", {
+                    score: String(Math.round(successData.trustScore.score)),
+                    band: successData.trustScore.band,
+                  })}
+                  value={`${Math.round(successData.trustScore.score)}/100`}
+                />
+              )}
             </div>
             <div className="flex flex-col sm:flex-row gap-2 mt-6 justify-center">
-              <Button variant="secondary" onClick={() => onNavigate('active-loan')}>View loan details</Button>
-              <Button variant="primary" onClick={() => onNavigate('borrower-dashboard')}>Back to dashboard</Button>
+              <Button variant="secondary" onClick={() => onNavigate("active-loan")}>
+                {t("repayment.viewLoanDetails")}
+              </Button>
+              <Button variant="primary" onClick={() => onNavigate("borrower-dashboard")}>
+                {t("repayment.backToDashboard")}
+              </Button>
             </div>
           </Card>
         </div>
       </AppLayout>
     );
   }
+
+  // ── Empty state: no active loan ──
+  if (!activeLoan) {
+    return (
+      <AppLayout onNavigate={onNavigate} currentPage="repayment">
+        <div className="max-w-3xl mx-auto px-4 md:px-6 py-10">
+          <PageHeader
+            eyebrow={t("repayment.title")}
+            title={t("repayment.title")}
+            description={t("repayment.subtitle")}
+          />
+          <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px]">
+            <EmptyState
+              icon={EmptyIcons.transactions}
+              title={t("repayment.emptyTitle")}
+              description={t("repayment.emptyDescription")}
+              action={{
+                label: t("dashboard.exploreLoans"),
+                onClick: () => onNavigate("loan-marketplace"),
+              }}
+              secondaryAction={{
+                label: t("dashboard.learnMore"),
+                onClick: () => onNavigate("education"),
+              }}
+            />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const progressPercent = totalExpected > 0 ? totalPaid / totalExpected : 0;
+  const paidCount = schedules.filter((s) => s.status === "paid").length;
+
+  // ── Main repayment view ──
   return (
     <AppLayout onNavigate={onNavigate} currentPage="repayment">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
         <PageHeader
-          title="Make a payment"
-          description={`Loan ${activeLoan.id} — ${activeLoan.name}`}
+          title={t("repayment.title")}
+          description={`${activeLoan.name}`}
         />
+
+        {errorMessage && (
+          <Alert variant="error" title={t("repayment.paymentFailed")} className="mb-4">
+            {errorMessage}
+          </Alert>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* ── Left: Schedule + Payment Form ── */}
           <div className="lg:col-span-2 flex flex-col gap-5 min-w-0">
+            {/* Loan summary card */}
             <Card variant="raised" className="p-5">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between sm:items-start">
                 <div className="min-w-0">
-                  <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Amount due</p>
-                  <p className="font-display tabular-nums text-3xl font-semibold text-navy mt-1">{formatTaka(activeLoan.monthlyPayment)}</p>
-                  <p className="text-sm text-stone-500 mt-1">Due {formatDate(activeLoan.nextPaymentDate)}</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                    {t("repayment.totalOutstanding")}
+                  </p>
+                  <p className="font-display tabular-nums text-3xl font-semibold text-navy mt-1">
+                    {formatTaka(totalOutstanding)}
+                  </p>
+                  <p className="text-sm text-stone-500 mt-1">
+                    {t("activeLoan.monthsPaid", {
+                      paid: paidCount,
+                      total: schedules.length,
+                    })}
+                  </p>
                 </div>
-                <Badge variant="warning" dot className="shrink-0">Due</Badge>
+                <Badge variant={totalOutstanding > 0 ? "warning" : "success"} dot className="shrink-0">
+                  {totalOutstanding > 0 ? t("repayment.due") : t("activeLoan.statusPaid")}
+                </Badge>
               </div>
-              {isOverdue && (
-                <Alert variant="error" title="Payment overdue" className="mt-4">
-                  This instalment is past due. A late fee may apply if not paid within 3 days.
-                </Alert>
+              {schedules.length > 0 && (
+                <div className="mt-4">
+                  <ProgressBar
+                    value={Math.round(progressPercent * 100)}
+                    max={100}
+                    showValue
+                    size="sm"
+                    color="teal"
+                  />
+                </div>
               )}
             </Card>
+
+            {/* Installment schedule table */}
             <Card variant="plain">
-              <CardHeader title="Choose amount" description="Pay your regular instalment, a custom amount, or clear the loan early." />
-              <CardBody className="flex flex-col gap-4">
-                <Radio
-                  name="amount-option"
-                  label={`Pay full instalment — ${formatTaka(activeLoan.monthlyPayment)}`}
-                  value="full"
-                  checked={amountOption === 'full'}
-                  onChange={() => setAmountOption('full')}
-                />
-                <Radio
-                  name="amount-option"
-                  label="Pay a custom amount"
-                  value="custom"
-                  checked={amountOption === 'custom'}
-                  onChange={() => setAmountOption('custom')}
-                />
-                {amountOption === 'custom' && (
-                  <div className="ml-6.5">
-                    <CurrencyInput
-                      label="Custom amount"
-                      value={customAmount}
-                      onChange={(e) => setCustomAmount(e.target.value)}
-                      max={activeLoan.remainingBalance}
-                      hint={`Maximum ${formatTaka(activeLoan.remainingBalance)}`}
-                    />
-                  </div>
-                )}
-                <Radio
-                  name="amount-option"
-                  label={`Pay off early — ${formatTaka(activeLoan.remainingBalance)}`}
-                  value="payoff"
-                  checked={amountOption === 'payoff'}
-                  onChange={() => setAmountOption('payoff')}
-                />
-              </CardBody>
+              <CardHeader
+                title={t("repayment.selectInstallment")}
+                description={t("repayment.chooseAmountHint")}
+              />
+              <DataTable
+                caption={t("repayment.selectInstallment")}
+                rows={schedules}
+                rowKey={(r) => r.scheduleId}
+                columns={[
+                  {
+                    key: "month",
+                    header: "#",
+                    render: (r) => `#${r.month}`,
+                  },
+                  {
+                    key: "due",
+                    header: t("repayment.due"),
+                    render: (r) => formatDate(r.dueDate),
+                  },
+                  {
+                    key: "expected",
+                    header: t("repayment.expectedAmount"),
+                    numeric: true,
+                    render: (r) => formatTaka(r.expectedAmount),
+                  },
+                  {
+                    key: "paid",
+                    header: t("repayment.paidAmount"),
+                    numeric: true,
+                    hideBelow: "sm",
+                    render: (r) => (
+                      <span className={r.paidAmount > 0 ? "text-emerald" : ""}>
+                        {formatTaka(r.paidAmount)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "outstanding",
+                    header: t("repayment.outstandingAmount"),
+                    numeric: true,
+                    render: (r) => (
+                      <span className={r.outstandingAmount > 0 ? "text-coral font-medium" : ""}>
+                        {formatTaka(r.outstandingAmount)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "status",
+                    header: t("activeLoan.scheduleStatus"),
+                    render: (r) => (
+                      <div className="flex items-center gap-2 justify-end">
+                        <Badge
+                          variant={scheduleStatusVariant[r.status]}
+                          size="sm"
+                          dot
+                        >
+                          {t(enumKey("activeLoan.status", r.status))}
+                        </Badge>
+                        {r.outstandingAmount > 0 && (
+                          <Button
+                            variant="tertiary"
+                            size="xs"
+                            onClick={() => handleSelectSchedule(r)}
+                          >
+                            {t("repayment.payNow")}
+                          </Button>
+                        )}
+                      </div>
+                    ),
+                  },
+                ]}
+              />
             </Card>
-            <Card variant="plain">
-              <CardHeader title="Payment method" description="A small processing fee may apply depending on your method." />
-              <CardBody className="flex flex-col gap-4">
-                {(Object.keys(methodInfo) as PaymentMethod[]).map((m) => (
-                  <div key={m} className="flex flex-col gap-0.5">
-                    <Radio
-                      name="payment-method"
-                      label={methodInfo[m].label}
-                      value={m}
-                      checked={method === m}
-                      onChange={() => setMethod(m as PaymentMethod)}
-                    />
-                    <p className="text-xs text-stone-400 ml-6.5">{methodInfo[m].hint}</p>
+
+            {/* Payment form for selected installment */}
+            {selectedSchedule && (
+              <Card variant="raised" className="p-5 border-2 border-teal/30">
+                <CardHeader
+                  title={t("repayment.installmentNumber", {
+                    number: String(selectedSchedule.month),
+                  })}
+                  description={`${t("repayment.due")} ${formatDate(selectedSchedule.dueDate)}`}
+                />
+                <CardBody className="flex flex-col gap-4">
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-stone-500">{t("repayment.expectedAmount")}</p>
+                      <p className="font-semibold tabular-nums">
+                        {formatTaka(selectedSchedule.expectedAmount)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-stone-500">{t("repayment.paidAmount")}</p>
+                      <p className="font-semibold tabular-nums text-emerald">
+                        {formatTaka(selectedSchedule.paidAmount)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-stone-500">{t("repayment.outstandingAmount")}</p>
+                      <p className="font-semibold tabular-nums text-coral">
+                        {formatTaka(selectedSchedule.outstandingAmount)}
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </CardBody>
-            </Card>
-            <Button variant="primary" size="lg" fullWidth onClick={() => setConfirmOpen(true)} disabled={instalmentAmount <= 0}>
-              Confirm and pay {formatTaka(totalCharged)}
-            </Button>
+
+                  <CurrencyInput
+                    label={t("repayment.paymentAmount")}
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    max={selectedSchedule.outstandingAmount}
+                    hint={t("repayment.maxPayment", {
+                      amount: formatTaka(selectedSchedule.outstandingAmount),
+                    })}
+                    error={
+                      parsedAmount > maxPayable
+                        ? t("repayment.amountExceedsOutstanding")
+                        : undefined
+                    }
+                  />
+
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    onClick={handleOpenConfirm}
+                    disabled={!isAmountValid}
+                  >
+                    {t("repayment.payNow")} — {formatTaka(parsedAmount)}
+                  </Button>
+                </CardBody>
+              </Card>
+            )}
+
+            {!selectedSchedule && outstandingSchedules.length > 0 && (
+              <Alert variant="info" title={t("repayment.selectInstallment")} className="text-sm">
+                {t("repayment.chooseAmountHint")}
+              </Alert>
+            )}
           </div>
+
+          {/* ── Right sidebar: Payment summary ── */}
           <div className="flex flex-col gap-5 min-w-0 lg:sticky lg:top-6 lg:self-start">
             <Card variant="plain">
-              <CardHeader title="Payment summary" />
+              <CardHeader title={t("repayment.summary")} />
               <CardBody>
-                <DataRow label="Instalment" value={formatTaka(instalmentAmount)} />
-                <DataRow label="Processing fee" value={formatTaka(fee)} hint={methodInfo[method].hint} />
-                <DataRow label="Total charged" value={formatTaka(totalCharged)} emphasis />
-                <div className="mt-2 pt-2 border-t border-stone-100">
-                  <DataRow label="Remaining balance after this payment" value={formatTaka(remainingAfter)} />
-                </div>
+                <DataRow label={t("repayment.loanSummary")} value={activeLoan.name} />
+                <DataRow
+                  label={t("repayment.totalOutstanding")}
+                  value={formatTaka(totalOutstanding)}
+                  emphasis
+                />
+                {selectedSchedule && (
+                  <>
+                    <div className="mt-2 pt-2 border-t border-stone-100">
+                      <DataRow
+                        label={t("repayment.instalment")}
+                        value={`#${selectedSchedule.month}`}
+                      />
+                      <DataRow
+                        label={t("repayment.paymentAmount")}
+                        value={formatTaka(parsedAmount)}
+                        emphasis
+                      />
+                      <DataRow
+                        label={t("repayment.remainingAfter")}
+                        value={formatTaka(
+                          Math.max(0, totalOutstanding - parsedAmount),
+                        )}
+                      />
+                    </div>
+                  </>
+                )}
               </CardBody>
             </Card>
           </div>
         </div>
-        <Card variant="plain" className="mt-6">
-          <CardHeader title="Recent payments" />
-          <DataTable
-            caption="Recent payments"
-            rows={recentPayments}
-            rowKey={(t) => t.id}
-            columns={[
-              { key: 'date', header: 'Date', render: (t) => formatDate(t.date) },
-              { key: 'desc', header: 'Description', render: (t) => <span className="block min-w-0 truncate max-w-[220px]">{t.description}</span> },
-              { key: 'amount', header: 'Amount', numeric: true, render: (t) => <span className="text-coral">−{formatTaka(t.amount)}</span> },
-              { key: 'status', header: 'Status', render: (t) => <Badge variant={t.status === 'completed' ? 'success' : t.status === 'pending' ? 'warning' : 'error'} size="sm" dot>{t.status}</Badge> },
-            ]}
-          />
-        </Card>
+
+        {/* ── Confirmation modal ── */}
         <Modal
           open={confirmOpen}
           onClose={() => setConfirmOpen(false)}
-          title="Confirm payment"
+          title={t("repayment.confirmTitle")}
           footer={
             <>
-              <Button variant="ghost" size="sm" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setConfirmOpen(false)}
+                disabled={isSubmitting}
+              >
+                {t("common.cancel")}
+              </Button>
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => {
-                  setConfirmOpen(false);
-                  setSuccess(true);
-                }}
+                loading={isSubmitting}
+                onClick={handleSubmitPayment}
               >
-                Pay {formatTaka(totalCharged)}
+                {t("repayment.confirmAndPay")} — {formatTaka(parsedAmount)}
               </Button>
             </>
           }
         >
-          <div className="flex flex-col gap-1">
-            <p className="text-sm text-stone-600 leading-relaxed mb-2">
-              You are about to pay <span className="tabular-nums font-semibold text-navy">{formatTaka(totalCharged)}</span> via {methodInfo[method].label} for loan {activeLoan.id}.
+          <div className="flex flex-col gap-3">
+            <Alert variant="info" title="MVP">
+              {t("repayment.mvpDisclaimer")}
+            </Alert>
+            <p className="text-sm text-stone-600 leading-relaxed">
+              {t("repayment.confirmBody", {
+                amount: formatTaka(parsedAmount),
+                number: String(selectedSchedule?.month ?? ""),
+              })}
             </p>
-            <DataRow label="Instalment" value={formatTaka(instalmentAmount)} />
-            <DataRow label="Processing fee" value={formatTaka(fee)} />
-            <DataRow label="Total charged" value={formatTaka(totalCharged)} emphasis />
+            <DataRow
+              label={t("repayment.instalment")}
+              value={`#${selectedSchedule?.month ?? ""}`}
+            />
+            <DataRow
+              label={t("repayment.paymentAmount")}
+              value={formatTaka(parsedAmount)}
+              emphasis
+            />
+            <DataRow
+              label={t("repayment.remainingAfter")}
+              value={formatTaka(
+                Math.max(0, totalOutstanding - parsedAmount),
+              )}
+            />
           </div>
         </Modal>
       </div>

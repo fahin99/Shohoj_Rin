@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import { pool } from "../lib/db.js";
 import { createRepaymentSchema, recordRepayment } from "../services/repayment.service.js";
@@ -11,10 +10,11 @@ router.post("/payment", async (req, res) => {
       error: { message: "Invalid payment payload", details: parsed.error.flatten() },
     });
   }
-  // In a real scenario, this would verify a provider signature (e.g., HMAC with a shared secret).
-  // For this implementation, we simulate it with a simple authorization token check.
   const authHeader = req.headers.authorization;
-  if (!authHeader || authHeader !== `Bearer ${process.env.WEBHOOK_SECRET || 'test-webhook-secret'}`) {
+  if (
+    !authHeader ||
+    authHeader !== `Bearer ${process.env.WEBHOOK_SECRET || "test-webhook-secret"}`
+  ) {
     return res.status(401).json({
       success: false,
       error: { message: "Unauthorized webhook" },

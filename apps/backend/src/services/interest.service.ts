@@ -1,4 +1,3 @@
-
 export interface AmortizationScheduleItem {
   installmentNumber: number;
   dueDate: Date;
@@ -47,7 +46,7 @@ export function calculateReducingBalanceSchedule(
 }
 
 export function calculateDailyInterest(balance: number, annualRatePct: number): number {
-  return Math.round((balance * (annualRatePct / 100) / 365) * 100) / 100;
+  return Math.round(((balance * (annualRatePct / 100)) / 365) * 100) / 100;
 }
 
 export function calculateLateFee(

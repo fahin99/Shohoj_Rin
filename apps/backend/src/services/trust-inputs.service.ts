@@ -58,7 +58,8 @@ export async function buildTrustInputs(userId: string): Promise<TrustInputs> {
       defaults: Number(raw.repayment.defaults),
     },
     financial: {
-      monthlyIncome: raw.financial.monthlyIncome != null ? Number(raw.financial.monthlyIncome) : null,
+      monthlyIncome:
+        raw.financial.monthlyIncome != null ? Number(raw.financial.monthlyIncome) : null,
       monthlyDebtObligations: Number(raw.financial.monthlyDebtObligations),
       activeLoanCount: Number(raw.financial.activeLoanCount),
     },
@@ -85,3 +86,7 @@ export async function buildTrustInputs(userId: string): Promise<TrustInputs> {
   };
 }
 
+export async function hasPreviousLoans(userId: string): Promise<boolean> {
+  const result = await pool.query(`SELECT 1 FROM loans WHERE user_id = $1 LIMIT 1`, [userId]);
+  return (result.rowCount ?? 0) > 0;
+}

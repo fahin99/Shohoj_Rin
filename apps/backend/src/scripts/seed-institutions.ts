@@ -7,11 +7,27 @@ const STATIC_BANGLADESH_INSTITUTIONS = [
   { name: "Jahangirnagar University", type: "university" },
   { name: "Rajshahi University", type: "university" },
   { name: "University of Chittagong", type: "university" },
+  { name: "Jatiya Kabi Kazi Nazrul Islam University", type: "university" },
+  { name: "Khulna University", type: "university" },
+  { name: "Begum Rokeya University, Rangpur", type: "university" },
+  { name: "Dhaka Medical College", type: "university" },
+  { name: "Bangladesh Open University", type: "university" },
+  { name: "Sir Salimullah Medical College", type: "university" },
+  { name: "Suhrawardy Medical College", type: "university" },
+  { name: "Chittagong Medical College", type: "university" },
+  { name: "Rajshahi Medical College", type: "university" },
+  { name: "Mymensingh Medical College", type: "university" },
+  { name: "Sher-e-Bangla Medical College", type: "university" },
+  { name: "Sylhet MAG Osmani Medical College", type: "university" },
+  { name: "Bangabandhu Sheikh Mujib Medical University (BSMMU)", type: "university" },
+  { name: "Mugda Medical College", type: "university" },
   { name: "Shahjalal University of Science and Technology (SUST)", type: "university" },
   { name: "Khulna University of Engineering & Technology (KUET)", type: "university" },
   { name: "Chittagong University of Engineering & Technology (CUET)", type: "university" },
   { name: "Rajshahi University of Engineering & Technology (RUET)", type: "university" },
   { name: "Islamic University of Technology (IUT)", type: "university" },
+  { name: "Bangladesh University of Textiles (BUTEX)", type: "university" },
+  { name: "Military Institute of Science and Technology (MIST)", type: "university" },
   { name: "Bangladesh Agricultural University", type: "university" },
   { name: "Bangladesh University of Professionals (BUP)", type: "university" },
   { name: "North South University (NSU)", type: "university" },
@@ -37,7 +53,10 @@ const STATIC_BANGLADESH_INSTITUTIONS = [
   { name: "Mawlana Bhashani Science and Technology University", type: "university" },
   { name: "Noakhali Science and Technology University", type: "university" },
   { name: "Jatiya Kabi Kazi Nazrul Islam University", type: "university" },
-  { name: "Bangabandhu Sheikh Mujibur Rahman Science and Technology University", type: "university" },
+  {
+    name: "Bangabandhu Sheikh Mujibur Rahman Science and Technology University",
+    type: "university",
+  },
   { name: "Dhaka College", type: "college" },
   { name: "Notre Dame College", type: "college" },
   { name: "Holy Cross College", type: "college" },
@@ -165,7 +184,9 @@ async function seedInstitutions() {
         insertedCount += result.rowCount || 0;
       }
     }
-    console.log(`Institution seeding finished successfully. (${insertedCount} new records inserted)`);
+    console.log(
+      `Institution seeding finished successfully. (${insertedCount} new records inserted)`,
+    );
   } catch (error) {
     console.error("Error during institution seeding:", error);
     throw error;

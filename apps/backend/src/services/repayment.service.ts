@@ -84,14 +84,20 @@ function summarizeSchedule(
   schedule: RepaymentScheduleRow,
   repayments: RepaymentRow[],
   expectedAmount: number,
-) : RepaymentScheduleSummary {
-  const completedRepayments = repayments.filter(p => p.status === 'completed');
-  const totalPaid = completedRepayments.reduce((sum, payment) => sum + toNumber(payment.amount_paid), 0);
+): RepaymentScheduleSummary {
+  const completedRepayments = repayments.filter((p) => p.status === "completed");
+  const totalPaid = completedRepayments.reduce(
+    (sum, payment) => sum + toNumber(payment.amount_paid),
+    0,
+  );
   const latestPayment = repayments[repayments.length - 1] ?? null;
   const outstandingAmount = Math.max(0, Math.round((expectedAmount - totalPaid) * 100) / 100);
   const today = new Date();
   const dueDate = new Date(schedule.due_date);
-  const daysLate = today > dueDate ? Math.max(0, Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+  const daysLate =
+    today > dueDate
+      ? Math.max(0, Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
+      : 0;
   return {
     scheduleId: schedule.schedule_id,
     loanId: schedule.loan_id,
@@ -117,7 +123,10 @@ function summarizeSchedule(
       : null,
   };
 }
-export async function getRepaymentSchedulesForLoan(client: Pick<PoolClient, "query">, loanId: string) {
+export async function getRepaymentSchedulesForLoan(
+  client: Pick<PoolClient, "query">,
+  loanId: string,
+) {
   const schedules = await client.query<RepaymentScheduleRow>(
     `SELECT schedule_id, loan_id, installment_number, due_date, expected_amount, status, created_at
      FROM repayment_schedules
@@ -146,7 +155,10 @@ export async function getRepaymentSchedulesForLoan(client: Pick<PoolClient, "que
     return summarizeSchedule(schedule, scheduleRepayments, toNumber(schedule.expected_amount));
   });
 }
-export async function recordRepayment(client: PoolClient, input: CreateRepaymentInput): Promise<RepaymentResult> {
+export async function recordRepayment(
+  client: PoolClient,
+  input: CreateRepaymentInput,
+): Promise<RepaymentResult> {
   await client.query("BEGIN");
   try {
     // Single procedure call replaces 7 round-trips
@@ -158,23 +170,23 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
       out_user_id: string;
       out_total_outstanding: string | number;
       out_is_duplicate: boolean;
-    }>(
-      `CALL process_repayment($1, $2, $3, $4, $5, $6, NULL, NULL, NULL, NULL, NULL, NULL, NULL)`,
-      [
-        input.scheduleId,
-        Math.round(input.amountPaid * 100) / 100,
-        input.paymentMethod ?? null,
-        input.transactionReference ?? null,
-        input.providerReference ?? null,
-        input.status ?? "completed",
-      ],
-    );
+    }>(`CALL process_repayment($1, $2, $3, $4, $5, $6, NULL, NULL, NULL, NULL, NULL, NULL, NULL)`, [
+      input.scheduleId,
+      Math.round(input.amountPaid * 100) / 100,
+      input.paymentMethod ?? null,
+      input.transactionReference ?? null,
+      input.providerReference ?? null,
+      input.status ?? "completed",
+    ]);
 
     const proc = procResult.rows[0];
 
-    if (!proc.out_repayment_id) {
+    if (!proc?.out_repayment_id) {
       await client.query("ROLLBACK");
-      throw Object.assign(new Error("Repayment schedule not found"), { statusCode: 404, isOperational: true });
+      throw Object.assign(new Error("Repayment schedule not found"), {
+        statusCode: 404,
+        isOperational: true,
+      });
     }
 
     // Fetch the repayment row for response details
@@ -191,8 +203,13 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
 
       // Fetch schedule summary for the response
       const allSched = await getRepaymentSchedulesForLoan(client, proc.out_loan_id);
-      const schedSummary = allSched.find(s => s.scheduleId === repayment.schedule_id)!;
-      const nextDue = allSched.find(s => s.status !== "paid");
+      const schedSummary = allSched.find(
+        (schedule) => schedule.scheduleId === repayment.schedule_id,
+      );
+      if (!schedSummary) {
+        throw new Error("Repayment schedule was not found after processing payment");
+      }
+      const nextDue = allSched.find((schedule) => schedule.status !== "paid");
 
       return {
         schedule: schedSummary,
@@ -219,7 +236,7 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
     const trustScore = await recalculateAndPersistTrustScore(
       proc.out_user_id,
       "repayment_received",
-      client
+      client,
     );
 
     await client.query("COMMIT");
@@ -265,7 +282,15 @@ export async function recordRepayment(client: PoolClient, input: CreateRepayment
     };
   } catch (error) {
     await client.query("ROLLBACK");
+    if (typeof error === "object" && error && "code" in error) {
+      const code = (error as { code?: string }).code;
+      if (code === "P0002") {
+        throw Object.assign(error, { statusCode: 404, isOperational: true });
+      }
+      if (code === "P0001") {
+        throw Object.assign(error, { statusCode: 400, isOperational: true });
+      }
+    }
     throw error;
   }
 }
-

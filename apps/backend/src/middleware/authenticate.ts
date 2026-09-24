@@ -2,13 +2,10 @@ import type { NextFunction, Request, Response } from "express";
 import { pool } from "../lib/db.js";
 import { getSessionIdFromCookie } from "../lib/auth.js";
 export interface RequestWithAuth extends Request {
-  auth?: {
-    userId: string;
-    sessionId: string;
-    role: string;
-  };
+  auth?: { userId: string; sessionId: string; role: string };
   user?: {
     userId: string;
+    username: string | null;
     email: string;
     phone: string | null;
     role: string;
@@ -16,92 +13,148 @@ export interface RequestWithAuth extends Request {
     emailVerified: boolean;
     createdAt: string;
     updatedAt: string;
-    fullName: string | null;
-    dateOfBirth: string | null;
-    gender: string | null;
-    city: string | null;
-    district: string | null;
-    occupation: string | null;
+    profileCompletionStatus: string | null;
+    profile: {
+      fullName: string | null;
+      dateOfBirth: string | null;
+      gender: string | null;
+      city: string | null;
+      district: string | null;
+      occupation: string | null;
+      nidNumber: string | null;
+      addressLine: string | null;
+      postalCode: string | null;
+      monthlyFamilyIncome: number | string | null;
+      employmentType: string | null;
+      employerName: string | null;
+      monthlyIncome: number | string | null;
+      incomeSource: string | null;
+      studentId: string | null;
+      enrollmentYear: number | null;
+      institutionId: string | null;
+      profilePhotoUrl: string | null;
+    };
   };
 }
 export async function requireAuth(req: RequestWithAuth, res: Response, next: NextFunction) {
   try {
     const sessionId = getSessionIdFromCookie(req.cookies);
-    if (!sessionId) {
-      return res.status(401).json({
-        success: false,
-        error: { message: "Authentication required" },
-      });
-    }
-    const sessionResult = await pool.query(
-      `SELECT s.session_id, s.user_id, s.is_revoked, s.expires_at, u.role
-       FROM login_sessions s
-       INNER JOIN users u ON u.user_id = s.user_id
-       WHERE s.session_id = $1
-       LIMIT 1`,
-      [sessionId],
-    );
-    const session = sessionResult.rows[0] as {
-      session_id: string;
-      user_id: string;
-      is_revoked: boolean;
-      expires_at: Date | string;
-      role: string;
-    } | undefined;
-    if (!session || session.is_revoked) {
-      return res.status(401).json({
-        success: false,
-        error: { message: "Session is no longer valid" },
-      });
-    }
-    const expiresAt =
-      session.expires_at instanceof Date ? session.expires_at : new Date(session.expires_at);
-    if (expiresAt.getTime() < Date.now()) {
-      return res.status(401).json({
-        success: false,
-        error: { message: "Session has expired" },
-      });
-    }
+    if (!sessionId)
+      return res
+        .status(401)
+        .json({ success: false, error: { message: "Authentication required" } });
     const userResult = await pool.query(
       `SELECT
         u.user_id AS "userId",
-        u.email,
-        u.phone,
         u.role,
         u.account_status AS "accountStatus",
-        u.email_verified AS "emailVerified",
-        u.created_at AS "createdAt",
-        u.updated_at AS "updatedAt",
-        p.full_name AS "fullName",
-        p.date_of_birth AS "dateOfBirth",
-        p.gender,
-        p.city,
-        p.district,
-        p.occupation
+        s.is_revoked AS "isRevoked",
+        s.expires_at AS "sessionExpiresAt"
+      FROM login_sessions s
+      INNER JOIN users u ON u.user_id = s.user_id
+      WHERE s.session_id = $1
+      LIMIT 1`,
+      [sessionId],
+    );
+    const row = userResult.rows[0];
+    if (!row) {
+      return res
+        .status(401)
+        .json({ success: false, error: { message: "Session expired or revoked" } });
+    }
+    if (
+      row.isRevoked === true ||
+      !row.sessionExpiresAt ||
+      new Date(row.sessionExpiresAt).getTime() < Date.now()
+    ) {
+      return res
+        .status(401)
+        .json({ success: false, error: { message: "Session expired or revoked" } });
+    }
+    if (row.accountStatus !== "active") {
+      return res.status(403).json({ success: false, error: { message: "Account is not active" } });
+    }
+
+    req.auth = { userId: row.userId, sessionId, role: row.role };
+    return next();
+  } catch {
+    return res
+      .status(401)
+      .json({ success: false, error: { message: "Invalid or expired session" } });
+  }
+}
+
+export async function requireUserProfile(req: RequestWithAuth, res: Response, next: NextFunction) {
+  if (!req.auth) {
+    return res.status(401).json({ success: false, error: { message: "Authentication required" } });
+  }
+  try {
+    const userResult = await pool.query(
+      `SELECT
+        u.user_id AS "userId", u.username, u.email, u.phone, u.role,
+        u.account_status AS "accountStatus", u.email_verified AS "emailVerified",
+        u.created_at AS "createdAt", u.updated_at AS "updatedAt",
+        p.profile_completion_status AS "profileCompletionStatus",
+        p.full_name AS "fullName", p.date_of_birth AS "dateOfBirth", p.gender,
+        p.city, p.district, p.occupation, p.nid_number AS "nidNumber",
+        p.address_line AS "addressLine", p.postal_code AS "postalCode",
+        p.monthly_family_income AS "monthlyFamilyIncome", p.employment_type AS "employmentType",
+        p.employer_name AS "employerName", p.monthly_income AS "monthlyIncome",
+        p.income_source AS "incomeSource", p.student_id AS "studentId",
+        p.enrollment_year AS "enrollmentYear", p.institution_id AS "institutionId",
+        p.profile_photo_url AS "profilePhotoUrl"
       FROM users u
       LEFT JOIN user_profiles p ON p.user_id = u.user_id
       WHERE u.user_id = $1
       LIMIT 1`,
-      [session.user_id],
+      [req.auth.userId],
     );
-    const row = userResult.rows[0] as RequestWithAuth["user"] | undefined;
+    const row = userResult.rows[0];
     if (!row) {
-      return res.status(401).json({
-        success: false,
-        error: { message: "User not found" },
-      });
+      return res.status(401).json({ success: false, error: { message: "User not found" } });
     }
-    req.auth = {
-      userId: session.user_id,
-      sessionId: session.session_id,
-      role: session.role,
+    req.user = {
+      userId: row.userId,
+      username: row.username,
+      email: row.email,
+      phone: row.phone,
+      role: row.role,
+      accountStatus: row.accountStatus,
+      emailVerified: row.emailVerified,
+      createdAt:
+        row.createdAt instanceof Date
+          ? row.createdAt.toISOString()
+          : new Date(row.createdAt).toISOString(),
+      updatedAt:
+        row.updatedAt instanceof Date
+          ? row.updatedAt.toISOString()
+          : new Date(row.updatedAt).toISOString(),
+      profileCompletionStatus: row.profileCompletionStatus,
+      profile: {
+        fullName: row.fullName,
+        dateOfBirth: row.dateOfBirth ? new Date(row.dateOfBirth).toISOString().slice(0, 10) : null,
+        gender: row.gender,
+        city: row.city,
+        district: row.district,
+        occupation: row.occupation,
+        nidNumber: row.nidNumber,
+        addressLine: row.addressLine,
+        postalCode: row.postalCode,
+        monthlyFamilyIncome: row.monthlyFamilyIncome,
+        employmentType: row.employmentType,
+        employerName: row.employerName,
+        monthlyIncome: row.monthlyIncome,
+        incomeSource: row.incomeSource,
+        studentId: row.studentId,
+        enrollmentYear: row.enrollmentYear,
+        institutionId: row.institutionId,
+        profilePhotoUrl: row.profilePhotoUrl,
+      },
     };
-    req.user = row;
     return next();
   } catch {
-    return res.status(401).json({
-      success: false,
-      error: { message: "Invalid or expired session" },
-    });
+    return res
+      .status(500)
+      .json({ success: false, error: { message: "Failed to load user profile" } });
   }
 }

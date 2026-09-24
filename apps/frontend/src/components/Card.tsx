@@ -1,27 +1,29 @@
-import type { ReactNode } from 'react';
-export type CardVariant = 'plain' | 'raised' | 'accent' | 'muted';
+import type { ReactNode } from "react";
+export type CardVariant = "plain" | "raised" | "accent" | "muted";
 interface CardProps {
   variant?: CardVariant;
-  as?: 'div' | 'article' | 'section' | 'li';
+  as?: "div" | "article" | "section" | "li";
   className?: string;
   children: ReactNode;
 }
 const variantClasses: Record<CardVariant, string> = {
-  plain: 'bg-white border-[1.5px] border-stone-200',
-  raised: 'bg-white border-[1.5px] border-navy shadow-nb',
-  accent: 'bg-teal-light border-[1.5px] border-teal/30',
-  muted: 'bg-stone-50 border border-stone-200',
+  plain: "bg-white border-[1.5px] border-stone-200",
+  raised: "bg-white border-[1.5px] border-navy shadow-nb",
+  accent: "bg-teal-light border-[1.5px] border-teal/30",
+  muted: "bg-stone-50 border border-stone-200",
 };
-export function Card({ variant = 'plain', as: Tag = 'div', className = '', children }: CardProps) {
+export function Card({ variant = "plain", as: Tag = "div", className = "", children }: CardProps) {
   return (
-    <Tag className={`min-w-0 rounded-[8px] ${variantClasses[variant]} ${className}`}>{children}</Tag>
+    <Tag className={`min-w-0 rounded-[8px] ${variantClasses[variant]} ${className}`}>
+      {children}
+    </Tag>
   );
 }
 export function CardHeader({
   title,
   description,
   action,
-  className = '',
+  className = "",
 }: {
   title: ReactNode;
   description?: ReactNode;
@@ -40,7 +42,13 @@ export function CardHeader({
     </div>
   );
 }
-export function CardBody({ className = '', children }: { className?: string; children: ReactNode }) {
+export function CardBody({
+  className = "",
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
   return <div className={`min-w-0 p-4 sm:p-5 ${className}`}>{children}</div>;
 }
 /** Label/value row used across every financial breakdown. */
@@ -57,13 +65,13 @@ export function DataRow({
 }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 py-1.5">
-      <span className={`min-w-0 text-sm ${emphasis ? 'font-medium text-navy' : 'text-stone-500'}`}>
+      <span className={`min-w-0 text-sm ${emphasis ? "font-medium text-navy" : "text-stone-500"}`}>
         {label}
         {hint && <span className="mt-0.5 block text-xs text-stone-400">{hint}</span>}
       </span>
       <span
         className={`tabular-nums shrink-0 text-right ${
-          emphasis ? 'text-base font-semibold text-navy' : 'text-sm font-medium text-navy'
+          emphasis ? "text-base font-semibold text-navy" : "text-sm font-medium text-navy"
         }`}
       >
         {value}

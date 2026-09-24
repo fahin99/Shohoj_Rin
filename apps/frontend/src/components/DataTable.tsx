@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 export interface Column<T> {
   key: string;
   header: string;
   numeric?: boolean;
-  hideBelow?: 'sm' | 'md' | 'lg';
+  hideBelow?: "sm" | "md" | "lg";
   render: (row: T) => ReactNode;
 }
 interface DataTableProps<T> {
@@ -13,7 +13,11 @@ interface DataTableProps<T> {
   rowKey: (row: T) => string;
   empty?: ReactNode;
 }
-const hideClass = { sm: 'hidden sm:table-cell', md: 'hidden md:table-cell', lg: 'hidden lg:table-cell' };
+const hideClass = {
+  sm: "hidden sm:table-cell",
+  md: "hidden md:table-cell",
+  lg: "hidden lg:table-cell",
+};
 export function DataTable<T>({ caption, columns, rows, rowKey, empty }: DataTableProps<T>) {
   if (rows.length === 0 && empty) {
     return <div className="p-6">{empty}</div>;
@@ -29,8 +33,8 @@ export function DataTable<T>({ caption, columns, rows, rowKey, empty }: DataTabl
                 key={c.key}
                 scope="col"
                 className={`whitespace-nowrap px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-stone-500 ${
-                  c.numeric ? 'text-right' : ''
-                } ${c.hideBelow ? hideClass[c.hideBelow] : ''}`}
+                  c.numeric ? "text-right" : ""
+                } ${c.hideBelow ? hideClass[c.hideBelow] : ""}`}
               >
                 {c.header}
               </th>
@@ -39,13 +43,16 @@ export function DataTable<T>({ caption, columns, rows, rowKey, empty }: DataTabl
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={rowKey(row)} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
+            <tr
+              key={rowKey(row)}
+              className="border-b border-stone-100 last:border-0 hover:bg-stone-50"
+            >
               {columns.map((c) => (
                 <td
                   key={c.key}
                   className={`px-4 py-3 align-middle text-sm text-navy ${
-                    c.numeric ? 'tabular-nums text-right' : ''
-                  } ${c.hideBelow ? hideClass[c.hideBelow] : ''}`}
+                    c.numeric ? "tabular-nums text-right" : ""
+                  } ${c.hideBelow ? hideClass[c.hideBelow] : ""}`}
                 >
                   {c.render(row)}
                 </td>

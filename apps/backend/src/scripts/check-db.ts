@@ -2,7 +2,7 @@ import { pool } from "../lib/db.js";
 async function main() {
   try {
     const tables = await pool.query(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;"
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
     );
     console.log("=== TABLES FOUND IN DATABASE ===");
     const tableNames = tables.rows.map((r: { table_name: string }) => r.table_name);

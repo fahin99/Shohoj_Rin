@@ -1,16 +1,6 @@
-
-export type UserRole = "borrower" | "lender" | "admin" | "reviewer";
+export type UserRole = "borrower" | "lender" | "partner_agent" | "admin";
 export type AccountStatus = "active" | "suspended" | "deactivated";
-export type LoanStatus =
-  | "active"
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "disbursed"
-  | "closed"
-  | "overdue"
-  | "defaulted"
-  | "delinquent";
+export type LoanStatus = "active" | "completed" | "overdue" | "defaulted" | "delinquent";
 export type ApplicationStatus =
   | "draft"
   | "submitted"
@@ -18,17 +8,35 @@ export type ApplicationStatus =
   | "info-required"
   | "approved"
   | "rejected"
-  | "disbursed";
+  | "disbursed"
+  | "active"
+  | "completed"
+  | "overdue"
+  | "defaulted";
 export type TransactionType = "payment" | "repayment" | "disbursement" | "fee" | "refund";
-export type VerificationStatus = "pending" | "approved" | "rejected";
-export type VerificationType = "identity" | "student" | "document" | "guarantor";
-export type TrustBand = "very_low_risk" | "low_risk" | "moderate_risk" | "high_risk" | "very_high_risk";
+export type VerificationStatus = "pending" | "approved" | "rejected" | "needs_review";
+export type VerificationType =
+  "identity" | "student" | "document" | "guarantor" | "income" | "address";
+export type VerificationSource = "manual_review" | "external_provider" | "demo_verification";
+export type ProfileCompletionStatus =
+  "incomplete" | "pending_verification" | "under_review" | "verified" | "rejected" | "needs_update";
+export type DocumentStatus =
+  | "pending_upload"
+  | "uploaded"
+  | "under_review"
+  | "verified"
+  | "rejected"
+  | "needs_resubmission"
+  | "demo_verified";
+export type TrustBand =
+  "very_low_risk" | "low_risk" | "moderate_risk" | "high_risk" | "very_high_risk";
 export type FraudSeverity = "low" | "medium" | "high" | "critical";
 export type NotificationChannel = "email" | "sms" | "in_app";
 export type PageName =
   | "landing"
   | "auth"
   | "onboarding"
+  | "investor-onboarding"
   | "borrower-dashboard"
   | "loan-marketplace"
   | "loan-details"
@@ -52,6 +60,56 @@ export interface LoanProduct {
   description: string;
   eligibility: string[];
   tags: string[];
+}
+export interface LoanProductDetail extends LoanProduct {
+  partnerId: string;
+  isActive: boolean;
+}
+export interface InvestorProfile {
+  investorProfileId: string;
+  userId: string;
+  username?: string | null;
+  displayName: string | null;
+  verificationStatus: VerificationStatus;
+  fundingCapacity: number | string | null;
+  preferredCategories: string[] | null;
+  riskPreference: "conservative" | "moderate" | "aggressive" | null;
+  maxExposure: number | string | null;
+  accountStatus: AccountStatus;
+  kycStatus: ProfileCompletionStatus;
+  createdAt: string;
+  updatedAt: string;
+  company: LenderCompany | null;
+}
+
+export type LenderMatchStatus = "pending" | "viewed" | "accepted" | "rejected" | "expired";
+
+export interface LenderCompany {
+  partnerId: string;
+  name: string;
+  type: string;
+  address: string | null;
+  branch: string | null;
+  goal: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  isActive: boolean;
+}
+export interface AssessmentResult {
+  documentType: string;
+  status: DocumentStatus;
+  confidence: number | null;
+  validity: boolean;
+  reason: string | null;
+  trustSignal: "positive" | "negative" | "neutral" | "incomplete";
+  assessmentTimestamp: string;
+  assessmentSource: VerificationSource;
+}
+export interface ProfileCompletionItem {
+  key: string;
+  label: string;
+  completed: boolean;
+  required: boolean;
 }
 export interface Transaction {
   id: string;

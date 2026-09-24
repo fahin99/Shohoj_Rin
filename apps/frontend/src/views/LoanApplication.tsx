@@ -1,137 +1,216 @@
-import { useMemo, useState } from 'react';
-import { AppLayout } from '../components/AppLayout';
-import { Card, CardHeader, CardBody, DataRow } from '../components/Card';
-import { Button } from '../components/Button';
-import { Stepper } from '../components/Progress';
-import { Alert } from '../components/Alert';
-import { CurrencyInput, TextInput, Select, FileUpload, Textarea } from '../components/Input';
-import { formatTaka } from '../lib/format';
-import { loanProducts } from '../lib/mock-data';
-import type { PageName } from '../types';
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { AppLayout } from "../components/AppLayout";
+import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
+import { Button } from "../components/Button";
+import { Stepper } from "../components/Progress";
+import { Alert } from "../components/Alert";
+import { CurrencyInput, TextInput, Select, Textarea } from "../components/Input";
+import { formatTaka } from "../lib/format";
+import { loansApi, applicationsApi } from "../lib/api/index";
+import type { PageName, LoanProduct } from "../types";
+import { useTranslation } from "../lib/language-context";
+import { enumKey } from "../lib/enum-labels";
+
 interface Props {
   onNavigate: (page: PageName) => void;
 }
-const steps = [
-  { label: 'Loan details' },
-  { label: 'Personal & income' },
-  { label: 'Documents' },
-  { label: 'Review & submit' },
-];
-const durationOptions = [12, 18, 24, 36, 48].map((d) => ({ value: String(d), label: `${d} months` }));
-const employmentOptions = [
-  { value: 'salaried', label: 'Salaried' },
-  { value: 'self-employed', label: 'Self-employed' },
-  { value: 'business-owner', label: 'Business owner' },
-  { value: 'student', label: 'Student' },
-];
+
 function calculateEmi(principal: number, annualRate: number, months: number) {
   const monthlyRate = annualRate / 12 / 100;
   if (!principal || !months) return 0;
   if (monthlyRate === 0) return principal / months;
-  return (principal * monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
+  return (
+    (principal * monthlyRate * Math.pow(1 + monthlyRate, months)) /
+    (Math.pow(1 + monthlyRate, months) - 1)
+  );
 }
+
 interface FormState {
   loanId: string;
   amount: number;
   duration: string;
   purpose: string;
-  fullName: string;
-  nid: string;
   phone: string;
-  address: string;
   employment: string;
   monthlyIncome: number;
-  nidUploaded: boolean;
-  incomeProofUploaded: boolean;
-  addressProofUploaded: boolean;
 }
+
 export default function LoanApplication({ onNavigate }: Props) {
-  const loan = loanProducts[0];
+  const { t } = useTranslation();
+
+  const steps = [
+    { label: t("application.stepLoanDetails") },
+    { label: t("application.stepEmployment") },
+    { label: t("application.stepReview") },
+  ];
+
+  const durationOptions = [12, 18, 24, 36, 48].map((d) => ({
+    value: String(d),
+    label: t("loanDetails.monthsUnit", { count: d }),
+  }));
+
+  const employmentOptions = [
+    { value: "salaried", label: t("employment.employed-full") },
+    { value: "self-employed", label: t("employment.self-employed") },
+    { value: "business-owner", label: t("employment.business") },
+    { value: "student", label: t("employment.student") },
+  ];
+
+  const [loanProducts, setLoanProducts] = useState<LoanProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProducts() {
+      setIsLoading(true);
+      try {
+        const res = await loansApi.getLoanProducts();
+        setLoanProducts(res.products || []);
+      } catch (e) {
+        console.error("Failed to fetch loan products", e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadProducts();
+  }, []);
+
+  const defaultLoan = loanProducts[0] || {
+    id: "",
+    maxAmount: 100000,
+    minAmount: 1000,
+    durationMonths: 12,
+    interestRate: 10,
+    name: "",
+    provider: "",
+  };
+
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState("");
   const [form, setForm] = useState<FormState>({
-    loanId: loan.id,
-    amount: Math.round(loan.maxAmount / 2),
-    duration: String(loan.durationMonths),
-    purpose: '',
-    fullName: '',
-    nid: '',
-    phone: '',
-    address: '',
-    employment: '',
+    loanId: "",
+    amount: 0,
+    duration: "",
+    purpose: "",
+    phone: "",
+    employment: "",
     monthlyIncome: 0,
-    nidUploaded: false,
-    incomeProofUploaded: false,
-    addressProofUploaded: false,
   });
-  const selectedLoan = loanProducts.find((l) => l.id === form.loanId) ?? loan;
+
+  // Init form defaults when products load
+  useEffect(() => {
+    if (loanProducts.length > 0 && !form.loanId) {
+      const loan = loanProducts[0];
+      setForm((f) => ({
+        ...f,
+        loanId: loan.id,
+        amount: Math.round(loan.maxAmount / 2),
+        duration: String(loan.durationMonths),
+      }));
+    }
+  }, [loanProducts, form.loanId]);
+
+  const selectedLoan = loanProducts.find((l) => l.id === form.loanId) ?? defaultLoan;
+
   const emi = useMemo(
     () => calculateEmi(form.amount, selectedLoan.interestRate, Number(form.duration)),
-    [form.amount, form.duration, selectedLoan]
+    [form.amount, form.duration, selectedLoan],
   );
+
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
-    setErrors((e) => ({ ...e, [key]: '' }));
+    setErrors((e) => ({ ...e, [key]: "" }));
   }
+
   function validateStep(current: number): boolean {
     const next: Record<string, string> = {};
     if (current === 0) {
-      if (!form.amount || form.amount < selectedLoan.minAmount) next.amount = `Enter at least ${formatTaka(selectedLoan.minAmount)}`;
-      if (form.amount > selectedLoan.maxAmount) next.amount = `Amount cannot exceed ${formatTaka(selectedLoan.maxAmount)}`;
-      if (!form.duration) next.duration = 'Select a repayment duration';
-      if (!form.purpose.trim()) next.purpose = 'Tell us what this loan is for';
+      if (!form.amount || form.amount < selectedLoan.minAmount)
+        next.amount = t("application.errorAmountMin", { amount: formatTaka(selectedLoan.minAmount) });
+      if (form.amount > selectedLoan.maxAmount)
+        next.amount = t("application.errorAmountMax", { amount: formatTaka(selectedLoan.maxAmount) });
+      if (!form.duration) next.duration = t("application.errorDuration");
+      if (!form.purpose.trim()) next.purpose = t("application.errorPurpose");
     }
     if (current === 1) {
-      if (!form.fullName.trim()) next.fullName = 'Full name is required';
-      if (!/^\d{10,17}$/.test(form.nid.replace(/\s/g, ''))) next.nid = 'Enter a valid NID number';
-      if (!/^01\d{9}$/.test(form.phone.replace(/\s/g, ''))) next.phone = 'Enter a valid Bangladeshi mobile number';
-      if (!form.address.trim()) next.address = 'Address is required';
-      if (!form.employment) next.employment = 'Select your employment type';
-      if (!form.monthlyIncome || form.monthlyIncome <= 0) next.monthlyIncome = 'Enter your monthly income';
-    }
-    if (current === 2) {
-      if (!form.nidUploaded) next.nidUploaded = 'NID copy is required';
-      if (!form.incomeProofUploaded) next.incomeProofUploaded = 'Income proof is required';
-      if (!form.addressProofUploaded) next.addressProofUploaded = 'Address proof is required';
+      if (!/^01\d{9}$/.test(form.phone.replace(/\s/g, "")))
+        next.phone = t("application.errorPhone");
+      if (!form.employment) next.employment = t("application.errorEmployment");
+      if (!form.monthlyIncome || form.monthlyIncome <= 0)
+        next.monthlyIncome = t("application.errorIncome");
     }
     setErrors(next);
     return Object.keys(next).length === 0;
   }
+
   function handleNext() {
     if (!validateStep(step)) return;
     setStep((s) => Math.min(steps.length - 1, s + 1));
   }
+
   function handleBack() {
     setStep((s) => Math.max(0, s - 1));
   }
-  function handleSubmit() {
+
+  async function handleSubmit() {
     if (!validateStep(step)) return;
     setSubmitting(true);
-    setTimeout(() => {
+    setSubmitError("");
+    try {
+      const applicationData = {
+        requestedAmount: form.amount,
+        purpose: selectedLoan.category ?? "personal",
+        purposeDescription: form.purpose,
+        ...(form.loanId ? { productId: form.loanId } : {}),
+      };
+      await applicationsApi.createApplication(applicationData);
+      onNavigate("application-status");
+    } catch (e) {
+      console.error("Submission failed", e);
+      setSubmitError(e instanceof Error ? e.message : "Failed to submit your application");
+    } finally {
       setSubmitting(false);
-      onNavigate('application-status');
-    }, 1400);
+    }
   }
+
+  if (isLoading) {
+    return (
+      <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 flex justify-center items-center h-64">
+          <p className="text-stone-500">{t("common.loading")}</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
   const summary = (
     <Card variant="raised">
-      <CardHeader title="Application summary" />
+      <CardHeader title={t("application.summary")} />
       <CardBody>
-        <DataRow label="Loan product" value={selectedLoan.name} />
-        <DataRow label="Requested amount" value={formatTaka(form.amount || 0)} />
-        <DataRow label="Duration" value={`${form.duration || selectedLoan.durationMonths} months`} />
+        <DataRow label={t("application.loanProduct")} value={selectedLoan.name || "—"} />
+        <DataRow label={t("loanDetails.loanAmount")} value={formatTaka(form.amount || 0)} />
+        <DataRow
+          label={t("loanDetails.repaymentDuration")}
+          value={t("loanDetails.monthsUnit", { count: form.duration || selectedLoan.durationMonths })}
+        />
         <div className="border-t border-stone-200 mt-2 pt-2">
-          <DataRow label="Estimated monthly EMI" value={formatTaka(Math.round(emi))} emphasis />
+          <DataRow label={t("application.estimatedEmi")} value={formatTaka(Math.round(emi))} emphasis />
         </div>
       </CardBody>
     </Card>
   );
+
   return (
     <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-navy sm:text-3xl">Apply for a loan</h1>
-          <p className="mt-1.5 text-sm text-stone-500">{selectedLoan.name} — {selectedLoan.provider}</p>
+          <h1 className="text-2xl font-semibold text-navy sm:text-3xl">{t("application.title")}</h1>
+          <p className="mt-1.5 text-sm text-stone-500">
+            {selectedLoan.name} — {selectedLoan.provider}
+          </p>
         </div>
         <div className="mb-6 overflow-x-auto">
           <Stepper steps={steps} currentStep={step} />
@@ -141,163 +220,169 @@ export default function LoanApplication({ onNavigate }: Props) {
         <div className="grid lg:grid-cols-[minmax(0,1fr)_18rem] gap-6">
           <div className="min-w-0">
             <Card>
-              <CardHeader title={steps[step].label} description={`Step ${step + 1} of ${steps.length}`} />
+              <CardHeader
+                title={steps[step].label}
+                description={t("onboarding.stepOf", { current: step + 1, total: steps.length })}
+              />
               <CardBody>
-                <div role="group" aria-current="step" aria-label={steps[step].label} className="flex flex-col gap-4">
+                <div
+                  role="group"
+                  aria-current="step"
+                  aria-label={steps[step].label}
+                  className="flex flex-col gap-4"
+                >
                   {step === 0 && (
                     <>
                       <Select
-                        label="Loan product"
+                        label={t("application.loanProduct")}
                         required
-                        options={loanProducts.map((l) => ({ value: l.id, label: `${l.name} — ${l.provider}` }))}
+                        options={loanProducts.map((l) => ({
+                          value: l.id,
+                          label: `${l.name} — ${l.provider}`,
+                        }))}
                         value={form.loanId}
-                        onChange={(e) => update('loanId', e.target.value)}
+                        onChange={(e) => update("loanId", e.target.value)}
                       />
                       <CurrencyInput
-                        label="Loan amount"
+                        label={t("loanDetails.loanAmount")}
                         required
                         value={form.amount}
                         error={errors.amount}
                         min={selectedLoan.minAmount}
                         max={selectedLoan.maxAmount}
-                        onChange={(e) => update('amount', Number(e.target.value))}
-                        hint={`Between ${formatTaka(selectedLoan.minAmount)} and ${formatTaka(selectedLoan.maxAmount)}`}
+                        onChange={(e) => update("amount", Number(e.target.value))}
+                        hint={t("loanDetails.loanRange", { min: formatTaka(selectedLoan.minAmount), max: formatTaka(selectedLoan.maxAmount) })}
                       />
                       <Select
-                        label="Repayment duration"
+                        label={t("loanDetails.repaymentDuration")}
                         required
-                        options={durationOptions.filter((d) => Number(d.value) <= selectedLoan.durationMonths)}
-                        placeholder="Select duration"
+                        options={durationOptions.filter(
+                          (d) => Number(d.value) <= selectedLoan.durationMonths,
+                        )}
+                        placeholder={t("application.errorDuration")}
                         value={form.duration}
                         error={errors.duration}
-                        onChange={(e) => update('duration', e.target.value)}
+                        onChange={(e) => update("duration", e.target.value)}
                       />
                       <Textarea
-                        label="Purpose of loan"
+                        label={t("application.purpose")}
                         required
-                        placeholder="E.g. Tuition fees for spring semester"
+                        placeholder={t("application.purposePlaceholder")}
                         value={form.purpose}
                         error={errors.purpose}
-                        onChange={(e) => update('purpose', e.target.value)}
+                        onChange={(e) => update("purpose", e.target.value)}
                       />
                     </>
                   )}
                   {step === 1 && (
                     <>
+                      <div className="bg-emerald-light/60 border border-emerald/30 rounded-[6px] p-3.5 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-5 h-5 rounded-full bg-emerald text-white flex items-center justify-center text-xs font-bold">
+                            ✓
+                          </span>
+                          <div>
+                            <p className="text-xs font-semibold text-emerald-800">
+                              {t("application.identityVerified")}
+                            </p>
+                            <p className="text-xs text-stone-600">
+                              {t("application.identityVerifiedBody")}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-medium text-emerald bg-white px-2 py-0.5 rounded border border-emerald/20 shrink-0">
+                          {t("application.profileKyc")}
+                        </span>
+                      </div>
                       <TextInput
-                        label="Full name (as per NID)"
-                        required
-                        placeholder="Riya Ahmed"
-                        value={form.fullName}
-                        error={errors.fullName}
-                        onChange={(e) => update('fullName', e.target.value)}
-                      />
-                      <TextInput
-                        label="National ID (NID) number"
-                        required
-                        placeholder="1234567890123"
-                        value={form.nid}
-                        error={errors.nid}
-                        onChange={(e) => update('nid', e.target.value)}
-                      />
-                      <TextInput
-                        label="Mobile number"
+                        label={t("application.contactMobile")}
                         required
                         placeholder="01XXXXXXXXX"
                         value={form.phone}
                         error={errors.phone}
-                        onChange={(e) => update('phone', e.target.value)}
-                      />
-                      <Textarea
-                        label="Present address"
-                        required
-                        placeholder="House, road, area, Dhaka"
-                        value={form.address}
-                        error={errors.address}
-                        onChange={(e) => update('address', e.target.value)}
+                        onChange={(e) => update("phone", e.target.value)}
+                        hint={t("application.contactMobileHint")}
                       />
                       <Select
-                        label="Employment type"
+                        label={t("application.employmentType")}
                         required
-                        placeholder="Select employment type"
+                        placeholder={t("application.employmentType")}
                         options={employmentOptions}
                         value={form.employment}
                         error={errors.employment}
-                        onChange={(e) => update('employment', e.target.value)}
+                        onChange={(e) => update("employment", e.target.value)}
                       />
                       <CurrencyInput
-                        label="Monthly income"
+                        label={t("application.monthlyIncome")}
                         required
-                        value={form.monthlyIncome || ''}
+                        value={form.monthlyIncome || ""}
                         error={errors.monthlyIncome}
-                        onChange={(e) => update('monthlyIncome', Number(e.target.value))}
+                        onChange={(e) => update("monthlyIncome", Number(e.target.value))}
                       />
                     </>
                   )}
                   {step === 2 && (
-                    <>
-                      <Alert variant="info" title="Accepted formats">
-                        Upload clear scans or photos (PDF, JPG, PNG) up to 5MB each.
-                      </Alert>
-                      <FileUpload
-                        label="NID copy (front & back)"
-                        error={errors.nidUploaded}
-                        onChange={(files) => update('nidUploaded', !!files && files.length > 0)}
-                      />
-                      <FileUpload
-                        label="Income proof (salary slip or bank statement)"
-                        error={errors.incomeProofUploaded}
-                        onChange={(files) => update('incomeProofUploaded', !!files && files.length > 0)}
-                      />
-                      <FileUpload
-                        label="Address proof (utility bill)"
-                        error={errors.addressProofUploaded}
-                        onChange={(files) => update('addressProofUploaded', !!files && files.length > 0)}
-                      />
-                    </>
-                  )}
-                  {step === 3 && (
                     <div className="flex flex-col gap-4">
-                      <Alert variant="success" title="Ready to submit">
-                        Please review your details below. You can go back to make changes before submitting.
+                      <Alert variant="success" title={t("application.readyToSubmit")}>
+                        {t("application.readyToSubmitBody")}
                       </Alert>
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">Loan details</p>
-                        <DataRow label="Loan product" value={selectedLoan.name} />
-                        <DataRow label="Amount requested" value={formatTaka(form.amount)} />
-                        <DataRow label="Duration" value={`${form.duration} months`} />
-                        <DataRow label="Purpose" value={form.purpose || '—'} />
+                        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">
+                          {t("application.stepLoanDetails")}
+                        </p>
+                        <DataRow label={t("application.loanProduct")} value={selectedLoan.name} />
+                        <DataRow label={t("loanDetails.loanAmount")} value={formatTaka(form.amount)} />
+                        <DataRow label={t("loanDetails.repaymentDuration")} value={t("loanDetails.monthsUnit", { count: form.duration })} />
+                        <DataRow label={t("application.purpose")} value={form.purpose || "—"} />
                       </div>
                       <div className="border-t border-stone-200 pt-3">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">Personal & income</p>
-                        <DataRow label="Full name" value={form.fullName || '—'} />
-                        <DataRow label="NID" value={form.nid || '—'} />
-                        <DataRow label="Mobile number" value={form.phone || '—'} />
-                        <DataRow label="Employment type" value={employmentOptions.find((o) => o.value === form.employment)?.label ?? '—'} />
-                        <DataRow label="Monthly income" value={form.monthlyIncome ? formatTaka(form.monthlyIncome) : '—'} />
+                        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">
+                          {t("application.stepEmployment")}
+                        </p>
+                        <DataRow label={t("profile.personalIdentity")} value={`${t("application.identityVerified")} ✓`} />
+                        <DataRow label={t("lender.address")} value={`${t("application.identityVerified")} ✓`} />
+                        <DataRow label={t("lender.income")} value={`${t("application.identityVerified")} ✓`} />
+                        <DataRow label={t("application.contactMobile")} value={form.phone || "—"} />
+                        <DataRow
+                          label={t("application.employmentType")}
+                          value={
+                            employmentOptions.find((o) => o.value === form.employment)?.label ?? "—"
+                          }
+                        />
+                        <DataRow
+                          label={t("application.monthlyIncome")}
+                          value={form.monthlyIncome ? formatTaka(form.monthlyIncome) : "—"}
+                        />
                       </div>
                       <div className="border-t border-stone-200 pt-3">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">Documents</p>
-                        <DataRow label="NID copy" value={form.nidUploaded ? 'Uploaded' : 'Missing'} />
-                        <DataRow label="Income proof" value={form.incomeProofUploaded ? 'Uploaded' : 'Missing'} />
-                        <DataRow label="Address proof" value={form.addressProofUploaded ? 'Uploaded' : 'Missing'} />
+                        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">
+                          {t("application.profileKyc")}
+                        </p>
+                        <DataRow label={t("profile.personalIdentity")} value={`${t("application.identityVerified")} ✓`} />
+                        <DataRow label={t("lender.address")} value={`${t("application.identityVerified")} ✓`} />
+                        <DataRow label={t("lender.income")} value={`${t("application.identityVerified")} ✓`} />
                       </div>
                     </div>
                   )}
                 </div>
               </CardBody>
             </Card>
+            {submitError && (
+              <Alert variant="error" title="Application could not be submitted">
+                {submitError}
+              </Alert>
+            )}
             <div className="flex flex-wrap items-center justify-between gap-3 mt-5">
               <Button variant="secondary" onClick={handleBack} disabled={step === 0 || submitting}>
-                Back
+                {t("common.back")}
               </Button>
               {step < steps.length - 1 ? (
                 <Button variant="primary" onClick={handleNext}>
-                  Next
+                  {t("common.next")}
                 </Button>
               ) : (
                 <Button variant="primary" onClick={handleSubmit} loading={submitting}>
-                  {submitting ? 'Submitting…' : 'Submit application'}
+                  {submitting ? t("application.submitting") : t("application.submit")}
                 </Button>
               )}
             </div>
