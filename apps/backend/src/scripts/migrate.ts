@@ -308,6 +308,114 @@ async function ensureBorrowerTrustSummaryView(client: PoolClient) {
   `);
 }
 
+async function ensureDatabaseComputedFunctions(client: PoolClient) {
+  // Keep the existing trust-score input function available for databases that were
+  // baselined before it was added to schema.sql.
+  await client.query(`
+    CREATE OR REPLACE FUNCTION get_trust_inputs(p_user_id UUID)
+    RETURNS JSON
+    LANGUAGE sql
+    STABLE
+    AS $func$
+      WITH repayment_data AS (
+        SELECT
+          COUNT(*) FILTER (WHERE rs.due_date <= CURRENT_DATE) AS total_due,
+          COUNT(*) FILTER (WHERE rs.status = 'paid' AND completed.paid_at <= rs.due_date) AS on_time,
+          COUNT(*) FILTER (WHERE rs.status = 'paid' AND (completed.paid_at IS NULL OR completed.paid_at > rs.due_date)) AS late,
+          COUNT(*) FILTER (WHERE rs.status IN ('pending', 'overdue') AND rs.due_date < CURRENT_DATE) AS missed,
+          COUNT(*) FILTER (WHERE rs.status = 'defaulted') AS defaults,
+          COUNT(*) FILTER (WHERE rs.status = 'paid') AS total_repayments
+        FROM loans l
+        JOIN repayment_schedules rs ON rs.loan_id = l.loan_id
+        LEFT JOIN LATERAL (
+          SELECT MAX(paid_at) AS paid_at
+          FROM repayments r
+          WHERE r.schedule_id = rs.schedule_id AND r.status = 'completed'
+        ) completed ON TRUE
+        WHERE l.user_id = p_user_id
+      ),
+      financial_data AS (
+        SELECT monthly_family_income FROM user_profiles WHERE user_id = p_user_id
+      ),
+      obligation_data AS (
+        SELECT COUNT(DISTINCT l.loan_id) AS active_loans, COALESCE(SUM(rs.expected_amount), 0) AS monthly_obligations
+        FROM loans l
+        JOIN repayment_schedules rs ON rs.loan_id = l.loan_id
+        WHERE l.user_id = p_user_id AND l.status = 'active'
+          AND rs.status IN ('pending', 'overdue')
+          AND rs.due_date >= DATE_TRUNC('month', CURRENT_DATE)
+          AND rs.due_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+      ),
+      verification_data AS (
+        SELECT COALESCE(array_agg(verification_type), '{}') AS types, COUNT(*) AS count
+        FROM verification_requests WHERE user_id = p_user_id AND status = 'approved'
+      )
+      SELECT json_build_object(
+        'repayment', json_build_object(
+          'totalDuePayments', COALESCE(rd.total_due, 0), 'onTimePayments', COALESCE(rd.on_time, 0),
+          'latePayments', COALESCE(rd.late, 0), 'missedPayments', COALESCE(rd.missed, 0), 'defaults', COALESCE(rd.defaults, 0)),
+        'financial', json_build_object(
+          'monthlyIncome', fd.monthly_family_income, 'monthlyDebtObligations', COALESCE(od.monthly_obligations, 0),
+          'activeLoanCount', COALESCE(od.active_loans, 0)),
+        'behavior', json_build_object('hasTransactionData', false),
+        'verification', json_build_object(
+          'identityVerified', 'identity' = ANY(vd.types), 'phoneVerified', u.phone IS NOT NULL,
+          'emailVerified', u.email_verified, 'addressVerified', 'address' = ANY(vd.types),
+          'incomeVerified', 'income' = ANY(vd.types), 'studentVerified', 'student' = ANY(vd.types)),
+        'credit', json_build_object('activeLoanCount', COALESCE(od.active_loans, 0), 'recentApplications', COALESCE(app.recent_apps, 0)),
+        'tenure', json_build_object(
+          'accountAgeDays', GREATEST(0, EXTRACT(DAY FROM NOW() - u.created_at)::INT),
+          'totalRepaymentCount', COALESCE(rd.total_repayments, 0), 'verificationCount', COALESCE(vd.count, 0))
+      )
+      FROM users u
+      LEFT JOIN repayment_data rd ON TRUE
+      LEFT JOIN financial_data fd ON TRUE
+      LEFT JOIN obligation_data od ON TRUE
+      LEFT JOIN verification_data vd ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*) AS recent_apps FROM loan_applications
+        WHERE user_id = p_user_id AND created_at >= NOW() - INTERVAL '90 days'
+      ) app ON TRUE
+      WHERE u.user_id = p_user_id;
+    $func$;
+  `);
+
+  await client.query(`
+    CREATE OR REPLACE FUNCTION calculate_loan_remaining_balance(p_loan_id UUID)
+    RETURNS NUMERIC(12,2)
+    LANGUAGE sql
+    STABLE
+    AS $func$
+      WITH selected_loan AS (
+        SELECT principal_amount FROM loans WHERE loan_id = p_loan_id
+      ),
+      expected_total AS (
+        SELECT COALESCE(SUM(expected_amount), 0::numeric) AS amount
+        FROM repayment_schedules
+        WHERE loan_id = p_loan_id
+      ),
+      paid_total AS (
+        SELECT COALESCE(SUM(repayment.amount_paid), 0::numeric) AS amount
+        FROM repayments repayment
+        JOIN repayment_schedules schedule ON schedule.schedule_id = repayment.schedule_id
+        WHERE schedule.loan_id = p_loan_id
+          AND repayment.status = 'completed'
+      )
+      SELECT COALESCE(
+        GREATEST(
+          0::numeric,
+          CASE
+            WHEN EXISTS (SELECT 1 FROM repayment_schedules WHERE loan_id = p_loan_id)
+              THEN (SELECT amount FROM expected_total)
+            ELSE (SELECT principal_amount FROM selected_loan)
+          END - (SELECT amount FROM paid_total)
+        ),
+        0::numeric
+      )::NUMERIC(12,2);
+    $func$;
+  `);
+}
+
 async function migrate() {
   const client = await pool.connect();
   try {
@@ -345,6 +453,7 @@ async function migrate() {
       await ensureLenderInvestorProfileInvariant(client);
       await ensureLoanApplicationReference(client);
       await ensureBorrowerTrustSummaryView(client);
+      await ensureDatabaseComputedFunctions(client);
 
       console.log("Canonical schema is already installed.");
       return;
@@ -365,6 +474,7 @@ async function migrate() {
       await ensureLenderInvestorProfileInvariant(client);
       await ensureLoanApplicationReference(client);
       await ensureBorrowerTrustSummaryView(client);
+      await ensureDatabaseComputedFunctions(client);
 
       const schemaStillIncomplete = !(await hasCanonicalSchema(client));
       if (schemaStillIncomplete) {
@@ -408,6 +518,7 @@ async function migrate() {
     await ensureLenderInvestorProfileInvariant(client);
     await ensureLoanApplicationReference(client);
     await ensureBorrowerTrustSummaryView(client);
+    await ensureDatabaseComputedFunctions(client);
 
     console.log("Canonical schema installed successfully.");
   } finally {

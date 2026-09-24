@@ -1,10 +1,10 @@
-import { Router } from "express";
+import { Router, type NextFunction, type Response } from "express";
 import { pool } from "../lib/db.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
 
 const router = Router();
 
-function requireAdmin(req: RequestWithAuth, res: any, next: any) {
+export function requireAdmin(req: RequestWithAuth, res: Response, next: NextFunction) {
   if (!req.auth || req.auth.role !== "admin") {
     return res.status(403).json({
       success: false,
@@ -134,6 +134,111 @@ router.get("/stats", requireAuth, requireAdmin, async (req, res) => {
     return res.status(500).json({
       success: false,
       error: { message: "Failed to fetch platform statistics" },
+    });
+  }
+});
+
+// GET /api/v1/admin/database-showcase/overview — live database counts and a trigger invariant.
+router.get("/database-showcase/overview", requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        (SELECT COUNT(*) FROM users) AS "users",
+        (SELECT COUNT(*) FROM users WHERE role = 'borrower') AS "borrowers",
+        (SELECT COUNT(*) FROM users WHERE role = 'lender') AS "lenders",
+        (SELECT COUNT(*) FROM users u
+         JOIN investor_profiles ip ON ip.user_id = u.user_id
+         WHERE u.role = 'lender') AS "lendersWithInvestorProfile",
+        (SELECT COUNT(*) FROM loan_applications) AS "loanApplications",
+        (SELECT COUNT(*) FROM loans WHERE status = 'active') AS "activeLoans",
+        (SELECT COUNT(*) FROM repayments) AS "repayments"
+    `);
+
+    const row = result.rows[0] as Record<string, string | number>;
+    return res.status(200).json({
+      success: true,
+      data: {
+        users: Number(row.users),
+        borrowers: Number(row.borrowers),
+        lenders: Number(row.lenders),
+        lendersWithInvestorProfile: Number(row.lendersWithInvestorProfile),
+        loanApplications: Number(row.loanApplications),
+        activeLoans: Number(row.activeLoans),
+        repayments: Number(row.repayments),
+      },
+    });
+  } catch (error) {
+    console.error("Failed to load database showcase overview:", error);
+    return res.status(500).json({
+      success: false,
+      error: { message: "Failed to load database showcase overview" },
+    });
+  }
+});
+
+// GET /api/v1/admin/database-showcase/loan-balances — portfolio aggregation with DB-side balance calculation.
+router.get("/database-showcase/loan-balances", requireAuth, requireAdmin, async (req, res) => {
+  const page = Math.max(1, Number.parseInt(String(req.query.page ?? "1"), 10) || 1);
+  const limit = Math.min(
+    100,
+    Math.max(1, Number.parseInt(String(req.query.limit ?? "25"), 10) || 25),
+  );
+  const offset = (page - 1) * limit;
+
+  try {
+    const [countResult, loansResult] = await Promise.all([
+      pool.query(`SELECT COUNT(*) AS total FROM loans`),
+      pool.query(
+        `WITH schedule_summary AS (
+           SELECT
+             schedule.loan_id,
+             COUNT(*) AS installment_count,
+             COUNT(*) FILTER (WHERE schedule.status = 'paid') AS paid_installment_count,
+             MIN(schedule.due_date) FILTER (WHERE schedule.status <> 'paid') AS next_due_date
+           FROM repayment_schedules schedule
+           GROUP BY schedule.loan_id
+         )
+         SELECT
+           loan.loan_id AS "loanId",
+           loan.status AS "loanStatus",
+           loan.principal_amount AS "principalAmount",
+           application.reference_code AS "applicationReference",
+           application.status AS "applicationStatus",
+           partner.name AS "partnerName",
+           COALESCE(summary.installment_count, 0) AS "installmentCount",
+           COALESCE(summary.paid_installment_count, 0) AS "paidInstallmentCount",
+           summary.next_due_date AS "nextDueDate",
+           calculate_loan_remaining_balance(loan.loan_id) AS "remainingBalance"
+         FROM loans loan
+         JOIN loan_applications application ON application.application_id = loan.application_id
+         LEFT JOIN funding_partners partner ON partner.partner_id = loan.partner_id
+         LEFT JOIN schedule_summary summary ON summary.loan_id = loan.loan_id
+         ORDER BY loan.created_at DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset],
+      ),
+    ]);
+
+    const total = Number(countResult.rows[0]?.total ?? 0);
+    return res.status(200).json({
+      success: true,
+      data: {
+        loans: loansResult.rows.map((row) => ({
+          ...row,
+          principalAmount: Number(row.principalAmount),
+          installmentCount: Number(row.installmentCount),
+          paidInstallmentCount: Number(row.paidInstallmentCount),
+          remainingBalance: Number(row.remainingBalance),
+        })),
+        total,
+      },
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
+  } catch (error) {
+    console.error("Failed to load database showcase loan balances:", error);
+    return res.status(500).json({
+      success: false,
+      error: { message: "Failed to load database showcase loan balances" },
     });
   }
 });

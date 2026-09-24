@@ -665,6 +665,41 @@ BEGIN
 END;
 $proc$;
 
+-- Returns the outstanding scheduled amount (including interest) after completed repayments.
+-- Before a schedule exists, principal is the best available outstanding amount; a missing loan returns 0.
+CREATE OR REPLACE FUNCTION calculate_loan_remaining_balance(p_loan_id UUID)
+RETURNS NUMERIC(12,2)
+LANGUAGE sql
+STABLE
+AS $func$
+    WITH selected_loan AS (
+        SELECT principal_amount FROM loans WHERE loan_id = p_loan_id
+    ),
+    expected_total AS (
+        SELECT COALESCE(SUM(expected_amount), 0::numeric) AS amount
+        FROM repayment_schedules
+        WHERE loan_id = p_loan_id
+    ),
+    paid_total AS (
+        SELECT COALESCE(SUM(repayment.amount_paid), 0::numeric) AS amount
+        FROM repayments repayment
+        JOIN repayment_schedules schedule ON schedule.schedule_id = repayment.schedule_id
+        WHERE schedule.loan_id = p_loan_id
+          AND repayment.status = 'completed'
+    )
+    SELECT COALESCE(
+        GREATEST(
+            0::numeric,
+            CASE
+                WHEN EXISTS (SELECT 1 FROM repayment_schedules WHERE loan_id = p_loan_id)
+                    THEN (SELECT amount FROM expected_total)
+                ELSE (SELECT principal_amount FROM selected_loan)
+            END - (SELECT amount FROM paid_total)
+        ),
+        0::numeric
+    )::NUMERIC(12,2);
+$func$;
+
 CREATE OR REPLACE FUNCTION get_trust_inputs(p_user_id UUID)
 RETURNS JSON
 LANGUAGE sql
