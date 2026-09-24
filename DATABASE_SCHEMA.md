@@ -8,20 +8,20 @@
 
 ## Entity Group Overview
 
-| #   | Group               | Tables                                                            |
-| --- | ------------------- | ----------------------------------------------------------------- |
-| 1   | Authentication      | `users`, `login_sessions`                                         |
-| 2   | User Information    | `user_profiles`, `institutions`                                   |
-| 3   | Verification        | `verification_requests`, `verification_documents`, `guarantors`   |
-| 4   | Trust Engine        | `trust_scores`, `trust_score_factors`                             |
-| 5   | Loan Management     | `loan_applications`, `loan_offers`, `loans`, `loan_disbursements` |
-| 6   | Repayment           | `repayment_schedules`, `repayments`                               |
-| 7   | Partner Integration | `funding_partners`, `partner_rules`, `partner_decisions`          |
-| 8   | Fraud               | `fraud_flags`                                                     |
-| 9   | Audit               | `audit_logs`                                                      |
-| 10  | Notification        | `notifications`                                                   |
+| #   | Group               | Tables                                                                                                                                  |
+| --- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Authentication      | `users`, `login_sessions`                                                                                                               |
+| 2   | User Information    | `user_profiles`, `institutions`, `investor_profiles`                                                                                    |
+| 3   | Verification        | `verification_requests`, `verification_documents`, `guarantors`                                                                         |
+| 4   | Trust Engine        | `trust_scores`, `trust_score_factors`                                                                                                   |
+| 5   | Loan Management     | `loan_products`, `loan_applications`, `funding_commitments`, `lender_application_matches`, `loan_offers`, `loans`, `loan_disbursements` |
+| 6   | Repayment           | `repayment_schedules`, `repayments`                                                                                                     |
+| 7   | Partner Integration | `funding_partners`, `partner_rules`, `partner_decisions`                                                                                |
+| 8   | Fraud               | `fraud_flags`                                                                                                                           |
+| 9   | Audit               | `audit_logs`                                                                                                                            |
+| 10  | Notification        | `notifications`                                                                                                                         |
 
-**Total: 18 tables** — no junction tables required (all relationships are 1:1 or 1:N).
+**Total: 25 tables** — `funding_commitments` and `lender_application_matches` model lender/application associations; the remaining relationships are 1:1 or 1:N.
 
 ---
 
@@ -983,3 +983,99 @@ erDiagram
 | Historical record preservation                                 | Append-only: `trust_scores`, `audit_logs`, `repayments`, `fraud_flags` |
 | Fairness (need ≠ trust)                                        | Trust factors are explicit; no GPA/hackathon columns                   |
 | Future extensibility (scholarship, SME, OCR, AI)               | Flexible `purpose` fields, `document_type` enum, JSONB audit states    |
+
+---
+
+# CSE216 Final Database Checklist
+
+This section records the implemented database evidence used for the final demonstration. The admin showcase is deliberately read-only and returns aggregate data only; it never returns borrower names, contact details, NID values, addresses, uploaded documents, or other KYC data.
+
+| Checklist requirement                           | Status             | Concrete evidence                                                                                                                                                                                            |
+| ----------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Authentication for all schema roles             | PARTIAL            | Borrower, lender, and admin have end-to-end paths in `auth.ts`/`AuthPage.tsx`; `partner_agent` is stored and authorized by the backend but has no dedicated registration, landing view, or role-specific UI. |
+| Validation, sessions, and backend authorization | COMPLETE           | `requireAuth`, `requireRole`, ownership checks in resource routes, plus `requireAdmin` on every showcase endpoint.                                                                                           |
+| HTTP/API-backed features                        | COMPLETE           | Raw parameterized SQL routes across auth, profile, applications, loans, funding, repayment, and admin modules.                                                                                               |
+| Functional role-aware frontend                  | COMPLETE           | Auth screens, borrower/lender/admin shells, and the protected `/admin/database` showcase.                                                                                                                    |
+| Transactions                                    | COMPLETE           | Explicit `BEGIN`/`COMMIT`/`ROLLBACK` in registration, funding, reviews, and other workflow routes.                                                                                                           |
+| Triggers                                        | COMPLETE           | Named trigger definitions in `schema.sql`; live, read-only catalog metadata in the showcase.                                                                                                                 |
+| PostgreSQL functions                            | COMPLETE           | `calculate_loan_remaining_balance` and `get_trust_inputs`; the showcase invokes the former live.                                                                                                             |
+| Stored procedure                                | PENDING / TEAMMATE | Excluded from this task by ownership instruction; do not claim it in this submission.                                                                                                                        |
+| Three complex SQL demonstrations                | COMPLETE           | `loanPortfolio`, `lenderFunding`, and `applicationTrust` in `admin.ts`.                                                                                                                                      |
+| Schema features and referential integrity       | COMPLETE           | Foreign keys, constraints, indexes, JSONB/arrays, triggers, functions, transactions, and locks in `schema.sql`.                                                                                              |
+
+## 1. Authentication
+
+- **Implementation:** `apps/backend/src/routes/auth.ts` registers accounts, verifies credentials with bcrypt, creates a row in `login_sessions`, and invalidates that row on logout. `apps/backend/src/lib/auth.ts` hashes passwords with bcrypt (12 rounds) and issues the HTTP-only `shohojrin_session` cookie.
+- **Relevant tables:** `users` stores the password hash, role, and account status; `login_sessions` stores server-side session state, expiry, and revocation.
+- **Relevant frontend:** `apps/frontend/src/views/AuthPage.tsx` and `apps/frontend/src/lib/api/auth.ts` call the authentication routes; `apps/frontend/src/components/AppLayout.tsx` provides the role-aware shell and logout action.
+- **Audit status — PARTIAL for all schema roles:** borrower, lender, and admin can authenticate and reach distinct flows. `partner_agent` exists in the database role constraint and is accepted by selected backend authorization paths (for example verification review), but it has no dedicated registration option or frontend landing route. This is a remaining viva risk if it is presented as a supported end-user role.
+
+## 2. Authentication validation and protected routes
+
+- `apps/backend/src/middleware/authenticate.ts` implements the existing split `requireAuth` middleware. It reads the session cookie, joins `login_sessions` to `users`, rejects revoked/expired sessions, and loads the role from PostgreSQL.
+- `apps/backend/src/middleware/authorize.ts` provides the existing `requireRole` and `requireOwnership` helpers. Role-specific examples include borrower application creation in `apps/backend/src/routes/applications.ts` and lender funding routes in `apps/backend/src/routes/investor.ts`.
+- The admin showcase has two independent guards: `apps/frontend/src/app/admin/database/page.tsx` calls `requireAdminUser()` for page access, while every API endpoint in `apps/backend/src/routes/admin.ts` uses `requireAuth, requireAdmin`. A direct API request by a non-admin receives `403` before a query runs; this is covered by `apps/backend/src/routes/__tests__/admin.authorization.test.ts`.
+
+## 3. Transactions
+
+- **Registration:** `POST /api/v1/auth/register` in `apps/backend/src/routes/auth.ts` wraps user, profile, and login-session creation in `BEGIN`/`COMMIT`, with `ROLLBACK` on duplicate or failure.
+- **Funding commitment:** `POST /api/v1/investor/fund/:applicationId` in `apps/backend/src/routes/investor.ts` locks the match and existing commitment, inserts the commitment, and, when fully funded, writes the offer, loan, disbursement, schedules, audit log, and notification in one transaction. Failures call `ROLLBACK`; the route tests assert both commit and rollback paths in `apps/backend/src/routes/__tests__/investor.funding.test.ts`.
+- **Administrative review:** `PUT /api/v1/admin/applications/:id/review` in `apps/backend/src/routes/admin.ts` updates an application, optional partner decision, and audit log atomically.
+
+## 4. Triggers
+
+All trigger definitions live in `apps/backend/migrations/schema.sql`.
+
+| Trigger                                                   | Enforced behavior                                                                    |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `trg_users_updated_at` (and analogous timestamp triggers) | Runs `update_timestamp()` before updates and maintains `updated_at`.                 |
+| `trg_audit_logs_append_only`                              | Runs `prevent_update_delete()` before an update/delete and preserves audit history.  |
+| `trg_repayments_append_only`                              | Prevents changes to recorded repayments.                                             |
+| `trg_trust_scores_append_only`                            | Prevents trust-score deletion.                                                       |
+| `trg_trust_scores_restrict_update`                        | Allows only the current-score marker to change; it protects historical score values. |
+| `trg_users_ensure_lender_investor_profile`                | Creates an `investor_profiles` row when a user becomes a lender.                     |
+
+The showcase endpoint `GET /api/v1/admin/database-showcase/triggers` queries PostgreSQL catalog tables (`pg_trigger`, `pg_class`, `pg_namespace`) for selected trigger names and reports live enabled state. It does not attempt update/delete demonstrations against application data.
+
+## 5. Functions
+
+- **`calculate_loan_remaining_balance(p_loan_id UUID) RETURNS NUMERIC(12,2)`** is defined in `apps/backend/migrations/schema.sql`. It uses CTEs to select the principal or scheduled total and subtract completed repayments, returning a non-negative outstanding balance.
+- **Application use:** `GET /api/v1/admin/database-showcase/loan-balances` in `apps/backend/src/routes/admin.ts` invokes `calculate_loan_remaining_balance(loan.loan_id)`. The admin page labels the resulting value as a PostgreSQL computation, so the displayed balance is not a browser calculation.
+- **`get_trust_inputs(p_user_id UUID) RETURNS JSON`** is also defined in the schema. It aggregates repayment, financial, obligation, verification, application, and account-tenure inputs for the trust service in `apps/backend/src/services/trust-inputs.service.ts`.
+
+## 6. Procedures
+
+**PENDING / TEAMMATE-OWNED.** Stored-procedure work is intentionally outside this database-showcase task. No procedure was implemented, changed, or integrated here, and it must not be presented as complete until the owning teammate confirms and demonstrates it.
+
+## 7. Complex PostgreSQL queries
+
+The three live demonstration queries are implemented by `GET /api/v1/admin/database-showcase/queries` in `apps/backend/src/routes/admin.ts` and displayed by `apps/frontend/src/views/DatabaseShowcase.tsx`.
+
+| Query result       | Database technique demonstrated                                                                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `loanPortfolio`    | A `schedule_totals` CTE joins `repayment_schedules` to `repayments`, conditionally aggregates completed payments, then joins to `loans` and groups by loan status. |
+| `lenderFunding`    | A `lender_commitments` CTE aggregates commitments per lender, then joins `users` and `investor_profiles` and groups by risk preference.                            |
+| `applicationTrust` | A `funding_totals` CTE conditionally aggregates committed funding; it joins `loan_applications`, `trust_scores`, and the CTE, then groups by application status.   |
+
+`GET /api/v1/admin/database-showcase/loan-balances` is an additional live query that joins loans, applications, partners, and a schedule-summary CTE while calling the PostgreSQL balance function.
+
+## 8. PostgreSQL feature usage
+
+- **Constraints:** UUID primary keys, `NOT NULL`, `UNIQUE`, `CHECK`, and defaults in `apps/backend/migrations/schema.sql`; examples include positive loan/repayment amounts, valid role/status values, and score ranges.
+- **Foreign keys:** Loan, repayment, verification, trust, and session relationships use explicit foreign keys with intentional `CASCADE`, `RESTRICT`, or `SET NULL` behavior.
+- **Indexes:** Lookup and workflow indexes include `idx_loan_applications_status`, `idx_loans_status`, `idx_funding_commitments_lender`, `idx_funding_commitments_application`, partial unique `idx_repayments_provider_ref`, and partial unique `idx_trust_scores_user_current`.
+- **Triggers and functions:** Listed above and defined in the schema migration.
+- **Transactions and row locks:** The workflow routes use `BEGIN`/`COMMIT`/`ROLLBACK` and `FOR UPDATE` where a concurrent funding decision could otherwise create conflicting state.
+- **Other PostgreSQL types/features:** `JSONB` audit before/after state, `INET` audit IP address, `TEXT[]` preferences/tags, `FILTER` aggregates, CTEs, and catalog queries for safe trigger metadata.
+
+## Database Viva Notes
+
+- **Why PostgreSQL instead of only application-side storage?** ShohojRin needs persistent, shared records with foreign keys between users, applications, loans, schedules, repayments, and audit entries. PostgreSQL enforces those relationships even if a route has a bug or requests arrive concurrently.
+- **Why use a transaction?** A funding decision can create several dependent records. In `investor.ts`, either all committed-funding, loan-lifecycle, schedule, audit, and notification writes succeed, or `ROLLBACK` leaves no partial loan state.
+- **Why use a trigger?** Triggers protect rules that should apply regardless of which backend route performs the write: timestamps stay current, audit/repayment history is append-only, and lender accounts get their required investor profile.
+- **Why use a function?** `calculate_loan_remaining_balance` keeps balance logic beside the schedules and repayments it reads. Every caller receives the same numeric result without duplicating the calculation in React or Express.
+- **Why are some computations better done in SQL?** The showcase portfolio, funding, and trust aggregates group and join data where it already resides. SQL reduces data transfer and avoids building sensitive row-level datasets only to total them in the application.
+- **Why not put all authentication into one huge query?** ShohojRin separates credential/session validation (`requireAuth`) from profile hydration (`requireUserProfile`) and authorization (`requireRole`/`requireAdmin`). That keeps the fast security check narrow, reusable, and easier to audit.
+- **What is the difference between a PostgreSQL function and procedure?** A function returns a value and can be used inside a `SELECT`, such as the remaining-balance function. A procedure is invoked with `CALL` for an operational workflow and is owned separately in this project; it is not part of this showcase submission.
+- **Which parts are enforced by the database versus Express?** PostgreSQL enforces constraints, foreign keys, indexes, triggers, functions, and transaction atomicity. Express validates request shape, verifies sessions and roles, applies ownership/route policy, and chooses the authorized database operation.
+- **How does the application maintain referential integrity?** Schema foreign keys tie child records to parent users, applications, loans, schedules, and partners. `ON DELETE` behavior is specified per relationship, while transactions and row locks prevent inconsistent multi-step lifecycle changes.

@@ -9,6 +9,7 @@ const en = {
   "nav.portfolio": "Portfolio",
   "nav.opportunities": "Opportunities",
   "nav.adminOverview": "Admin Overview",
+  "nav.databaseShowcase": "Database Showcase",
   "header.notifications": "Notifications",
   "header.markAllRead": "Mark all read",
   "menu.profile": "Profile",

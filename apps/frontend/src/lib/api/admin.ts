@@ -36,6 +36,59 @@ interface Partner {
   applicationCount: number;
 }
 
+export interface DatabaseOverview {
+  users: number;
+  borrowers: number;
+  lenders: number;
+  lendersWithInvestorProfile: number;
+  loanApplications: number;
+  activeLoans: number;
+  repayments: number;
+}
+
+export interface LoanBalanceRow {
+  loanId: string;
+  loanStatus: string;
+  principalAmount: number;
+  applicationReference: string | null;
+  applicationStatus: string;
+  partnerName: string | null;
+  installmentCount: number;
+  paidInstallmentCount: number;
+  nextDueDate: string | null;
+  remainingBalance: number;
+}
+
+export interface DatabaseShowcaseQueries {
+  loanPortfolio: Array<{
+    loanStatus: string;
+    loanCount: number;
+    principalAmount: number;
+    scheduledAmount: number;
+    paidAmount: number;
+  }>;
+  lenderFunding: Array<{
+    riskPreference: string;
+    lenderCount: number;
+    commitmentCount: number;
+    committedAmount: number;
+  }>;
+  applicationTrust: Array<{
+    applicationStatus: string;
+    applicationCount: number;
+    requestedAmount: number;
+    averageTrustScore: number | null;
+    committedAmount: number;
+  }>;
+}
+
+export interface DatabaseTrigger {
+  triggerName: string;
+  tableName: string;
+  event: string;
+  enabled: boolean;
+}
+
 export async function getPlatformStats() {
   return apiRequest<PlatformStats>("/admin/stats");
 }
@@ -50,6 +103,28 @@ export async function getUsers(params?: { page?: number; limit?: number }) {
 
 export async function getPartners() {
   return apiRequest<Partner[]>("/admin/partners");
+}
+
+export async function getDatabaseOverview() {
+  return apiRequest<DatabaseOverview>("/admin/database-showcase/overview");
+}
+
+export async function getDatabaseShowcaseQueries() {
+  return apiRequest<DatabaseShowcaseQueries>("/admin/database-showcase/queries");
+}
+
+export async function getLoanBalanceShowcase(params: { page?: number; limit?: number } = {}) {
+  const searchParams = new URLSearchParams();
+  if (params.page) searchParams.set("page", String(params.page));
+  if (params.limit) searchParams.set("limit", String(params.limit));
+  const query = searchParams.toString();
+  return apiRequest<{ loans: LoanBalanceRow[]; total: number }>(
+    `/admin/database-showcase/loan-balances${query ? `?${query}` : ""}`,
+  );
+}
+
+export async function getDatabaseTriggers() {
+  return apiRequest<DatabaseTrigger[]>("/admin/database-showcase/triggers");
 }
 
 export async function reviewApplication(

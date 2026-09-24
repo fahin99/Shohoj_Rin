@@ -182,6 +182,21 @@ const adminNav: SidebarItem[] = [
     ),
   },
   {
+    label: "Database Showcase",
+    labelKey: "nav.databaseShowcase",
+    page: "database-showcase",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <ellipse cx="8" cy="3.5" rx="5.5" ry="2.25" stroke="currentColor" strokeWidth="1.5" />
+        <path
+          d="M2.5 3.5v4.5c0 1.25 2.46 2.25 5.5 2.25s5.5-1 5.5-2.25V3.5M2.5 8v4.5c0 1.25 2.46 2.25 5.5 2.25s5.5-1 5.5-2.25V8"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
+      </svg>
+    ),
+  },
+  {
     label: "Applications",
     labelKey: "nav.applications",
     page: "application-status",

@@ -243,6 +243,158 @@ router.get("/database-showcase/loan-balances", requireAuth, requireAdmin, async 
   }
 });
 
+// GET /api/v1/admin/database-showcase/queries — read-only aggregate queries for the database demo.
+router.get("/database-showcase/queries", requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    const [portfolioResult, fundingResult, applicationResult] = await Promise.all([
+      pool.query(`
+        WITH schedule_totals AS (
+          SELECT
+            schedule.loan_id,
+            SUM(schedule.expected_amount) AS scheduled_amount,
+            COALESCE(SUM(payment.amount_paid) FILTER (WHERE payment.status = 'completed'), 0) AS paid_amount
+          FROM repayment_schedules schedule
+          LEFT JOIN repayments payment ON payment.schedule_id = schedule.schedule_id
+          GROUP BY schedule.loan_id
+        )
+        SELECT
+          loan.status AS "loanStatus",
+          COUNT(*) AS "loanCount",
+          COALESCE(SUM(loan.principal_amount), 0) AS "principalAmount",
+          COALESCE(SUM(COALESCE(schedule_totals.scheduled_amount, loan.principal_amount)), 0) AS "scheduledAmount",
+          COALESCE(SUM(COALESCE(schedule_totals.paid_amount, 0)), 0) AS "paidAmount"
+        FROM loans loan
+        LEFT JOIN schedule_totals ON schedule_totals.loan_id = loan.loan_id
+        GROUP BY loan.status
+        ORDER BY loan.status
+      `),
+      pool.query(`
+        WITH lender_commitments AS (
+          SELECT
+            lender_user_id,
+            COUNT(*) AS commitment_count,
+            COALESCE(SUM(amount) FILTER (WHERE status = 'committed'), 0) AS committed_amount
+          FROM funding_commitments
+          GROUP BY lender_user_id
+        )
+        SELECT
+          COALESCE(profile.risk_preference, 'not_set') AS "riskPreference",
+          COUNT(*) AS "lenderCount",
+          COALESCE(SUM(COALESCE(commitment.commitment_count, 0)), 0) AS "commitmentCount",
+          COALESCE(SUM(COALESCE(commitment.committed_amount, 0)), 0) AS "committedAmount"
+        FROM users lender
+        LEFT JOIN investor_profiles profile ON profile.user_id = lender.user_id
+        LEFT JOIN lender_commitments commitment ON commitment.lender_user_id = lender.user_id
+        WHERE lender.role = 'lender'
+        GROUP BY COALESCE(profile.risk_preference, 'not_set')
+        ORDER BY "lenderCount" DESC, "riskPreference"
+      `),
+      pool.query(`
+        WITH funding_totals AS (
+          SELECT
+            application_id,
+            COALESCE(SUM(amount) FILTER (WHERE status = 'committed'), 0) AS committed_amount
+          FROM funding_commitments
+          GROUP BY application_id
+        )
+        SELECT
+          application.status AS "applicationStatus",
+          COUNT(*) AS "applicationCount",
+          COALESCE(SUM(application.requested_amount), 0) AS "requestedAmount",
+          ROUND(AVG(score.score), 2) AS "averageTrustScore",
+          COALESCE(SUM(COALESCE(funding_totals.committed_amount, 0)), 0) AS "committedAmount"
+        FROM loan_applications application
+        LEFT JOIN trust_scores score ON score.score_id = application.trust_score_id
+        LEFT JOIN funding_totals ON funding_totals.application_id = application.application_id
+        GROUP BY application.status
+        ORDER BY application.status
+      `),
+    ]);
+
+    const toNumber = (value: unknown) => Number(value ?? 0);
+    return res.status(200).json({
+      success: true,
+      data: {
+        loanPortfolio: portfolioResult.rows.map((row: any) => ({
+          ...row,
+          loanCount: toNumber(row.loanCount),
+          principalAmount: toNumber(row.principalAmount),
+          scheduledAmount: toNumber(row.scheduledAmount),
+          paidAmount: toNumber(row.paidAmount),
+        })),
+        lenderFunding: fundingResult.rows.map((row: any) => ({
+          ...row,
+          lenderCount: toNumber(row.lenderCount),
+          commitmentCount: toNumber(row.commitmentCount),
+          committedAmount: toNumber(row.committedAmount),
+        })),
+        applicationTrust: applicationResult.rows.map((row: any) => ({
+          ...row,
+          applicationCount: toNumber(row.applicationCount),
+          requestedAmount: toNumber(row.requestedAmount),
+          averageTrustScore: row.averageTrustScore == null ? null : toNumber(row.averageTrustScore),
+          committedAmount: toNumber(row.committedAmount),
+        })),
+      },
+    });
+  } catch (error) {
+    console.error("Failed to load database showcase queries:", error);
+    return res.status(500).json({
+      success: false,
+      error: { message: "Failed to load database showcase queries" },
+    });
+  }
+});
+
+// GET /api/v1/admin/database-showcase/triggers — safe PostgreSQL catalog metadata only.
+router.get("/database-showcase/triggers", requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        trigger.tgname AS "triggerName",
+        table_class.relname AS "tableName",
+        COALESCE(
+          NULLIF(
+            concat_ws(', ',
+              CASE WHEN (trigger.tgtype & 4) <> 0 THEN 'INSERT' END,
+              CASE WHEN (trigger.tgtype & 8) <> 0 THEN 'DELETE' END,
+              CASE WHEN (trigger.tgtype & 16) <> 0 THEN 'UPDATE' END
+            ),
+            ''
+          ),
+          'OTHER'
+        ) AS "event",
+        trigger.tgenabled = 'O' AS "enabled"
+      FROM pg_trigger trigger
+      JOIN pg_class table_class ON table_class.oid = trigger.tgrelid
+      JOIN pg_namespace table_schema ON table_schema.oid = table_class.relnamespace
+      WHERE NOT trigger.tgisinternal
+        AND table_schema.nspname = current_schema()
+        AND trigger.tgname = ANY($1::text[])
+      ORDER BY trigger.tgname
+      `,
+      [
+        [
+          "trg_users_updated_at",
+          "trg_audit_logs_append_only",
+          "trg_trust_scores_restrict_update",
+          "trg_repayments_append_only",
+          "trg_users_ensure_lender_investor_profile",
+        ],
+      ],
+    );
+
+    return res.status(200).json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error("Failed to load database showcase triggers:", error);
+    return res.status(500).json({
+      success: false,
+      error: { message: "Failed to load database showcase triggers" },
+    });
+  }
+});
+
 // PUT /api/v1/admin/applications/:id/review — approve/reject application
 router.put("/applications/:id/review", requireAuth, requireAdmin, async (req, res) => {
   const authReq = req as RequestWithAuth;

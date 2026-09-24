@@ -13,6 +13,7 @@ export type PageName =
   | "lender-dashboard"
   | "lender-opportunities"
   | "admin"
+  | "database-showcase"
   | "system-states"
   | "investor-onboarding"
   | "profile"

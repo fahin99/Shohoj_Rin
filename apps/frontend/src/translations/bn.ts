@@ -11,6 +11,7 @@ const bn: Record<TranslationKey, string> = {
   "nav.portfolio": "পোর্টফোলিও",
   "nav.opportunities": "সুযোগসমূহ",
   "nav.adminOverview": "অ্যাডমিন ওভারভিউ",
+  "nav.databaseShowcase": "ডেটাবেস প্রদর্শনী",
   "header.notifications": "বিজ্ঞপ্তি",
   "header.markAllRead": "সব পঠিত করুন",
   "menu.profile": "প্রোফাইল",
