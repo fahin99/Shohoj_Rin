@@ -46,7 +46,7 @@ function toStoredUser(user: BackendUser): StoredUserProfile {
 }
 export async function getCurrentUser(): Promise<StoredUserProfile | null> {
   const cookieStore = await cookies();
-  if (!cookieStore.has("shohojrin_access_token")) {
+  if (!cookieStore.has("shohojrin_session")) {
     return null;
   }
   const cookieHeader = cookieStore.toString();

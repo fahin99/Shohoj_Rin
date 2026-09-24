@@ -1,25 +1,17 @@
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
-import jwt from "jsonwebtoken";
 import type { CookieOptions, Response } from "express";
 import { config } from "../config/index.js";
 const BCRYPT_ROUNDS = 12;
-const REFRESH_COOKIE_NAME = "shohojrin_refresh_token";
-const ACCESS_COOKIE_NAME = "shohojrin_access_token";
-export function accessCookieOptions(): CookieOptions {
-  return getCookieOptions(15 * 60 * 1000);
-}
-export function refreshCookieOptions(): CookieOptions {
-  return getCookieOptions(7 * 24 * 60 * 60 * 1000);
-}
-function getCookieOptions(maxAgeMs: number): CookieOptions {
+const SESSION_COOKIE_NAME = "shohojrin_session";
+export function sessionCookieOptions(): CookieOptions {
   const isProduction = config.nodeEnv === "production";
   return {
     httpOnly: true,
     secure: isProduction,
     sameSite: "lax",
     path: "/",
-    maxAge: maxAgeMs,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   };
 }
 export function hashToken(token: string) {
@@ -44,49 +36,16 @@ export function comparePassword(password: string, passwordHash: string) {
 export function generateSessionId() {
   return crypto.randomUUID();
 }
-export function createAccessToken(userId: string, sessionId: string, role: string) {
-  return jwt.sign({ tokenType: "access", role }, config.jwt.accessSecret, {
-    subject: userId,
-    jwtid: sessionId,
-    expiresIn: config.jwt.accessExpiresIn,
-  });
+export function setSessionCookie(res: Response, sessionId: string) {
+  res.cookie(SESSION_COOKIE_NAME, sessionId, sessionCookieOptions());
 }
-export function createRefreshToken(userId: string, sessionId: string) {
-  return jwt.sign({ tokenType: "refresh" }, config.jwt.refreshSecret, {
-    subject: userId,
-    jwtid: sessionId,
-    expiresIn: config.jwt.refreshExpiresIn,
-  });
+export function clearSessionCookie(res: Response) {
+  res.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
 }
-export function verifyAccessToken(token: string) {
-  return jwt.verify(token, config.jwt.accessSecret);
-}
-export function verifyRefreshToken(token: string) {
-  return jwt.verify(token, config.jwt.refreshSecret);
-}
-export function setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
-  res.cookie(ACCESS_COOKIE_NAME, accessToken, accessCookieOptions());
-  res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions());
-}
-export function clearAuthCookies(res: Response) {
-  const cookieOptions = { path: "/" };
-  res.clearCookie(ACCESS_COOKIE_NAME, cookieOptions);
-  res.clearCookie(REFRESH_COOKIE_NAME, cookieOptions);
-}
-export function getAuthTokenFromCookiesOrHeaders(
-  cookies: Record<string, unknown>,
-  authorizationHeader?: string,
-) {
-  const cookieToken = cookies[ACCESS_COOKIE_NAME] ?? cookies[REFRESH_COOKIE_NAME];
-  if (typeof cookieToken === "string" && cookieToken.length > 0) {
-    return cookieToken;
+export function getSessionIdFromCookie(cookies: Record<string, unknown>): string | null {
+  const value = cookies[SESSION_COOKIE_NAME];
+  if (typeof value === "string" && value.length > 0) {
+    return value;
   }
-  if (!authorizationHeader) {
-    return null;
-  }
-  const [scheme, token] = authorizationHeader.split(" ");
-  if (scheme !== "Bearer" || !token) {
-    return null;
-  }
-  return token;
+  return null;
 }

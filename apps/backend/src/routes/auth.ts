@@ -3,17 +3,13 @@ import { z } from "zod";
 import type { PoolClient } from "pg";
 import { pool } from "../lib/db.js";
 import {
-  clearAuthCookies,
+  clearSessionCookie,
   comparePassword,
-  createAccessToken,
-  createRefreshToken,
   generateSessionId,
   hashPassword,
-  hashToken,
   normalizeEmail,
   normalizePhone,
-  setAuthCookies,
-  verifyRefreshToken,
+  setSessionCookie,
 } from "../lib/auth.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
 const router = Router();
@@ -34,9 +30,6 @@ const loginSchema = z
     message: "Email or phone is required",
     path: ["identifier"],
   });
-const refreshSchema = z.object({
-  refreshToken: z.string().optional(),
-});
 type UserQueryRow = {
   user_id: string;
   email: string;
@@ -111,19 +104,15 @@ async function fetchUserById(userId: string) {
 async function createSession(
   db: Pick<PoolClient, "query">,
   userId: string,
-  role: string,
   sessionId: string,
 ) {
-  const accessToken = createAccessToken(userId, sessionId, role);
-  const refreshToken = createRefreshToken(userId, sessionId);
-  const refreshTokenHash = hashToken(refreshToken);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   await db.query(
     `INSERT INTO login_sessions (session_id, user_id, refresh_token_hash, expires_at)
      VALUES ($1, $2, $3, $4)`,
-    [sessionId, userId, refreshTokenHash, expiresAt],
+    [sessionId, userId, "session-auth", expiresAt],
   );
-  return { accessToken, refreshToken, expiresAt };
+  return { expiresAt };
 }
 router.post("/register", async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
@@ -170,9 +159,9 @@ router.post("/register", async (req, res) => {
        VALUES ($1, $2)`,
       [user.user_id, fullName],
     );
-    const session = await createSession(client, user.user_id, user.role, sessionId);
+    await createSession(client, user.user_id, sessionId);
     await client.query("COMMIT");
-    setAuthCookies(res, session.accessToken, session.refreshToken);
+    setSessionCookie(res, sessionId);
     const profile = await fetchUserById(user.user_id);
     return res.status(201).json({
       success: true,
@@ -255,8 +244,8 @@ router.post("/login", async (req, res) => {
       });
     }
     const sessionId = generateSessionId();
-    const session = await createSession(client, user.user_id, user.role, sessionId);
-    setAuthCookies(res, session.accessToken, session.refreshToken);
+    await createSession(client, user.user_id, sessionId);
+    setSessionCookie(res, sessionId);
     const profile = await fetchUserById(user.user_id);
     return res.status(200).json({
       success: true,
@@ -274,117 +263,22 @@ router.post("/login", async (req, res) => {
     client.release();
   }
 });
-router.post("/refresh", async (req, res) => {
-  const parsed = refreshSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({
-      success: false,
-      error: { message: "Invalid refresh request" },
-    });
-  }
-  const refreshToken =
-    parsed.data.refreshToken ??
-    (typeof req.cookies?.shohojrin_refresh_token === "string"
-      ? req.cookies.shohojrin_refresh_token
-      : null);
-  if (!refreshToken) {
-    return res.status(401).json({
-      success: false,
-      error: { message: "Refresh token is required" },
-    });
-  }
-  try {
-    const claims = verifyRefreshToken(refreshToken) as {
-      tokenType?: string;
-      sub?: string;
-      jti?: string;
-    };
-    if (claims.tokenType !== "refresh" || !claims.sub || !claims.jti) {
-      return res.status(401).json({
-        success: false,
-        error: { message: "Invalid refresh token" },
-      });
-    }
-    const sessionResult = await pool.query<{
-      session_id: string;
-      user_id: string;
-      refresh_token_hash: string;
-      is_revoked: boolean;
-      expires_at: Date | string;
-      role: string;
-    }>(
-      `SELECT s.session_id, s.user_id, s.refresh_token_hash, s.is_revoked, s.expires_at, u.role
-       FROM login_sessions s
-       INNER JOIN users u ON u.user_id = s.user_id
-       WHERE s.session_id = $1
-         AND s.user_id = $2
-       LIMIT 1`,
-      [claims.jti, claims.sub],
-    );
-    const session = sessionResult.rows[0];
-    if (!session || session.is_revoked) {
-      return res.status(401).json({
-        success: false,
-        error: { message: "Session is no longer valid" },
-      });
-    }
-    const tokenMatches = hashToken(refreshToken) === session.refresh_token_hash;
-    const expiresAt =
-      session.expires_at instanceof Date ? session.expires_at : new Date(session.expires_at);
-    if (!tokenMatches || expiresAt.getTime() < Date.now()) {
-      return res.status(401).json({
-        success: false,
-        error: { message: "Refresh token has expired" },
-      });
-    }
-    const accessToken = createAccessToken(session.user_id, session.session_id, session.role);
-    const nextRefreshToken = createRefreshToken(session.user_id, session.session_id);
-    const nextRefreshHash = hashToken(nextRefreshToken);
-    const nextExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await pool.query(
-      `UPDATE login_sessions
-       SET refresh_token_hash = $1,
-           expires_at = $2
-       WHERE session_id = $3`,
-      [nextRefreshHash, nextExpiresAt, session.session_id],
-    );
-    setAuthCookies(res, accessToken, nextRefreshToken);
-    const profile = await fetchUserById(session.user_id);
-    return res.status(200).json({
-      success: true,
-      data: {
-        user: profile ? serializeUser(profile) : null,
-      },
-    });
-  } catch {
-    return res.status(401).json({
-      success: false,
-      error: { message: "Invalid or expired refresh token" },
-    });
-  }
-});
 router.post("/logout", async (req, res) => {
-  const refreshToken =
-    typeof req.cookies?.shohojrin_refresh_token === "string"
-      ? req.cookies.shohojrin_refresh_token
-      : typeof req.body?.refreshToken === "string"
-        ? req.body.refreshToken
-        : null;
-  if (refreshToken) {
+  const sessionId = typeof req.cookies?.shohojrin_session === "string"
+    ? req.cookies.shohojrin_session
+    : null;
+  if (sessionId) {
     try {
-      const claims = verifyRefreshToken(refreshToken) as { jti?: string };
-      if (claims.jti) {
-        await pool.query(
-          `UPDATE login_sessions
-           SET is_revoked = TRUE
-           WHERE session_id = $1`,
-          [claims.jti],
-        );
-      }
+      await pool.query(
+        `UPDATE login_sessions
+         SET is_revoked = TRUE
+         WHERE session_id = $1`,
+        [sessionId],
+      );
     } catch {
     }
   }
-  clearAuthCookies(res);
+  clearSessionCookie(res);
   return res.status(200).json({
     success: true,
     data: { message: "Logged out successfully" },
