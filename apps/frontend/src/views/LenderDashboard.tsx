@@ -314,7 +314,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
         <PageHeader
           eyebrow="Lender portfolio"
-          title={t("lender.welcomeBack", { firstName })}
+          title={t("lender.welcomeBack", { name: firstName })}
           description={t("lender.subtitle")}
         />
 

@@ -47,6 +47,7 @@ const txStatusVariant: Record<Transaction["status"], "success" | "warning" | "er
 export default function ActiveLoanDetails({ onNavigate }: Props) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"schedule" | "transactions">("schedule");
+  const [loans, setLoans] = useState<ActiveLoan[]>([]);
   const [activeLoan, setActiveLoan] = useState<ActiveLoan | null>(null);
   const [repaymentSchedule, setRepaymentSchedule] = useState<RepaymentScheduleRow[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -57,6 +58,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
       setIsLoading(true);
       try {
         const loansRes = await loansApi.getActiveLoans(true);
+        setLoans(loansRes);
         const loan = loansRes[0] || null;
         setActiveLoan(loan);
 
@@ -120,6 +122,32 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
   return (
     <AppLayout onNavigate={onNavigate} currentPage="active-loan">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
+        {loans.length > 1 && (
+          <label className="mb-6 block max-w-sm text-sm font-medium text-navy">
+            {t("activeLoan.title")}
+            <select
+              value={activeLoan.id}
+              onChange={async (event) => {
+                const loan = loans.find((item) => item.id === event.target.value);
+                if (!loan) return;
+                setActiveLoan(loan);
+                const [txs, sched] = await Promise.all([
+                  loansApi.getLoanTransactions(loan.id),
+                  loansApi.getRepaymentSchedule(loan.id),
+                ]);
+                setTransactions(txs || []);
+                setRepaymentSchedule(sched || []);
+              }}
+              className="mt-1 block w-full rounded-[6px] border border-stone-300 bg-white px-3 py-2 text-sm text-navy"
+            >
+              {loans.map((loan) => (
+                <option key={loan.id} value={loan.id}>
+                  {loan.name} - {loan.provider}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between sm:items-start mb-6">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-1">

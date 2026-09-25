@@ -37,6 +37,7 @@ function TransactionIcon({ type }: { type: Transaction["type"] }) {
     payment: { bg: "bg-sky-light", icon: "↑" },
     refund: { bg: "bg-emerald-light", icon: "↩" },
   };
+
   const cfg = icons[type];
   return (
     <span
@@ -50,10 +51,22 @@ function TransactionIcon({ type }: { type: Transaction["type"] }) {
 
 export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboardProps) {
   const { t } = useTranslation();
+  const [loans, setLoans] = useState<ActiveLoan[]>([]);
   const [activeLoan, setActiveLoan] = useState<ActiveLoan | null>(null);
   const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  async function selectLoan(loan: ActiveLoan) {
+    setActiveLoan(loan);
+    try {
+      const txs = await loansApi.getLoanTransactions(loan.id);
+      setTransactions(txs || []);
+    } catch (e) {
+      console.error("Failed to fetch loan transactions", e);
+      setTransactions([]);
+    }
+  }
 
   const quickActions: { label: string; page: PageName; icon: string }[] = [
     { label: t("dashboard.exploreLoans"), icon: "🔍", page: "loan-marketplace" },
@@ -72,6 +85,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
         ]);
 
         const loan = loansRes[0] || null;
+        setLoans(loansRes);
         setActiveLoan(loan);
         // API returns applicationId/productName/requestedAmount/submittedAt;
         // normalize to the id/product/amount/submitted shape used below.
@@ -201,6 +215,35 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
         </div>
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <div className="flex min-w-0 flex-col gap-5 lg:col-span-2">
+            {loans.length > 1 && (
+              <Card>
+                <CardHeader title={t("activeLoan.title")} />
+                <CardBody className="grid gap-2 sm:grid-cols-2">
+                  {loans.map((loan) => (
+                    <button
+                      key={loan.id}
+                      type="button"
+                      onClick={() => void selectLoan(loan)}
+                      className={`rounded-[6px] border p-3 text-left transition-colors ${
+                        loan.id === activeLoan?.id
+                          ? "border-navy bg-stone-50"
+                          : "border-stone-200 hover:border-stone-300 hover:bg-stone-50"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="min-w-0 truncate text-sm font-semibold text-navy">
+                          {loan.name}
+                        </span>
+                        <LoanStatusBadge status={loan.status} />
+                      </div>
+                      <p className="mt-1 text-xs text-stone-500">
+                        {formatTaka(loan.remainingBalance)} {t("dashboard.remainingBalance")}
+                      </p>
+                    </button>
+                  ))}
+                </CardBody>
+              </Card>
+            )}
             {activeLoan ? (
               <section className="min-w-0 rounded-[8px] border-[1.5px] border-navy bg-white p-4 shadow-nb sm:p-5">
                 <div className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">

@@ -37,6 +37,7 @@ const scheduleStatusVariant: Record<
 export default function RepaymentPage({ onNavigate }: Props) {
   const { t } = useTranslation();
 
+  const [loans, setLoans] = useState<ActiveLoan[]>([]);
   const [activeLoan, setActiveLoan] = useState<ActiveLoan | null>(null);
   const [schedules, setSchedules] = useState<RepaymentScheduleRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,6 +62,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
     setIsLoading(true);
     try {
       const loansRes = await loansApi.getActiveLoans();
+      setLoans(loansRes);
       const loan = loansRes[0] || null;
       setActiveLoan(loan);
 
@@ -83,6 +85,16 @@ export default function RepaymentPage({ onNavigate }: Props) {
   const totalOutstanding = schedules.reduce((sum, s) => sum + s.outstandingAmount, 0);
   const totalPaid = schedules.reduce((sum, s) => sum + s.paidAmount, 0);
   const totalExpected = schedules.reduce((sum, s) => sum + s.expectedAmount, 0);
+
+  async function handleLoanChange(loanId: string) {
+    const loan = loans.find((item) => item.id === loanId);
+    if (!loan) return;
+    setActiveLoan(loan);
+    setSelectedSchedule(null);
+    setPaymentAmount("");
+    setErrorMessage(null);
+    setSchedules(await loansApi.getRepaymentSchedule(loan.id));
+  }
 
   const parsedAmount = Math.max(0, Number(paymentAmount) || 0);
   const maxPayable = selectedSchedule?.outstandingAmount ?? 0;
@@ -237,6 +249,23 @@ export default function RepaymentPage({ onNavigate }: Props) {
     <AppLayout onNavigate={onNavigate} currentPage="repayment">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
         <PageHeader title={t("repayment.title")} description={`${activeLoan.name}`} />
+
+        {loans.length > 1 && (
+          <label className="mb-6 block max-w-sm text-sm font-medium text-navy">
+            {t("activeLoan.title")}
+            <select
+              value={activeLoan.id}
+              onChange={(event) => void handleLoanChange(event.target.value)}
+              className="mt-1 block w-full rounded-[6px] border border-stone-300 bg-white px-3 py-2 text-sm text-navy"
+            >
+              {loans.map((loan) => (
+                <option key={loan.id} value={loan.id}>
+                  {loan.name} - {loan.provider}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         {errorMessage && (
           <Alert variant="error" title={t("repayment.paymentFailed")} className="mb-4">
