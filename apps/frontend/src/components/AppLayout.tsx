@@ -279,9 +279,8 @@ export function AppLayout({
       router.replace("/");
       router.refresh();
     } catch (error) {
-      setLogoutError(
-        error instanceof Error ? error.message : "Unable to log out. Please try again.",
-      );
+      console.error("Unable to log out", error);
+      setLogoutError(t("common.requestFailed"));
     } finally {
       setLogoutLoading(false);
     }

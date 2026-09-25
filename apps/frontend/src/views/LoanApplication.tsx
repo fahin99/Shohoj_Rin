@@ -6,12 +6,13 @@ import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
 import { Button } from "../components/Button";
 import { Stepper } from "../components/Progress";
 import { Alert } from "../components/Alert";
-import { CurrencyInput, TextInput, Select, Textarea } from "../components/Input";
+import { CurrencyInput, Select, Textarea } from "../components/Input";
 import { formatTaka } from "../lib/format";
-import { loansApi, applicationsApi } from "../lib/api/index";
+import { loansApi, applicationsApi, profileApi } from "../lib/api/index";
 import type { PageName, LoanProduct } from "../types";
 import { useTranslation } from "../lib/language-context";
 import { enumKey } from "../lib/enum-labels";
+import type { ProfileData } from "../lib/api/profile";
 
 interface Props {
   onNavigate: (page: PageName) => void;
@@ -32,9 +33,6 @@ interface FormState {
   amount: number;
   duration: string;
   purpose: string;
-  phone: string;
-  employment: string;
-  monthlyIncome: number;
 }
 
 export default function LoanApplication({ onNavigate }: Props) {
@@ -46,40 +44,31 @@ export default function LoanApplication({ onNavigate }: Props) {
     { label: t("application.stepReview") },
   ];
 
-  const employmentOptions = [
-    { value: "salaried", label: t("employment.employed-full") },
-    { value: "self-employed", label: t("employment.self-employed") },
-    { value: "business-owner", label: t("employment.business") },
-    { value: "student", label: t("employment.student") },
-  ];
-
   const [loanProducts, setLoanProducts] = useState<LoanProduct[]>([]);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    async function loadProducts() {
+    async function loadApplicationData() {
       setIsLoading(true);
+      setLoadError("");
       try {
-        const res = await loansApi.getLoanProducts();
+        const [res, profileResponse] = await Promise.all([
+          loansApi.getLoanProducts(),
+          profileApi.getProfile(),
+        ]);
         setLoanProducts(res.products || []);
+        setProfile(profileResponse.profile);
       } catch (e) {
-        console.error("Failed to fetch loan products", e);
+        console.error("Failed to load application data", e);
+        setLoadError(t("common.requestFailed"));
       } finally {
         setIsLoading(false);
       }
     }
-    loadProducts();
-  }, []);
-
-  const defaultLoan = loanProducts[0] || {
-    id: "",
-    maxAmount: 100000,
-    minAmount: 1000,
-    durationMonths: 12,
-    interestRate: 10,
-    name: "",
-    provider: "",
-  };
+    void loadApplicationData();
+  }, [t]);
 
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -90,9 +79,6 @@ export default function LoanApplication({ onNavigate }: Props) {
     amount: 0,
     duration: "",
     purpose: "",
-    phone: "",
-    employment: "",
-    monthlyIncome: 0,
   });
 
   // Init form defaults when products load
@@ -108,12 +94,15 @@ export default function LoanApplication({ onNavigate }: Props) {
     }
   }, [loanProducts, form.loanId]);
 
-  const selectedLoan = loanProducts.find((l) => l.id === form.loanId) ?? defaultLoan;
+  const selectedLoan = loanProducts.find((l) => l.id === form.loanId) ?? null;
 
   const durationOptions = Array.from(
-    new Set([12, 18, 24, 36, 48, selectedLoan.durationMonths]),
+    new Set([12, 18, 24, 36, 48, selectedLoan?.durationMonths].filter(Boolean)),
   )
-    .filter((months) => months <= selectedLoan.durationMonths)
+    .filter(
+      (months): months is number =>
+        typeof months === "number" && months <= (selectedLoan?.durationMonths ?? 0),
+    )
     .sort((a, b) => a - b)
     .map((months) => ({
       value: String(months),
@@ -121,7 +110,7 @@ export default function LoanApplication({ onNavigate }: Props) {
     }));
 
   const emi = useMemo(
-    () => calculateEmi(form.amount, selectedLoan.interestRate, Number(form.duration)),
+    () => calculateEmi(form.amount, selectedLoan?.interestRate ?? 0, Number(form.duration)),
     [form.amount, form.duration, selectedLoan],
   );
 
@@ -133,23 +122,17 @@ export default function LoanApplication({ onNavigate }: Props) {
   function validateStep(current: number): boolean {
     const next: Record<string, string> = {};
     if (current === 0) {
-      if (!form.amount || form.amount < selectedLoan.minAmount)
+      if (!selectedLoan) next.loanId = t("application.noLoanProducts");
+      else if (!form.amount || form.amount < selectedLoan.minAmount)
         next.amount = t("application.errorAmountMin", {
           amount: formatTaka(selectedLoan.minAmount),
         });
-      if (form.amount > selectedLoan.maxAmount)
+      if (selectedLoan && form.amount > selectedLoan.maxAmount)
         next.amount = t("application.errorAmountMax", {
           amount: formatTaka(selectedLoan.maxAmount),
         });
       if (!form.duration) next.duration = t("application.errorDuration");
       if (!form.purpose.trim()) next.purpose = t("application.errorPurpose");
-    }
-    if (current === 1) {
-      if (!/^01\d{9}$/.test(form.phone.replace(/\s/g, "")))
-        next.phone = t("application.errorPhone");
-      if (!form.employment) next.employment = t("application.errorEmployment");
-      if (!form.monthlyIncome || form.monthlyIncome <= 0)
-        next.monthlyIncome = t("application.errorIncome");
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -172,7 +155,7 @@ export default function LoanApplication({ onNavigate }: Props) {
       const applicationData = {
         requestedAmount: form.amount,
         durationMonths: Number(form.duration),
-        purpose: selectedLoan.category ?? "personal",
+        purpose: selectedLoan?.category ?? "personal",
         purposeDescription: form.purpose,
         ...(form.loanId ? { productId: form.loanId } : {}),
       };
@@ -180,7 +163,7 @@ export default function LoanApplication({ onNavigate }: Props) {
       onNavigate("application-status");
     } catch (e) {
       console.error("Submission failed", e);
-      setSubmitError(e instanceof Error ? e.message : "Failed to submit your application");
+      setSubmitError(t("common.requestFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -191,6 +174,21 @@ export default function LoanApplication({ onNavigate }: Props) {
       <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 flex justify-center items-center h-64">
           <p className="text-stone-500">{t("common.loading")}</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (loadError || !profile || loanProducts.length === 0 || !selectedLoan) {
+    return (
+      <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
+          <Alert variant="error" title={t("application.unavailableTitle")}>
+            {loadError ||
+              (loanProducts.length === 0
+                ? t("application.noLoanProducts")
+                : t("application.profileLoadFailed"))}
+          </Alert>
         </div>
       </AppLayout>
     );
@@ -225,7 +223,7 @@ export default function LoanApplication({ onNavigate }: Props) {
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-navy sm:text-3xl">{t("application.title")}</h1>
           <p className="mt-1.5 text-sm text-stone-500">
-            {selectedLoan.name} — {selectedLoan.provider}
+            {selectedLoan.name || "—"} — {selectedLoan.provider || "—"}
           </p>
         </div>
         <div className="mb-6 overflow-x-auto">
@@ -238,7 +236,7 @@ export default function LoanApplication({ onNavigate }: Props) {
             <Card>
               <CardHeader
                 title={steps[step].label}
-                description={t("onboarding.stepOf", { current: step + 1, total: steps.length })}
+                description={t("onboarding.stepOf", { step: step + 1, total: steps.length })}
               />
               <CardBody>
                 <div
@@ -311,31 +309,48 @@ export default function LoanApplication({ onNavigate }: Props) {
                           {t("application.profileKyc")}
                         </span>
                       </div>
-                      <TextInput
-                        label={t("application.contactMobile")}
-                        required
-                        placeholder="01XXXXXXXXX"
-                        value={form.phone}
-                        error={errors.phone}
-                        onChange={(e) => update("phone", e.target.value)}
-                        hint={t("application.contactMobileHint")}
-                      />
-                      <Select
-                        label={t("application.employmentType")}
-                        required
-                        placeholder={t("application.employmentType")}
-                        options={employmentOptions}
-                        value={form.employment}
-                        error={errors.employment}
-                        onChange={(e) => update("employment", e.target.value)}
-                      />
-                      <CurrencyInput
-                        label={t("application.monthlyIncome")}
-                        required
-                        value={form.monthlyIncome || ""}
-                        error={errors.monthlyIncome}
-                        onChange={(e) => update("monthlyIncome", Number(e.target.value))}
-                      />
+                      <div className="rounded-[6px] border border-stone-200 bg-stone-50 p-4">
+                        <p className="text-sm font-medium text-navy">
+                          {t("application.profileConfirmation")}
+                        </p>
+                        <p className="mt-1 text-xs text-stone-600">
+                          {t("application.profileConfirmationBody")}
+                        </p>
+                        <div className="mt-3 border-t border-stone-200 pt-3">
+                          <DataRow
+                            label={t("application.contactMobile")}
+                            value={profile.phone || "—"}
+                          />
+                          <DataRow
+                            label={t("application.employmentType")}
+                            value={
+                              profile.employment_type
+                                ? t(enumKey("employment", profile.employment_type))
+                                : "—"
+                            }
+                          />
+                          <DataRow
+                            label={t("application.monthlyIncome")}
+                            value={
+                              profile.monthly_income != null
+                                ? formatTaka(Number(profile.monthly_income))
+                                : "—"
+                            }
+                          />
+                          {profile.employer_name && (
+                            <DataRow
+                              label={t("profile.employerName")}
+                              value={profile.employer_name}
+                            />
+                          )}
+                          {profile.institution_name && (
+                            <DataRow
+                              label={t("profile.institution")}
+                              value={profile.institution_name}
+                            />
+                          )}
+                        </div>
+                      </div>
                     </>
                   )}
                   {step === 2 && (
@@ -374,16 +389,25 @@ export default function LoanApplication({ onNavigate }: Props) {
                           label={t("lender.income")}
                           value={`${t("application.identityVerified")} ✓`}
                         />
-                        <DataRow label={t("application.contactMobile")} value={form.phone || "—"} />
+                        <DataRow
+                          label={t("application.contactMobile")}
+                          value={profile.phone || "—"}
+                        />
                         <DataRow
                           label={t("application.employmentType")}
                           value={
-                            employmentOptions.find((o) => o.value === form.employment)?.label ?? "—"
+                            profile.employment_type
+                              ? t(enumKey("employment", profile.employment_type))
+                              : "—"
                           }
                         />
                         <DataRow
                           label={t("application.monthlyIncome")}
-                          value={form.monthlyIncome ? formatTaka(form.monthlyIncome) : "—"}
+                          value={
+                            profile.monthly_income != null
+                              ? formatTaka(Number(profile.monthly_income))
+                              : "—"
+                          }
                         />
                       </div>
                       <div className="border-t border-stone-200 pt-3">

@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
+import { Alert } from "../components/Alert";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { CurrencyInput, Select } from "../components/Input";
@@ -19,6 +20,7 @@ interface Props {
 
 function calculateEmi(principal: number, annualRate: number, months: number) {
   const monthlyRate = annualRate / 12 / 100;
+  if (!principal || !months) return 0;
   if (monthlyRate === 0) return principal / months;
   const emi =
     (principal * monthlyRate * Math.pow(1 + monthlyRate, months)) /
@@ -26,24 +28,11 @@ function calculateEmi(principal: number, annualRate: number, months: number) {
   return emi;
 }
 
-const defaultLoan: LoanProduct = {
-  id: "",
-  name: "Loading...",
-  provider: "",
-  category: "personal",
-  minAmount: 10000,
-  maxAmount: 100000,
-  interestRate: 10,
-  durationMonths: 24,
-  description: "",
-  eligibility: [],
-  tags: [],
-};
-
 export default function LoanDetails({ onNavigate, productId }: Props) {
   const { t } = useTranslation();
-  const [loan, setLoan] = useState<LoanProduct>(defaultLoan);
+  const [loan, setLoan] = useState<LoanProduct | null>(null);
   const [loadingProduct, setLoadingProduct] = useState(true);
+  const [productError, setProductError] = useState(false);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -58,8 +47,9 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
             setLoan(data.products[0]);
           }
         }
-      } catch {
-        // keep default
+      } catch (error) {
+        console.error("Failed to load loan product", error);
+        setProductError(true);
       } finally {
         setLoadingProduct(false);
       }
@@ -67,26 +57,26 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
     fetchProduct();
   }, [productId]);
 
-  const [amount, setAmount] = useState(loan.maxAmount / 2);
-  const [duration, setDuration] = useState(String(loan.durationMonths));
+  const [amount, setAmount] = useState(0);
+  const [duration, setDuration] = useState("");
 
   useEffect(() => {
-    if (!loadingProduct) {
+    if (!loadingProduct && loan) {
       setAmount(loan.maxAmount / 2);
       setDuration(String(loan.durationMonths));
     }
   }, [loan, loadingProduct]);
 
   const durationOptions = [12, 24, 36, 48]
-    .filter((d) => d <= loan.durationMonths)
+    .filter((d) => d <= (loan?.durationMonths ?? 0))
     .map((d) => ({
       value: String(d),
       label: t("loanDetails.monthsUnit", { months: d }),
     }));
 
   const { emi, totalRepayment, totalInterest } = useMemo(() => {
-    const months = Number(duration) || loan.durationMonths;
-    const monthlyEmi = calculateEmi(amount, loan.interestRate, months);
+    const months = Number(duration) || loan?.durationMonths || 0;
+    const monthlyEmi = calculateEmi(amount, loan?.interestRate ?? 0, months);
     const total = monthlyEmi * months;
     return {
       emi: monthlyEmi,
@@ -96,8 +86,8 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
   }, [amount, duration, loan]);
 
   const previewRows: RepaymentScheduleRow[] = useMemo(() => {
-    const count = Math.min(6, Number(duration) || loan.durationMonths);
-    const monthlyRate = loan.interestRate / 12 / 100;
+    const count = Math.min(6, Number(duration) || loan?.durationMonths || 0);
+    const monthlyRate = (loan?.interestRate ?? 0) / 12 / 100;
     let balance = amount;
     const rows: RepaymentScheduleRow[] = [];
     const now = new Date();
@@ -184,6 +174,28 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
       ),
     },
   ];
+
+  if (loadingProduct) {
+    return (
+      <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
+          <p className="text-stone-500">{t("common.loading")}</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!loan) {
+    return (
+      <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
+          <Alert variant="error" title={t("loanDetails.about")}>
+            {productError ? t("common.requestFailed") : t("application.noLoanProducts")}
+          </Alert>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">

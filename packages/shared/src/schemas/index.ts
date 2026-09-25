@@ -30,6 +30,7 @@ export const loanApplicationSchema = z.object({
   purposeDescription: z.string().optional(),
   partnerId: z.string().uuid().optional(),
   productId: z.string().uuid().optional(),
+  disbursementAccountId: z.string().uuid().optional(),
 });
 
 export const paginationSchema = z.object({
@@ -142,6 +143,60 @@ export const verificationRequestSchema = z.object({
   verificationType: z.enum(["identity", "student", "income", "address", "document", "guarantor"]),
 });
 
+export const paymentAccountTypeSchema = z.enum(["mobile_money", "bank"]);
+export const paymentProviderSchema = z.enum(["bkash", "nagad", "rocket", "bank"]);
+
+export const createPaymentAccountSchema = z
+  .object({
+    accountType: paymentAccountTypeSchema,
+    provider: paymentProviderSchema,
+    accountName: z.string().trim().min(2, "Account name must be at least 2 characters").max(255),
+    accountNumber: z
+      .string()
+      .trim()
+      .min(5, "Account number must be at least 5 characters")
+      .max(100),
+    bankName: z.string().trim().max(255).optional().nullable(),
+    branchName: z.string().trim().max(255).optional().nullable(),
+    isDefault: z.boolean().optional().default(false),
+  })
+  .refine(
+    (data) => {
+      if (data.accountType === "bank") {
+        return !!data.bankName && data.bankName.trim().length > 0;
+      }
+      return true;
+    },
+    {
+      message: "Bank name is required for bank accounts",
+      path: ["bankName"],
+    },
+  )
+  .refine(
+    (data) => {
+      if (data.accountType === "mobile_money") {
+        return ["bkash", "nagad", "rocket"].includes(data.provider);
+      }
+      if (data.accountType === "bank") {
+        return data.provider === "bank";
+      }
+      return false;
+    },
+    {
+      message: "Invalid provider for account type",
+      path: ["provider"],
+    },
+  );
+
+export const updatePaymentAccountSchema = z
+  .object({
+    accountName: z.string().trim().min(2).max(255).optional(),
+    accountNumber: z.string().trim().min(5).max(100).optional(),
+    bankName: z.string().trim().max(255).optional().nullable(),
+    branchName: z.string().trim().max(255).optional().nullable(),
+    isDefault: z.boolean().optional(),
+  });
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type LoanApplicationInput = z.infer<typeof loanApplicationSchema>;
@@ -153,3 +208,5 @@ export type InvestorProfileInput = z.infer<typeof investorProfileSchema>;
 export type UsernameUpdateInput = z.infer<typeof usernameUpdateSchema>;
 export type DocumentUploadInput = z.infer<typeof documentUploadSchema>;
 export type VerificationRequestInput = z.infer<typeof verificationRequestSchema>;
+export type CreatePaymentAccountInput = z.infer<typeof createPaymentAccountSchema>;
+export type UpdatePaymentAccountInput = z.infer<typeof updatePaymentAccountSchema>;

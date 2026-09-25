@@ -147,3 +147,22 @@ export interface ApiResponse<T> {
     totalPages: number;
   };
 }
+
+export type PaymentAccountType = "mobile_money" | "bank";
+export type PaymentProvider = "bkash" | "nagad" | "rocket" | "bank";
+
+export interface UserPaymentAccount {
+  accountId: string;
+  userId: string;
+  accountType: PaymentAccountType;
+  provider: PaymentProvider;
+  accountName: string;
+  accountNumber: string;
+  bankName: string | null;
+  branchName: string | null;
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+

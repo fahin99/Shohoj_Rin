@@ -78,7 +78,8 @@ export default function SettingsPage({ onNavigate, user }: Props) {
       setUsernameSuccess(true);
       router.refresh();
     } catch (err) {
-      setUsernameError(err instanceof Error ? err.message : "Failed to update username");
+      console.error("Failed to update username", err);
+      setUsernameError(t("common.requestFailed"));
     } finally {
       setUsernameSaving(false);
     }
@@ -93,7 +94,8 @@ export default function SettingsPage({ onNavigate, user }: Props) {
       router.replace("/");
       router.refresh();
     } catch (error) {
-      setLogoutError(error instanceof Error ? error.message : t("settings.logoutFailedTitle"));
+      console.error("Unable to log out", error);
+      setLogoutError(t("common.requestFailed"));
     } finally {
       setLogoutLoading(false);
     }

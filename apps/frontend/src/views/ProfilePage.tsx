@@ -173,11 +173,7 @@ const riskPreferenceOptions = [
   { value: "aggressive", label: "Aggressive" },
 ];
 
-const genderOptions = [
-  { value: "male", label: "Male" },
-  { value: "female", label: "Female" },
-  { value: "other", label: "Prefer not to say" },
-];
+const genderOptions = ["male", "female", "other"] as const;
 
 const employmentOptions = [
   { value: "employed-full", label: "Employed (Full-time)" },
@@ -243,11 +239,12 @@ export default function ProfilePage({ onNavigate, user }: Props) {
       }
       setCompletionItems(data.completionItems ?? []);
     } catch (e) {
-      setProfileError(e instanceof Error ? e.message : "Failed to load profile");
+      console.error("Failed to load profile", e);
+      setProfileError(t("common.requestFailed"));
     } finally {
       setLoadingProfile(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (isLender) {
@@ -270,13 +267,14 @@ export default function ProfilePage({ onNavigate, user }: Props) {
         const data = await trustApi.getTrustScore();
         setTrustScore(data);
       } catch (e) {
-        setTrustError(e instanceof Error ? e.message : "Failed to load trust score");
+        console.error("Failed to load trust score", e);
+        setTrustError(t("common.requestFailed"));
       } finally {
         setTrustLoading(false);
       }
     }
     loadTrust();
-  }, [isLender]);
+  }, [isLender, t]);
 
   useEffect(() => {
     if (isLender) {
@@ -290,13 +288,14 @@ export default function ProfilePage({ onNavigate, user }: Props) {
         const data = await guarantorApi.getGuarantor();
         setGuarantor(data);
       } catch (e) {
-        setGuarantorError(e instanceof Error ? e.message : "Failed to load guarantor");
+        console.error("Failed to load guarantor", e);
+        setGuarantorError(t("common.requestFailed"));
       } finally {
         setGuarantorLoading(false);
       }
     }
     loadGuarantor();
-  }, [isLender]);
+  }, [isLender, t]);
 
   useEffect(() => {
     if (!isLender) return;
@@ -314,7 +313,8 @@ export default function ProfilePage({ onNavigate, user }: Props) {
         }
       } catch (e) {
         if (!cancelled) {
-          setInvestorError(e instanceof Error ? e.message : "Failed to load investor profile");
+          console.error("Failed to load investor profile", e);
+          setInvestorError(t("common.requestFailed"));
         }
       } finally {
         if (!cancelled) setInvestorLoading(false);
@@ -324,7 +324,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [isLender]);
+  }, [isLender, t]);
 
   useEffect(() => {
     if (!isLender) return;
@@ -338,12 +338,13 @@ export default function ProfilePage({ onNavigate, user }: Props) {
         ]);
         setLenderStats({ total, completed });
       } catch (e) {
-        setLenderStatsError(e instanceof Error ? e.message : "Failed to load loan statistics");
+        console.error("Failed to load loan statistics", e);
+        setLenderStatsError(t("common.requestFailed"));
       } finally {
         setLenderStatsLoading(false);
       }
     })();
-  }, [isLender]);
+  }, [isLender, t]);
 
   function startLenderEdit() {
     if (!investorProfile) return;
@@ -425,7 +426,8 @@ export default function ProfilePage({ onNavigate, user }: Props) {
       setLenderSaveSuccess(true);
       router.refresh();
     } catch (e) {
-      setLenderSaveError(e instanceof Error ? e.message : "Failed to save profile");
+      console.error("Failed to save lender profile", e);
+      setLenderSaveError(t("common.requestFailed"));
     } finally {
       setLenderSaving(false);
     }
@@ -518,7 +520,8 @@ export default function ProfilePage({ onNavigate, user }: Props) {
       setSaveSuccess(true);
       router.refresh();
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "Failed to save profile");
+      console.error("Failed to save profile", e);
+      setSaveError(t("common.requestFailed"));
     } finally {
       setSaving(false);
     }
@@ -868,7 +871,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                   </p>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     <Badge variant="teal" size="sm" className="capitalize">
-                      {user.role}
+                      {t(enumKey("role", String(user.role || "borrower")))}
                     </Badge>
                     <Badge
                       variant={
@@ -933,7 +936,10 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       label="Gender"
                       value={form.gender}
                       onChange={(e) => updateForm("gender", e.target.value)}
-                      options={genderOptions}
+                      options={genderOptions.map((value) => ({
+                        value,
+                        label: t(enumKey("gender", value)),
+                      }))}
                       placeholder="Select"
                     />
                     <TextInput
@@ -1051,7 +1057,10 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       label="Date of birth"
                       value={profile.date_of_birth ? formatDate(profile.date_of_birth) : "—"}
                     />
-                    <DataRow label="Gender" value={profile.gender || "—"} />
+                    <DataRow
+                      label="Gender"
+                      value={profile.gender ? t(enumKey("gender", profile.gender)) : "—"}
+                    />
                     <DataRow label="National ID number" value={profile.nid_number || "—"} />
                     <DataRow label="Address" value={profile.address_line || "—"} />
                     <DataRow label="City" value={profile.city || "—"} />
@@ -1074,7 +1083,14 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                           : "—"
                       }
                     />
-                    <DataRow label="Employment type" value={profile.employment_type || "—"} />
+                    <DataRow
+                      label="Employment type"
+                      value={
+                        profile.employment_type
+                          ? t(enumKey("employment", profile.employment_type))
+                          : "—"
+                      }
+                    />
                     <DataRow label="Employer / business" value={profile.employer_name || "—"} />
                     <DataRow
                       label="Monthly income"
@@ -1092,7 +1108,14 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                           : "—"
                       }
                     />
-                    <DataRow label="Income source" value={profile.income_source || "—"} />
+                    <DataRow
+                      label="Income source"
+                      value={
+                        profile.income_source
+                          ? t(enumKey("incomeSource", profile.income_source))
+                          : "—"
+                      }
+                    />
                   </CardBody>
                 </Card>
 
@@ -1135,7 +1158,14 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                   ) : guarantor ? (
                     <CardBody>
                       <DataRow label="Full name" value={guarantor.fullName} />
-                      <DataRow label="Relationship" value={guarantor.relationship} />
+                      <DataRow
+                        label="Relationship"
+                        value={
+                          guarantor.relationship
+                            ? t(enumKey("relationship", guarantor.relationship))
+                            : "—"
+                        }
+                      />
                       <DataRow label="Phone" value={guarantor.phone || "—"} />
                       <DataRow label="Email" value={guarantor.email || "—"} />
                       <DataRow label="NID" value={guarantor.nidNumber || "—"} />
@@ -1203,7 +1233,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                     </div>
                   </div>
                   <p className="text-xs text-stone-400">
-                    {t("profile.lastUpdated")} {formatDate(trustScore.lastUpdated)}
+                    {t("profile.lastUpdated", { date: formatDate(trustScore.lastUpdated) })}
                   </p>
                   {trustScore.factors.length > 0 && (
                     <div className="border-t border-stone-200 pt-4 flex flex-col gap-3">
@@ -1211,7 +1241,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                         <div key={factor.name} className="flex flex-col gap-1">
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-sm font-medium text-navy capitalize">
-                              {factorNameLabel[factor.name] ?? factor.name.replace(/_/g, " ")}
+                              {factorNameLabel[factor.name] ?? "—"}
                             </span>
                             <span className="tabular-nums text-sm text-stone-500">
                               {Math.round(factor.score)}

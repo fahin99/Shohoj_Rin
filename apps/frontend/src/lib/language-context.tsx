@@ -43,13 +43,18 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       let str =
         translations[language][key] ??
         translations.en[key] ??
-        (typeof varsOrFallback === "string" ? varsOrFallback : key);
+        (typeof varsOrFallback === "string"
+          ? varsOrFallback
+          : (translations[language]["common.notAvailable"] ?? "—"));
       if (varsOrFallback && typeof varsOrFallback === "object") {
         for (const [k, v] of Object.entries(varsOrFallback)) {
           str = str.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
         }
       }
-      return str;
+      // Never expose an interpolation token when a caller omits a variable.
+      // The em dash keeps the surrounding translated sentence readable and is
+      // preferable to leaking a template implementation detail into the UI.
+      return str.replace(/\{[^{}]+\}/g, "—");
     },
     [language],
   );

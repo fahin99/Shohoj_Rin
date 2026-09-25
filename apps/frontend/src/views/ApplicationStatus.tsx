@@ -251,7 +251,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                       <p className="text-sm text-stone-500 truncate">{app.provider}</p>
                       <p className="text-xs tabular-nums text-stone-400 mt-1">
                         {app.referenceCode ? `${app.referenceCode} · ` : ""}
-                        {t("appStatusPage.submittedOn")} {formatDate(app.submitted)}
+                        {t("appStatusPage.submittedOn", { date: formatDate(app.submitted) })}
                       </p>
                     </div>
                     <div className="shrink-0 flex flex-col items-end gap-2">

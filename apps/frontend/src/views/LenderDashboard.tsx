@@ -190,7 +190,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
     const amount = entered && entered.trim() !== "" ? roundTaka(Number(entered)) : remaining;
 
     if (!Number.isFinite(amount) || amount <= 0) {
-      setFundError(t("application.errorAmountMin") || "Enter a funding amount greater than ৳0.");
+      setFundError(t("application.errorAmountMin", { amount: formatTaka(1) }));
       return;
     }
     if (amount > remaining) {
@@ -211,7 +211,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
       await loadData();
     } catch (err) {
       console.error("Failed to fund opportunity", err);
-      setFundError(err instanceof Error ? err.message : "Failed to record funding commitment");
+      setFundError(t("common.requestFailed"));
       await loadData();
     } finally {
       setFundingId(null);
@@ -272,7 +272,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
       header: t("loanDetails.tenure"),
       numeric: true,
       hideBelow: "lg",
-      render: (r) => `${r.tenure} ${t("loanDetails.monthsUnit")}`,
+      render: (r) => t("loanDetails.monthsUnit", { months: r.tenure }),
     },
     {
       key: "repaid",
@@ -289,7 +289,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
     },
     {
       key: "nextDue",
-      header: t("activeLoan.nextDueDate"),
+      header: t("activeLoan.nextPayment"),
       hideBelow: "lg",
       render: (r) => (r.nextDueDate ? formatDate(r.nextDueDate) : "—"),
     },
@@ -420,7 +420,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
               </p>
             </div>
             <span className="text-xs text-stone-500">
-              {visibleOpportunities.length} {t("lender.available")}
+              {t("lender.available", { count: visibleOpportunities.length })}
             </span>
           </div>
           {fundError && (
@@ -485,7 +485,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                           <p className="tabular-nums font-medium text-navy">
                             {op.interestRate != null ? formatPercent(op.interestRate) : "—"}
                             {op.durationMonths
-                              ? ` · ${op.durationMonths} ${t("loanDetails.monthsUnit")}`
+                              ? ` · ${t("loanDetails.monthsUnit", { months: op.durationMonths })}`
                               : ""}
                           </p>
                         </div>

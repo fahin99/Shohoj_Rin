@@ -221,8 +221,8 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
               dismissible
             >
               {t("admin.applicantHasBeen", {
-                applicant: confirmation.applicant,
-                status: t(`admin.${confirmation.type}`),
+                name: confirmation.applicant,
+                decision: t(`admin.${confirmation.type}`),
               })}
             </Alert>
           </div>
@@ -273,7 +273,7 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between items-center px-5 py-4 border-b border-stone-200">
               <h2 className="text-sm font-semibold text-navy min-w-0">{t("admin.reviewQueue")}</h2>
               <span className="text-xs text-stone-500 shrink-0">
-                {pendingCount} {t("admin.pending")}
+                {t("admin.pending", { count: pendingCount })}
               </span>
             </div>
             <DataTable
@@ -299,7 +299,8 @@ export default function AdminDashboard({ onNavigate, user }: Props) {
                 {
                   key: "role",
                   header: t("settings.role", "Role"),
-                  render: (r) => r.role || t("admin.userRole", "User"),
+                  render: (r) =>
+                    r.role ? t(enumKey("role", r.role)) : t("admin.userRole", "User"),
                 },
                 {
                   key: "joined",

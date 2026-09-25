@@ -207,7 +207,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
             value={String(applications.length)}
             hint={
               openApplications.length > 0
-                ? `${openApplications.length} ${t("dashboard.awaitingDecision")}`
+                ? t("dashboard.awaitingDecision", { count: openApplications.length })
                 : t("dashboard.noPendingApplications")
             }
             tone="info"
@@ -287,7 +287,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                           {t("loanDetails.repaymentDuration")}
                         </dt>
                         <dd className="mt-0.5 tabular-nums font-semibold text-navy">
-                          {activeLoan.durationMonths} {t("loanDetails.monthsUnit")}
+                          {t("loanDetails.monthsUnit", { months: activeLoan.durationMonths })}
                         </dd>
                       </div>
                     </dl>
@@ -489,8 +489,10 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                         <AppStatusBadge status={app.status ?? "submitted"} />
                       </div>
                       <p className="mt-1.5 text-xs text-stone-500">
-                        {formatTaka(app.amount || 0)} · {t("appStatusPage.submittedOn")}{" "}
-                        {formatDate(app.submitted || "")}
+                        {formatTaka(app.amount || 0)} ·{" "}
+                        {t("appStatusPage.submittedOn", {
+                          date: formatDate(app.submitted || ""),
+                        })}
                       </p>
                     </button>
                   ))

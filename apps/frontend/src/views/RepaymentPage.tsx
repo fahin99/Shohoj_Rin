@@ -136,7 +136,8 @@ export default function RepaymentPage({ onNavigate }: Props) {
       setSuccess(true);
     } catch (e) {
       setConfirmOpen(false);
-      setErrorMessage(e instanceof Error ? e.message : t("repayment.paymentFailed"));
+      console.error("Failed to submit repayment", e);
+      setErrorMessage(t("repayment.paymentFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -219,7 +220,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
           <PageHeader
             eyebrow={t("repayment.title")}
             title={t("repayment.title")}
-            description={t("repayment.subtitle")}
+            description={t("repayment.title")}
           />
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px]">
             <EmptyState
@@ -248,7 +249,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
   return (
     <AppLayout onNavigate={onNavigate} currentPage="repayment">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
-        <PageHeader title={t("repayment.title")} description={`${activeLoan.name}`} />
+        <PageHeader title={t("repayment.title")} description={activeLoan.name || "—"} />
 
         {loans.length > 1 && (
           <label className="mb-6 block max-w-sm text-sm font-medium text-navy">

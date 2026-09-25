@@ -196,7 +196,7 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-10">
         <div className="mb-10">
           <p className="text-xs text-stone-500 mb-4 text-center">
-            {t("onboarding.stepOf", { current: step + 1, total: localizedSteps.length })} —{" "}
+            {t("onboarding.stepOf", { step: step + 1, total: localizedSteps.length })} —{" "}
             {t("onboarding.setupLenderProfile", { defaultValue: "setup your lender profile" })}
           </p>
           <Stepper steps={localizedSteps} currentStep={step} />

@@ -37,12 +37,31 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
     terms: false,
   });
 
+  const clearForm = () => {
+    setForm({
+      name: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirm: "",
+      remember: false,
+      terms: false,
+    });
+    setErrors({});
+    setApiError("");
+    setSuccess(false);
+  };
+
+  const switchMode = (nextMode: AuthMode) => {
+    setMode(nextMode);
+    clearForm();
+  };
+
   const update = (k: string, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
 
   useEffect(() => {
     setMode(initialMode);
-    setErrors({});
-    setSuccess(false);
+    clearForm();
   }, [initialMode]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -109,7 +128,8 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
 
       router.refresh();
     } catch (error) {
-      setApiError(error instanceof Error ? error.message : "Authentication failed");
+      console.error("Authentication failed", error);
+      setApiError(t("common.requestFailed"));
     } finally {
       setLoading(false);
     }
@@ -144,9 +164,7 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
                   key={m}
                   type="button"
                   onClick={() => {
-                    setMode(m);
-                    setErrors({});
-                    setSuccess(false);
+                    switchMode(m);
                   }}
                   className={`flex-1 py-1.5 text-sm font-medium rounded-[4px] ${mode === m ? "bg-white text-navy shadow-nb-xs" : "text-stone-500"}`}
                 >
@@ -282,9 +300,7 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
                 <button
                   type="button"
                   onClick={() => {
-                    setMode("forgot");
-                    setErrors({});
-                    setSuccess(false);
+                    switchMode("forgot");
                   }}
                   className="text-sm text-teal hover:underline"
                 >
@@ -315,9 +331,7 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
             <button
               type="button"
               onClick={() => {
-                setMode("login");
-                setErrors({});
-                setSuccess(false);
+                switchMode("login");
               }}
               className="mt-4 w-full text-sm text-stone-500 hover:text-navy"
             >

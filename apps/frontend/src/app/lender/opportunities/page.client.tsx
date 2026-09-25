@@ -65,7 +65,7 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
       setOpportunities(Array.isArray(data) ? (data as Opportunity[]) : []);
     } catch (err) {
       console.error("Failed to fetch lender opportunities", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch opportunities");
+      setError(t("common.requestFailed"));
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
       await load();
     } catch (err) {
       console.error("Failed to fund opportunity", err);
-      setError(err instanceof Error ? err.message : "Failed to record funding commitment");
+      setError(t("common.requestFailed"));
     } finally {
       setFundingId(null);
     }
@@ -107,7 +107,7 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
       setRejectedIds((prev) => new Set(prev).add(opportunity.applicationId));
     } catch (err) {
       console.error("Failed to reject opportunity", err);
-      setError(err instanceof Error ? err.message : "Failed to reject opportunity");
+      setError(t("common.requestFailed"));
     } finally {
       setRejectingId(null);
     }
