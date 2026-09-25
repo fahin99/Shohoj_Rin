@@ -7,6 +7,7 @@ export const createRepaymentSchema = z.object({
   scheduleId: z.string().uuid(),
   amountPaid: z.number().positive(),
   paymentMethod: repaymentMethodSchema.optional(),
+  paymentAccountId: z.string().uuid().optional(),
   transactionReference: z.string().trim().min(1).max(100).optional(),
   providerReference: z.string().trim().min(1).max(100).optional(),
   status: z.enum(["completed", "failed", "reversed"]).optional(),
@@ -26,6 +27,7 @@ export type RepaymentRow = {
   schedule_id: string;
   amount_paid: string | number;
   payment_method: string | null;
+  payment_account_id?: string | null;
   transaction_reference: string | null;
   status: string;
   paid_at: Date | string;
@@ -47,6 +49,7 @@ export type RepaymentScheduleSummary = {
     repaymentId: string;
     amountPaid: number;
     paymentMethod: string | null;
+    paymentAccountId?: string | null;
     transactionReference: string | null;
     status: string;
     paidAt: string;
@@ -59,6 +62,7 @@ export type RepaymentResult = {
     scheduleId: string;
     amountPaid: number;
     paymentMethod: string | null;
+    paymentAccountId?: string | null;
     transactionReference: string | null;
     status: string;
     paidAt: string;
@@ -116,6 +120,7 @@ function summarizeSchedule(
           repaymentId: latestPayment.repayment_id,
           amountPaid: toNumber(latestPayment.amount_paid),
           paymentMethod: latestPayment.payment_method,
+          paymentAccountId: latestPayment.payment_account_id ?? null,
           transactionReference: latestPayment.transaction_reference,
           status: latestPayment.status,
           paidAt: toIsoDate(latestPayment.paid_at),
@@ -138,7 +143,7 @@ export async function getRepaymentSchedulesForLoan(
     return [];
   }
   const repayments = await client.query<RepaymentRow>(
-    `SELECT repayment_id, schedule_id, amount_paid, payment_method, transaction_reference, status, paid_at
+    `SELECT repayment_id, schedule_id, amount_paid, payment_method, transaction_reference, status, paid_at, payment_account_id
      FROM repayments
      WHERE schedule_id = ANY($1::uuid[])
      ORDER BY paid_at ASC`,
@@ -170,13 +175,14 @@ export async function recordRepayment(
       out_user_id: string;
       out_total_outstanding: string | number;
       out_is_duplicate: boolean;
-    }>(`CALL process_repayment($1, $2, $3, $4, $5, $6, NULL, NULL, NULL, NULL, NULL, NULL, NULL)`, [
+    }>(`CALL process_repayment($1, $2, $3, $4, $5, $6, NULL, NULL, NULL, NULL, NULL, NULL, NULL, $7)`, [
       input.scheduleId,
       Math.round(input.amountPaid * 100) / 100,
       input.paymentMethod ?? null,
       input.transactionReference ?? null,
       input.providerReference ?? null,
       input.status ?? "completed",
+      input.paymentAccountId ?? null,
     ]);
 
     const proc = procResult.rows[0];
@@ -191,7 +197,7 @@ export async function recordRepayment(
 
     // Fetch the repayment row for response details
     const repaymentRow = await client.query<RepaymentRow>(
-      `SELECT repayment_id, schedule_id, amount_paid, payment_method, transaction_reference, status, paid_at
+      `SELECT repayment_id, schedule_id, amount_paid, payment_method, transaction_reference, status, paid_at, payment_account_id
        FROM repayments WHERE repayment_id = $1`,
       [proc.out_repayment_id],
     );
@@ -218,6 +224,7 @@ export async function recordRepayment(
           scheduleId: repayment.schedule_id,
           amountPaid: toNumber(repayment.amount_paid),
           paymentMethod: repayment.payment_method,
+          paymentAccountId: repayment.payment_account_id ?? null,
           transactionReference: repayment.transaction_reference,
           status: repayment.status,
           paidAt: toIsoDate(repayment.paid_at),
@@ -249,7 +256,7 @@ export async function recordRepayment(
     );
     const schedule = scheduleRow.rows[0];
     const allRepayments = await client.query<RepaymentRow>(
-      `SELECT repayment_id, schedule_id, amount_paid, payment_method, transaction_reference, status, paid_at
+      `SELECT repayment_id, schedule_id, amount_paid, payment_method, transaction_reference, status, paid_at, payment_account_id
        FROM repayments WHERE schedule_id = $1 ORDER BY paid_at ASC`,
       [input.scheduleId],
     );
@@ -268,6 +275,7 @@ export async function recordRepayment(
         scheduleId: repayment.schedule_id,
         amountPaid: toNumber(repayment.amount_paid),
         paymentMethod: repayment.payment_method,
+        paymentAccountId: repayment.payment_account_id ?? null,
         transactionReference: repayment.transaction_reference,
         status: repayment.status,
         paidAt: toIsoDate(repayment.paid_at),

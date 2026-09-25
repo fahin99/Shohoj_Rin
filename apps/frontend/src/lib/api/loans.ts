@@ -156,12 +156,21 @@ export async function getRepaymentSchedule(loanId: string) {
   }));
 }
 
-export async function createRepayment(scheduleId: string, amountPaid: number) {
+export async function createRepayment(
+  scheduleId: string,
+  amountPaid: number,
+  options?: {
+    paymentAccountId?: string;
+    paymentMethod?: "bank_transfer" | "mobile_money" | "cash" | "other";
+  },
+) {
   return apiRequest<MvpRepaymentResult>(`/repayments/payments`, {
     method: "POST",
     body: JSON.stringify({
       scheduleId,
       amountPaid: Math.round(amountPaid * 100) / 100,
+      paymentAccountId: options?.paymentAccountId,
+      paymentMethod: options?.paymentMethod,
     }),
   });
 }

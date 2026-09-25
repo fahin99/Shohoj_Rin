@@ -412,9 +412,11 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
     }
 
     const appResult = await client.query(
-      `SELECT application_id, user_id, status, partner_id, requested_amount
-       FROM loan_applications
-       WHERE application_id = $1
+      `SELECT la.application_id, la.user_id, la.status, la.partner_id, la.requested_amount,
+              la.disbursement_account_id, upa.provider, upa.account_type
+       FROM loan_applications la
+       LEFT JOIN user_payment_accounts upa ON upa.account_id = la.disbursement_account_id AND upa.is_active = TRUE
+       WHERE la.application_id = $1
        FOR UPDATE`,
       [applicationId],
     );
@@ -431,6 +433,20 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
         .status(400)
         .json({ success: false, error: { message: "Application is not eligible for funding" } });
     }
+
+    let disbursementAccountId = app.disbursement_account_id || null;
+    let disbursementProvider = app.provider || null;
+    if (!disbursementAccountId) {
+      const defaultAcc = await client.query(
+        `SELECT account_id, provider FROM user_payment_accounts WHERE user_id = $1 AND is_default = TRUE AND is_active = TRUE LIMIT 1`,
+        [app.user_id],
+      );
+      if (defaultAcc.rows.length > 0) {
+        disbursementAccountId = defaultAcc.rows[0].account_id;
+        disbursementProvider = defaultAcc.rows[0].provider;
+      }
+    }
+    const disbursementMethod = disbursementProvider || "platform_transfer";
 
     const existingCommitment = await client.query(
       `SELECT commitment_id
@@ -552,9 +568,9 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
 
         await client.query(
           `INSERT INTO loan_disbursements
-            (loan_id, amount, disbursement_method, reference_number, disbursed_at)
-           VALUES ($1, $2, 'platform_transfer', $3, NOW())`,
-          [loanId, principal, `AUTO-${applicationId}`],
+            (loan_id, amount, disbursement_method, reference_number, disbursed_at, payment_account_id)
+           VALUES ($1, $2, $3, $4, NOW(), $5)`,
+          [loanId, principal, disbursementMethod, `AUTO-${applicationId}`, disbursementAccountId],
         );
         await client.query(
           `UPDATE loans SET status = 'active', updated_at = NOW() WHERE loan_id = $1`,
@@ -601,9 +617,9 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
         if (Number(disbursementResult.rows[0].total_disbursed) < principalAmount) {
           await client.query(
             `INSERT INTO loan_disbursements
-              (loan_id, amount, disbursement_method, reference_number, disbursed_at)
-             VALUES ($1, $2, 'platform_transfer', $3, NOW())`,
-            [loanId, principalAmount, `AUTO-${applicationId}`],
+              (loan_id, amount, disbursement_method, reference_number, disbursed_at, payment_account_id)
+             VALUES ($1, $2, $3, $4, NOW(), $5)`,
+            [loanId, principalAmount, disbursementMethod, `AUTO-${applicationId}`, disbursementAccountId],
           );
           await client.query(
             `UPDATE loans SET status = 'active', updated_at = NOW() WHERE loan_id = $1`,

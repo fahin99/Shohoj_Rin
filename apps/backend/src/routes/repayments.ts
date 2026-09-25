@@ -83,11 +83,46 @@ router.post("/payments", async (req: RequestWithAuth, res) => {
     if (schedCheck.rowCount === 0) {
       return res.status(404).json({ success: false, error: { message: "Schedule not found" } });
     }
-    if (schedCheck.rows[0].user_id !== req.auth!.userId && req.auth!.role !== "admin") {
+    const borrowerUserId = schedCheck.rows[0].user_id;
+    if (borrowerUserId !== req.auth!.userId && req.auth!.role !== "admin") {
       return res.status(403).json({ success: false, error: { message: "Forbidden" } });
     }
 
-    const result = await recordRepayment(client, parsed.data);
+    let paymentAccountId = parsed.data.paymentAccountId ?? null;
+    let paymentMethod = parsed.data.paymentMethod;
+
+    if (paymentAccountId) {
+      const accRes = await client.query(
+        `SELECT account_id, account_type, provider FROM user_payment_accounts WHERE account_id = $1 AND user_id = $2 AND is_active = TRUE`,
+        [paymentAccountId, borrowerUserId],
+      );
+      if (accRes.rowCount === 0) {
+        return res.status(400).json({
+          success: false,
+          error: { message: "Invalid or inactive payment account selected" },
+        });
+      }
+      if (!paymentMethod) {
+        paymentMethod = accRes.rows[0].account_type === "bank" ? "bank_transfer" : "mobile_money";
+      }
+    } else {
+      const defaultAcc = await client.query(
+        `SELECT account_id, account_type, provider FROM user_payment_accounts WHERE user_id = $1 AND is_default = TRUE AND is_active = TRUE LIMIT 1`,
+        [borrowerUserId],
+      );
+      if (defaultAcc.rows.length > 0) {
+        paymentAccountId = defaultAcc.rows[0].account_id;
+        if (!paymentMethod) {
+          paymentMethod = defaultAcc.rows[0].account_type === "bank" ? "bank_transfer" : "mobile_money";
+        }
+      }
+    }
+
+    const result = await recordRepayment(client, {
+      ...parsed.data,
+      paymentAccountId: paymentAccountId ?? undefined,
+      paymentMethod: paymentMethod ?? parsed.data.paymentMethod,
+    });
     return res.status(201).json({
       success: true,
       data: result,

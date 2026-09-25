@@ -26,6 +26,7 @@ export async function createApplication(data: {
   purposeDescription?: string;
   partnerId?: string;
   productId?: string;
+  disbursementAccountId?: string;
 }) {
   return apiRequest<unknown>("/applications", {
     method: "POST",

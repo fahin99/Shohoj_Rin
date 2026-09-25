@@ -10,6 +10,7 @@ const createDisbursementSchema = z.object({
   amount: z.number().positive("Amount must be positive"),
   disbursementMethod: z.string().trim().min(1).max(50).optional(),
   referenceNumber: z.string().trim().max(100).optional(),
+  paymentAccountId: z.string().uuid().optional(),
 });
 
 router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
@@ -68,15 +69,62 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
       });
     }
 
+    let paymentAccountId: string | null = parsed.data.paymentAccountId ?? null;
+    let method = parsed.data.disbursementMethod ?? null;
+
+    if (paymentAccountId) {
+      const accCheck = await client.query(
+        `SELECT account_id, provider FROM user_payment_accounts WHERE account_id = $1 AND user_id = $2 AND is_active = TRUE`,
+        [paymentAccountId, loan.user_id],
+      );
+      if (accCheck.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false,
+          error: { message: "Invalid or inactive disbursement payment account selected" },
+        });
+      }
+      if (!method) {
+        method = accCheck.rows[0].provider;
+      }
+    } else {
+      const appAcc = await client.query(
+        `SELECT la.disbursement_account_id, upa.provider
+         FROM loans l
+         JOIN loan_applications la ON la.application_id = l.application_id
+         LEFT JOIN user_payment_accounts upa ON upa.account_id = la.disbursement_account_id AND upa.is_active = TRUE
+         WHERE l.loan_id = $1`,
+        [parsed.data.loanId],
+      );
+      if (appAcc.rows[0]?.disbursement_account_id) {
+        paymentAccountId = appAcc.rows[0].disbursement_account_id;
+        if (!method) {
+          method = appAcc.rows[0].provider || "platform_transfer";
+        }
+      } else {
+        const defaultAcc = await client.query(
+          `SELECT account_id, provider FROM user_payment_accounts WHERE user_id = $1 AND is_default = TRUE AND is_active = TRUE LIMIT 1`,
+          [loan.user_id],
+        );
+        if (defaultAcc.rows.length > 0) {
+          paymentAccountId = defaultAcc.rows[0].account_id;
+          if (!method) {
+            method = defaultAcc.rows[0].provider;
+          }
+        }
+      }
+    }
+
     const disbResult = await client.query(
-      `INSERT INTO loan_disbursements (loan_id, amount, disbursement_method, reference_number, disbursed_at)
-       VALUES ($1, $2, $3, $4, NOW())
-       RETURNING disbursement_id AS "disbursementId", loan_id AS "loanId", amount, disbursement_method AS "disbursementMethod", reference_number AS "referenceNumber", disbursed_at AS "disbursedAt"`,
+      `INSERT INTO loan_disbursements (loan_id, amount, disbursement_method, reference_number, disbursed_at, payment_account_id)
+       VALUES ($1, $2, $3, $4, NOW(), $5)
+       RETURNING disbursement_id AS "disbursementId", loan_id AS "loanId", amount, disbursement_method AS "disbursementMethod", reference_number AS "referenceNumber", disbursed_at AS "disbursedAt", payment_account_id AS "paymentAccountId"`,
       [
         parsed.data.loanId,
         parsed.data.amount,
-        parsed.data.disbursementMethod ?? null,
+        method,
         parsed.data.referenceNumber ?? null,
+        paymentAccountId,
       ],
     );
 

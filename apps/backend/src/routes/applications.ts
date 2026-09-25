@@ -14,6 +14,7 @@ const createApplicationSchema = z.object({
   purposeDescription: z.string().optional(),
   partnerId: z.string().uuid().optional(),
   productId: z.string().uuid().optional(),
+  disbursementAccountId: z.string().uuid().optional(),
 });
 
 router.post("/", requireAuth, requireRole("borrower"), async (req, res) => {
@@ -31,8 +32,15 @@ router.post("/", requireAuth, requireRole("borrower"), async (req, res) => {
     });
   }
 
-  const { requestedAmount, durationMonths, purpose, purposeDescription, partnerId, productId } =
-    parsed.data;
+  const {
+    requestedAmount,
+    durationMonths,
+    purpose,
+    purposeDescription,
+    partnerId,
+    productId,
+    disbursementAccountId,
+  } = parsed.data;
 
   const client = await pool.connect();
   try {
@@ -76,18 +84,43 @@ router.post("/", requireAuth, requireRole("borrower"), async (req, res) => {
       }
     }
 
+    let resolvedDisbursementAccountId: string | null = null;
+    if (disbursementAccountId) {
+      const accountCheck = await client.query(
+        `SELECT account_id FROM user_payment_accounts WHERE account_id = $1 AND user_id = $2 AND is_active = TRUE`,
+        [disbursementAccountId, userId],
+      );
+      if (accountCheck.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false,
+          error: { message: "Invalid or inactive disbursement account selected" },
+        });
+      }
+      resolvedDisbursementAccountId = disbursementAccountId;
+    } else {
+      const defaultAccount = await client.query(
+        `SELECT account_id FROM user_payment_accounts WHERE user_id = $1 AND is_default = TRUE AND is_active = TRUE LIMIT 1`,
+        [userId],
+      );
+      if (defaultAccount.rowCount && defaultAccount.rowCount > 0) {
+        resolvedDisbursementAccountId = defaultAccount.rows[0].account_id;
+      }
+    }
+
     const resolvedPartnerId = partnerId ?? null;
 
     const appResult = await client.query(
       `INSERT INTO loan_applications
-        (user_id, partner_id, product_id, requested_amount, duration_months, purpose, purpose_description, status, trust_score_id, submitted_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, 'submitted', $8, NOW())
+        (user_id, partner_id, product_id, requested_amount, duration_months, purpose, purpose_description, status, trust_score_id, submitted_at, disbursement_account_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'submitted', $8, NOW(), $9)
        RETURNING
         application_id AS "applicationId",
         reference_code AS "referenceCode",
         user_id AS "userId",
         partner_id AS "partnerId",
         product_id AS "productId",
+        disbursement_account_id AS "disbursementAccountId",
         requested_amount AS "requestedAmount",
         duration_months AS "durationMonths",
         purpose,
@@ -104,6 +137,7 @@ router.post("/", requireAuth, requireRole("borrower"), async (req, res) => {
         purpose,
         purposeDescription ?? null,
         trustScoreId,
+        resolvedDisbursementAccountId,
       ],
     );
 
@@ -174,6 +208,7 @@ router.get("/", requireAuth, async (req, res) => {
         la.user_id AS "userId",
         la.partner_id AS "partnerId",
         la.product_id AS "productId",
+        la.disbursement_account_id AS "disbursementAccountId",
         la.requested_amount AS "requestedAmount",
         la.duration_months AS "durationMonths",
         la.purpose,
@@ -184,21 +219,46 @@ router.get("/", requireAuth, async (req, res) => {
         la.updated_at AS "updatedAt",
         lp.name AS "productName",
         fp.name AS "partnerName",
-        up.full_name AS "borrowerName"
+        up.full_name AS "borrowerName",
+        upa.account_name AS "disbursementAccountName",
+        upa.account_number AS "disbursementAccountNumber",
+        upa.provider AS "disbursementProvider",
+        upa.account_type AS "disbursementAccountType"
        FROM loan_applications la
        LEFT JOIN loan_products lp ON lp.product_id = la.product_id
        LEFT JOIN funding_partners fp ON fp.partner_id = la.partner_id
        LEFT JOIN user_profiles up ON up.user_id = la.user_id
+       LEFT JOIN user_payment_accounts upa ON upa.account_id = la.disbursement_account_id
        ${whereClause}
        ORDER BY la.created_at DESC
        LIMIT $${paramIdx++} OFFSET $${paramIdx++}`,
       dataParams,
     );
 
-    const applications = result.rows.map((row: any) => ({
-      ...row,
-      requestedAmount: parseFloat(row.requestedAmount),
-    }));
+    const applications = result.rows.map((row: any) => {
+      const {
+        disbursementAccountName,
+        disbursementAccountNumber,
+        disbursementProvider,
+        disbursementAccountType,
+        ...rest
+      } = row;
+      return {
+        ...rest,
+        requestedAmount: parseFloat(row.requestedAmount),
+        disbursementAccount: row.disbursementAccountId
+          ? {
+              accountId: row.disbursementAccountId,
+              accountName: disbursementAccountName,
+              provider: disbursementProvider,
+              accountType: disbursementAccountType,
+              maskedAccountNumber: disbursementAccountNumber
+                ? `****${disbursementAccountNumber.slice(-4)}`
+                : null,
+            }
+          : null,
+      };
+    });
 
     return res.status(200).json({
       success: true,
@@ -233,6 +293,7 @@ router.get("/:id", requireAuth, async (req, res) => {
         la.user_id AS "userId",
         la.partner_id AS "partnerId",
         la.product_id AS "productId",
+        la.disbursement_account_id AS "disbursementAccountId",
         la.requested_amount AS "requestedAmount",
         la.duration_months AS "durationMonths",
         la.purpose,
@@ -246,11 +307,18 @@ router.get("/:id", requireAuth, async (req, res) => {
         lp.interest_rate AS "interestRate",
         lp.duration_months AS "durationMonths",
         fp.name AS "partnerName",
-        up.full_name AS "borrowerName"
+        up.full_name AS "borrowerName",
+        upa.account_name AS "disbursementAccountName",
+        upa.account_number AS "disbursementAccountNumber",
+        upa.provider AS "disbursementProvider",
+        upa.account_type AS "disbursementAccountType",
+        upa.bank_name AS "disbursementBankName",
+        upa.branch_name AS "disbursementBranchName"
        FROM loan_applications la
        LEFT JOIN loan_products lp ON lp.product_id = la.product_id
        LEFT JOIN funding_partners fp ON fp.partner_id = la.partner_id
        LEFT JOIN user_profiles up ON up.user_id = la.user_id
+       LEFT JOIN user_payment_accounts upa ON upa.account_id = la.disbursement_account_id
        WHERE la.application_id = $1`,
       [req.params.id],
     );
@@ -298,12 +366,36 @@ router.get("/:id", requireAuth, async (req, res) => {
       ORDER BY pd.decided_at DESC`,
       [req.params.id],
     );
+
+    const {
+      disbursementAccountName,
+      disbursementAccountNumber,
+      disbursementProvider,
+      disbursementAccountType,
+      disbursementBankName,
+      disbursementBranchName,
+      ...restApp
+    } = app;
+
     return res.status(200).json({
       success: true,
       data: {
-        ...app,
+        ...restApp,
         requestedAmount: parseFloat(app.requestedAmount),
         interestRate: app.interestRate ? parseFloat(app.interestRate) : null,
+        disbursementAccount: app.disbursementAccountId
+          ? {
+              accountId: app.disbursementAccountId,
+              accountName: disbursementAccountName,
+              provider: disbursementProvider,
+              accountType: disbursementAccountType,
+              bankName: disbursementBankName,
+              branchName: disbursementBranchName,
+              maskedAccountNumber: disbursementAccountNumber
+                ? `****${disbursementAccountNumber.slice(-4)}`
+                : null,
+            }
+          : null,
         decisionHistory: historyResult.rows,
       },
     });

@@ -170,12 +170,28 @@ CREATE TABLE IF NOT EXISTS loan_products (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
- 
+
+CREATE TABLE IF NOT EXISTS user_payment_accounts (
+  account_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+  account_type VARCHAR(20) NOT NULL,
+  provider VARCHAR(50) NOT NULL,
+  account_name VARCHAR(255) NOT NULL,
+  account_number VARCHAR(100) NOT NULL,
+  bank_name VARCHAR(255),
+  branch_name VARCHAR(255),
+  is_default BOOLEAN NOT NULL DEFAULT FALSE,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS loan_applications (
   application_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   reference_code VARCHAR(20),
   user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
   partner_id UUID REFERENCES funding_partners (partner_id) ON DELETE SET NULL,
+  disbursement_account_id UUID REFERENCES user_payment_accounts (account_id) ON DELETE SET NULL,
   requested_amount DECIMAL(12,2) NOT NULL,
     duration_months INTEGER NOT NULL DEFAULT 12,
   purpose VARCHAR(100) NOT NULL,
@@ -250,6 +266,7 @@ CREATE TABLE IF NOT EXISTS loan_disbursements (
   loan_id UUID NOT NULL REFERENCES loans (loan_id) ON DELETE CASCADE,
   amount DECIMAL(12,2) NOT NULL,
   disbursement_method VARCHAR(50),
+  payment_account_id UUID REFERENCES user_payment_accounts (account_id) ON DELETE SET NULL,
   reference_number VARCHAR(100),
   disbursed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -270,6 +287,7 @@ CREATE TABLE IF NOT EXISTS repayments (
   schedule_id UUID NOT NULL REFERENCES repayment_schedules (schedule_id) ON DELETE RESTRICT,
   amount_paid DECIMAL(12,2) NOT NULL,
   payment_method VARCHAR(50),
+  payment_account_id UUID REFERENCES user_payment_accounts (account_id) ON DELETE SET NULL,
   transaction_reference VARCHAR(100),
   provider_reference VARCHAR(100),
   status VARCHAR(20) NOT NULL DEFAULT 'completed',
@@ -353,9 +371,15 @@ CREATE INDEX idx_loan_products_active ON loan_products(is_active) WHERE is_activ
 CREATE INDEX idx_investor_profiles_user ON investor_profiles(user_id);
 CREATE INDEX idx_loan_applications_user ON loan_applications(user_id);
 CREATE INDEX idx_loan_applications_status ON loan_applications(status);
+CREATE INDEX idx_loan_applications_disbursement_account ON loan_applications(disbursement_account_id);
 CREATE INDEX idx_loans_user ON loans(user_id);
 CREATE INDEX idx_loans_partner ON loans(partner_id);
 CREATE INDEX idx_loans_status ON loans(status);
+CREATE INDEX idx_loan_disbursements_payment_account ON loan_disbursements(payment_account_id);
+CREATE INDEX idx_repayments_payment_account ON repayments(payment_account_id);
+CREATE INDEX idx_user_payment_accounts_user ON user_payment_accounts(user_id);
+CREATE INDEX idx_user_payment_accounts_user_active ON user_payment_accounts(user_id, is_active);
+CREATE UNIQUE INDEX idx_user_payment_accounts_default ON user_payment_accounts(user_id) WHERE is_default = TRUE AND is_active = TRUE;
 CREATE INDEX idx_funding_commitments_lender ON funding_commitments(lender_user_id, status, created_at DESC);
 CREATE INDEX idx_funding_commitments_application ON funding_commitments(application_id, status);
 CREATE INDEX idx_lender_matches_lender ON lender_application_matches(lender_user_id, status, matched_at DESC);
@@ -363,6 +387,8 @@ CREATE INDEX idx_lender_matches_application ON lender_application_matches(applic
 ALTER TABLE users ADD CONSTRAINT chk_users_role CHECK (role IN ('borrower', 'lender', 'admin', 'partner_agent'));
 ALTER TABLE users ADD CONSTRAINT chk_users_account_status CHECK (account_status IN ('active', 'suspended', 'deactivated'));
 ALTER TABLE user_profiles ADD CONSTRAINT chk_profile_completion_status CHECK (profile_completion_status IN ('incomplete', 'pending_verification', 'under_review', 'verified', 'rejected', 'needs_update'));
+ALTER TABLE user_payment_accounts ADD CONSTRAINT chk_payment_account_type CHECK (account_type IN ('mobile_money', 'bank'));
+ALTER TABLE user_payment_accounts ADD CONSTRAINT chk_payment_account_provider CHECK (provider IN ('bkash', 'nagad', 'rocket', 'bank'));
  
 ALTER TABLE verification_requests ADD CONSTRAINT chk_verif_req_status CHECK (status IN ('pending', 'approved', 'rejected', 'needs_review'));
 ALTER TABLE verification_requests ADD CONSTRAINT chk_verif_req_type CHECK (verification_type IN ('identity', 'student', 'document', 'guarantor', 'income', 'address'));
@@ -470,7 +496,8 @@ CREATE OR REPLACE PROCEDURE process_repayment(
     INOUT out_loan_status VARCHAR(20) DEFAULT NULL,
     INOUT out_user_id UUID DEFAULT NULL,
     INOUT out_total_outstanding DECIMAL(12,2) DEFAULT NULL,
-    INOUT out_is_duplicate BOOLEAN DEFAULT FALSE
+    INOUT out_is_duplicate BOOLEAN DEFAULT FALSE,
+    p_payment_account_id UUID DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $proc$
@@ -538,9 +565,9 @@ BEGIN
     END IF;
 
     INSERT INTO repayments (
-        schedule_id, amount_paid, payment_method, transaction_reference, provider_reference, status
+        schedule_id, amount_paid, payment_method, transaction_reference, provider_reference, status, payment_account_id
     ) VALUES (
-        p_schedule_id, ROUND(p_amount_paid, 2), p_payment_method, p_txn_reference, p_provider_ref, p_status
+        p_schedule_id, ROUND(p_amount_paid, 2), p_payment_method, p_txn_reference, p_provider_ref, p_status, p_payment_account_id
     )
     ON CONFLICT (provider_reference) WHERE provider_reference IS NOT NULL DO NOTHING
     RETURNING repayment_id INTO out_repayment_id;
@@ -780,4 +807,5 @@ CREATE TRIGGER trg_audit_logs_append_only BEFORE UPDATE OR DELETE ON audit_logs 
 CREATE TRIGGER trg_trust_scores_append_only BEFORE DELETE ON trust_scores FOR EACH ROW EXECUTE PROCEDURE prevent_update_delete();
 CREATE TRIGGER trg_trust_scores_restrict_update BEFORE UPDATE ON trust_scores FOR EACH ROW EXECUTE PROCEDURE restrict_trust_scores_update();
 CREATE TRIGGER trg_repayments_append_only BEFORE UPDATE OR DELETE ON repayments FOR EACH ROW EXECUTE PROCEDURE prevent_update_delete();
+CREATE TRIGGER trg_user_payment_accounts_updated_at BEFORE UPDATE ON user_payment_accounts FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
 CREATE TRIGGER trg_users_ensure_lender_investor_profile AFTER INSERT OR UPDATE OF role ON users FOR EACH ROW EXECUTE PROCEDURE ensure_lender_investor_profile();

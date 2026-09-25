@@ -19,6 +19,7 @@ async function hasCanonicalSchema(client: PoolClient) {
       AND to_regclass('public.investor_profiles') IS NOT NULL
       AND to_regclass('public.loan_products') IS NOT NULL
       AND to_regclass('public.funding_commitments') IS NOT NULL
+      AND to_regclass('public.user_payment_accounts') IS NOT NULL
       AND EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'partner_id'
@@ -42,6 +43,18 @@ async function hasCanonicalSchema(client: PoolClient) {
       AND EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = 'loan_applications' AND column_name = 'product_id'
+      )
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'loan_applications' AND column_name = 'disbursement_account_id'
+      )
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'loan_disbursements' AND column_name = 'payment_account_id'
+      )
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'repayments' AND column_name = 'payment_account_id'
       ) AS complete
   `);
 
@@ -450,6 +463,59 @@ async function ensureDatabaseComputedFunctions(client: PoolClient) {
   `);
 }
 
+async function ensurePaymentAccountsSchema(client: PoolClient) {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS user_payment_accounts (
+      account_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+      account_type VARCHAR(20) NOT NULL,
+      provider VARCHAR(50) NOT NULL,
+      account_name VARCHAR(255) NOT NULL,
+      account_number VARCHAR(100) NOT NULL,
+      bank_name VARCHAR(255),
+      branch_name VARCHAR(255),
+      is_default BOOLEAN NOT NULL DEFAULT FALSE,
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await client.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_payment_account_type') THEN
+        ALTER TABLE user_payment_accounts ADD CONSTRAINT chk_payment_account_type CHECK (account_type IN ('mobile_money', 'bank'));
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_payment_account_provider') THEN
+        ALTER TABLE user_payment_accounts ADD CONSTRAINT chk_payment_account_provider CHECK (provider IN ('bkash', 'nagad', 'rocket', 'bank'));
+      END IF;
+    END $$;
+  `);
+
+  await client.query(`
+    CREATE INDEX IF NOT EXISTS idx_user_payment_accounts_user ON user_payment_accounts(user_id);
+    CREATE INDEX IF NOT EXISTS idx_user_payment_accounts_user_active ON user_payment_accounts(user_id, is_active);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_user_payment_accounts_default ON user_payment_accounts(user_id) WHERE is_default = TRUE AND is_active = TRUE;
+  `);
+
+  await client.query(`
+    DROP TRIGGER IF EXISTS trg_user_payment_accounts_updated_at ON user_payment_accounts;
+    CREATE TRIGGER trg_user_payment_accounts_updated_at BEFORE UPDATE ON user_payment_accounts FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+  `);
+
+  await client.query(`
+    ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS disbursement_account_id UUID REFERENCES user_payment_accounts(account_id) ON DELETE SET NULL;
+    CREATE INDEX IF NOT EXISTS idx_loan_applications_disbursement_account ON loan_applications(disbursement_account_id);
+
+    ALTER TABLE loan_disbursements ADD COLUMN IF NOT EXISTS payment_account_id UUID REFERENCES user_payment_accounts(account_id) ON DELETE SET NULL;
+    CREATE INDEX IF NOT EXISTS idx_loan_disbursements_payment_account ON loan_disbursements(payment_account_id);
+
+    ALTER TABLE repayments ADD COLUMN IF NOT EXISTS payment_account_id UUID REFERENCES user_payment_accounts(account_id) ON DELETE SET NULL;
+    CREATE INDEX IF NOT EXISTS idx_repayments_payment_account ON repayments(payment_account_id);
+  `);
+}
+
 async function migrate() {
   const client = await pool.connect();
   try {
@@ -492,6 +558,7 @@ async function migrate() {
       await ensureLoanApplicationReference(client);
       await ensureBorrowerTrustSummaryView(client);
       await ensureDatabaseComputedFunctions(client);
+      await ensurePaymentAccountsSchema(client);
 
       console.log("Canonical schema is already installed.");
       return;
@@ -515,6 +582,7 @@ async function migrate() {
       await ensureLoanApplicationReference(client);
       await ensureBorrowerTrustSummaryView(client);
       await ensureDatabaseComputedFunctions(client);
+      await ensurePaymentAccountsSchema(client);
 
       const schemaStillIncomplete = !(await hasCanonicalSchema(client));
       if (schemaStillIncomplete) {
@@ -559,6 +627,7 @@ async function migrate() {
     await ensureLoanApplicationReference(client);
     await ensureBorrowerTrustSummaryView(client);
     await ensureDatabaseComputedFunctions(client);
+    await ensurePaymentAccountsSchema(client);
 
     console.log("Canonical schema installed successfully.");
   } finally {

@@ -16,6 +16,7 @@ import adminRouter from "./admin.js";
 import loanDisbursementsRouter from "./loan-disbursements.js";
 import repaymentSchedulesRouter from "./repayment-schedules.js";
 import guarantorRouter from "./guarantor.js";
+import paymentAccountsRouter from "./payment-accounts.js";
 
 const router = Router();
 router.use("/health", healthRouter);
@@ -35,5 +36,6 @@ router.use("/investor", investorRouter);
 router.use("/admin", adminRouter);
 router.use("/loan-disbursements", loanDisbursementsRouter);
 router.use("/repayment-schedules", repaymentSchedulesRouter);
+router.use("/payment-accounts", paymentAccountsRouter);
 
 export default router;

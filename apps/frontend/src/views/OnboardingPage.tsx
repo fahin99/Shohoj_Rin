@@ -8,8 +8,9 @@ import { Button } from "../components/Button";
 import { TextInput, Select, Radio, Checkbox, FileUpload } from "../components/Input";
 import { Stepper } from "../components/Progress";
 import InstitutionCombobox from "../components/InstitutionCombobox";
-import { profileApi, documentsApi, verificationApi, guarantorApi } from "../lib/api/index";
+import { profileApi, documentsApi, verificationApi, guarantorApi, paymentAccountsApi } from "../lib/api/index";
 import type { PageName } from "../types";
+import type { PaymentAccountType, PaymentProvider, UserPaymentAccount } from "@shohojrin/shared";
 import { gu } from "date-fns/locale";
 
 interface OnboardingPageProps {
@@ -40,6 +41,8 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [doc_verif_req_id, set_doc_verif_req_id] = useState<string | null>(null);
+  const [existingAccounts, setExistingAccounts] = useState<UserPaymentAccount[]>([]);
+  const [paymentAccountError, setPaymentAccountError] = useState<string | null>(null);
   const [data, setData] = useState({
     fullName: "",
     dateOfBirth: "",
@@ -68,6 +71,12 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     notifEmail: true,
     notifSms: true,
     language: "en",
+    paymentAccountType: "mobile_money" as PaymentAccountType,
+    paymentProvider: "bkash" as PaymentProvider,
+    paymentAccountName: "",
+    paymentAccountNumber: "",
+    paymentBankName: "",
+    paymentBranchName: "",
     guarantorFullName: "",
     guarantorRelationship: "",
     guarantorPhone: "",
@@ -87,6 +96,12 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
         await profileApi.getProfileCompletion();
       } catch (e) {
         console.error("Failed to load profile completion", e);
+      }
+      try {
+        const accs = await paymentAccountsApi.getPaymentAccounts();
+        setExistingAccounts(accs);
+      } catch (e) {
+        console.error("Failed to load payment accounts", e);
       }
       try {
         const g = await guarantorApi.getGuarantor();
@@ -220,6 +235,51 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
     if (step < steps.length - 1) {
       setStep((s) => s + 1);
     } else {
+      if (step === 5) {
+        setPaymentAccountError(null);
+        const accNum = data.paymentAccountNumber.trim();
+        if (accNum) {
+          const accName = data.paymentAccountName.trim() || data.fullName.trim();
+          if (!accName) {
+            setPaymentAccountError(t("paymentAccounts.accountHolderHint"));
+            return;
+          }
+          if (data.paymentAccountType === "mobile_money") {
+            const clean = accNum.replace(/\s+/g, "");
+            if (!/^01[3-9]\d{8}$/.test(clean)) {
+              setPaymentAccountError(t("paymentAccounts.accountNumberMobileHint"));
+              return;
+            }
+          } else if (data.paymentAccountType === "bank") {
+            if (!data.paymentBankName.trim()) {
+              setPaymentAccountError(t("paymentAccounts.bankNamePlaceholder"));
+              return;
+            }
+          }
+          try {
+            await paymentAccountsApi.createPaymentAccount({
+              accountType: data.paymentAccountType,
+              provider: data.paymentAccountType === "bank" ? "bank" : data.paymentProvider,
+              accountName: accName,
+              accountNumber: accNum,
+              bankName: data.paymentAccountType === "bank" ? data.paymentBankName.trim() : undefined,
+              branchName:
+                data.paymentAccountType === "bank" && data.paymentBranchName.trim()
+                  ? data.paymentBranchName.trim()
+                  : undefined,
+              isDefault: existingAccounts.length === 0,
+            });
+          } catch (e) {
+            console.error("Failed to register payment account", e);
+            setPaymentAccountError(t("paymentAccounts.saveFailed"));
+            return;
+          }
+        } else if (existingAccounts.length === 0) {
+          setPaymentAccountError(t("paymentAccounts.accountNumberMobileHint"));
+          return;
+        }
+      }
+
       try {
         await profileApi.submitForVerification();
       } catch (e) {
@@ -706,7 +766,17 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                 {t("onboarding.preferences")}
               </h2>
               <p className="text-sm text-stone-500 mb-6">{t("onboarding.preferencesHint")}</p>
-              <div className="flex flex-col gap-5">
+
+              {paymentAccountError && (
+                <div className="mb-5">
+                  <Alert variant="error" title={t("common.requestFailed")}>
+                    {paymentAccountError}
+                  </Alert>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-6">
+                {/* ── Notification Preferences ── */}
                 <div>
                   <p className="text-sm font-medium text-navy mb-3">
                     {t("onboarding.notificationPreferences")}
@@ -724,6 +794,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     />
                   </div>
                 </div>
+
                 <Select
                   label={t("onboarding.preferredLanguage")}
                   value={data.language}
@@ -733,6 +804,147 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     { value: "bn", label: t("onboarding.langBangla") },
                   ]}
                 />
+
+                {/* ── Payment Account Registration ── */}
+                <div className="border-t border-stone-200 pt-5">
+                  <div className="mb-4">
+                    <p className="text-base font-semibold text-navy">
+                      {t("paymentAccounts.onboardingSectionTitle")}
+                    </p>
+                    <p className="text-xs text-stone-500 mt-0.5">
+                      {t("paymentAccounts.onboardingSectionHint")}
+                    </p>
+                  </div>
+
+                  {existingAccounts.length > 0 && (
+                    <div className="mb-4 p-3 bg-stone-50 border border-stone-200 rounded-[6px] flex flex-col gap-2">
+                      <p className="text-xs font-semibold text-stone-600">
+                        {t("paymentAccounts.title")} ({existingAccounts.length})
+                      </p>
+                      {existingAccounts.map((acc) => (
+                        <div
+                          key={acc.accountId}
+                          className="flex items-center justify-between text-xs py-1 border-b last:border-b-0 border-stone-200"
+                        >
+                          <span className="font-semibold uppercase text-teal">
+                            {acc.provider}: ****{acc.accountNumber.slice(-4)} ({acc.accountName})
+                          </span>
+                          {acc.isDefault && (
+                            <span className="text-[10px] font-semibold text-emerald bg-emerald-light px-1.5 py-0.5 rounded">
+                              {t("paymentAccounts.defaultBadge")}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-4 bg-stone-50/60 p-4 border border-stone-200 rounded-[8px]">
+                    <div>
+                      <label className="text-xs font-semibold text-navy mb-1.5 block">
+                        {t("paymentAccounts.accountType")}
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            update("paymentAccountType", "mobile_money");
+                            if (data.paymentProvider === "bank") update("paymentProvider", "bkash");
+                          }}
+                          className={`px-3 py-2 text-xs font-semibold rounded-[6px] border text-center transition-all ${
+                            data.paymentAccountType === "mobile_money"
+                              ? "bg-teal text-white border-teal shadow-xs"
+                              : "bg-white text-stone-600 border-stone-300 hover:border-stone-400"
+                          }`}
+                        >
+                          📱 {t("paymentAccounts.mobileMoney")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            update("paymentAccountType", "bank");
+                            update("paymentProvider", "bank");
+                          }}
+                          className={`px-3 py-2 text-xs font-semibold rounded-[6px] border text-center transition-all ${
+                            data.paymentAccountType === "bank"
+                              ? "bg-teal text-white border-teal shadow-xs"
+                              : "bg-white text-stone-600 border-stone-300 hover:border-stone-400"
+                          }`}
+                        >
+                          🏦 {t("paymentAccounts.bank")}
+                        </button>
+                      </div>
+                    </div>
+
+                    {data.paymentAccountType === "mobile_money" && (
+                      <Select
+                        label={t("paymentAccounts.provider")}
+                        value={data.paymentProvider}
+                        onChange={(e) =>
+                          update("paymentProvider", e.target.value as PaymentProvider)
+                        }
+                        options={[
+                          { value: "bkash", label: t("paymentAccounts.providerBkash") },
+                          { value: "nagad", label: t("paymentAccounts.providerNagad") },
+                          { value: "rocket", label: t("paymentAccounts.providerRocket") },
+                        ]}
+                      />
+                    )}
+
+                    <TextInput
+                      label={t("paymentAccounts.accountHolder")}
+                      placeholder="e.g. Rahim Uddin Ahmed"
+                      required
+                      value={data.paymentAccountName || data.fullName}
+                      hint={t("paymentAccounts.accountHolderHint")}
+                      onChange={(e) => update("paymentAccountName", e.target.value)}
+                    />
+
+                    <TextInput
+                      label={
+                        data.paymentAccountType === "mobile_money"
+                          ? t("paymentAccounts.accountNumberMobile")
+                          : t("paymentAccounts.accountNumberBank")
+                      }
+                      placeholder={
+                        data.paymentAccountType === "mobile_money"
+                          ? "017XXXXXXXX"
+                          : "123456789012"
+                      }
+                      required
+                      value={data.paymentAccountNumber}
+                      hint={
+                        data.paymentAccountType === "mobile_money"
+                          ? t("paymentAccounts.accountNumberMobileHint")
+                          : undefined
+                      }
+                      onChange={(e) => update("paymentAccountNumber", e.target.value)}
+                    />
+
+                    {data.paymentAccountType === "bank" && (
+                      <>
+                        <TextInput
+                          label={t("paymentAccounts.bankName")}
+                          placeholder={t("paymentAccounts.bankNamePlaceholder")}
+                          required
+                          value={data.paymentBankName}
+                          onChange={(e) => update("paymentBankName", e.target.value)}
+                        />
+                        <TextInput
+                          label={t("paymentAccounts.branchName")}
+                          placeholder={t("paymentAccounts.branchNamePlaceholder")}
+                          value={data.paymentBranchName}
+                          onChange={(e) => update("paymentBranchName", e.target.value)}
+                        />
+                      </>
+                    )}
+
+                    <p className="text-[11px] text-stone-500 italic">
+                      ℹ {t("paymentAccounts.simulationNotice")}
+                    </p>
+                  </div>
+                </div>
+
                 <div className="bg-emerald-light border border-emerald/30 rounded-[6px] p-4">
                   <p className="text-sm font-semibold text-emerald mb-1">
                     {t("onboarding.almostReady")}
