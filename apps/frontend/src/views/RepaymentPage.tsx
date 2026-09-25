@@ -8,14 +8,16 @@ import { PageHeader } from "../components/PageHeader";
 import { Card, CardHeader, CardBody, DataRow } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { Alert } from "../components/Alert";
-import { CurrencyInput } from "../components/Input";
+import { CurrencyInput, Select } from "../components/Input";
 import { Button } from "../components/Button";
 import { Modal } from "../components/Modal";
 import { DataTable } from "../components/DataTable";
 import { ProgressBar } from "../components/Progress";
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
-import { loansApi } from "../lib/api/index";
+import { loansApi, paymentAccountsApi } from "../lib/api/index";
 import type { MvpRepaymentResult } from "../lib/api/loans";
+import type { UserPaymentAccount } from "@shohojrin/shared";
+import { maskAccountNumber, getProviderBadge } from "../components/PaymentAccountsManager";
 import { formatTaka, formatDate } from "../lib/format";
 import type { PageName, RepaymentScheduleRow, ActiveLoan } from "../types";
 
@@ -57,12 +59,20 @@ export default function RepaymentPage({ onNavigate }: Props) {
     remainingAfter: number;
     trustScore: { score: number; band: string } | null;
   } | null>(null);
+  const [paymentAccounts, setPaymentAccounts] = useState<UserPaymentAccount[]>([]);
+  const [selectedPaymentAccountId, setSelectedPaymentAccountId] = useState<string>("");
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const loansRes = await loansApi.getActiveLoans();
+      const [loansRes, accounts] = await Promise.all([
+        loansApi.getActiveLoans(),
+        paymentAccountsApi.getPaymentAccounts(),
+      ]);
       setLoans(loansRes);
+      setPaymentAccounts(accounts);
+      const defaultAccount = accounts.find((a) => a.isDefault);
+      if (defaultAccount) setSelectedPaymentAccountId(defaultAccount.accountId);
       const loan = loansRes[0] || null;
       setActiveLoan(loan);
 
@@ -123,6 +133,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
       const result: MvpRepaymentResult = await loansApi.createRepayment(
         selectedSchedule.scheduleId,
         parsedAmount,
+        selectedPaymentAccountId ? { paymentAccountId: selectedPaymentAccountId } : undefined,
       );
       setSuccessData({
         repaymentId: result.repayment.repaymentId,
@@ -432,6 +443,21 @@ export default function RepaymentPage({ onNavigate }: Props) {
                         : undefined
                     }
                   />
+
+                  {paymentAccounts.length > 0 && (
+                    <Select
+                      label={t("paymentAccounts.repaymentAccount")}
+                      options={paymentAccounts.map((acc) => {
+                        const badge = getProviderBadge(acc.provider);
+                        return {
+                          value: acc.accountId,
+                          label: `${badge.label} — ${maskAccountNumber(acc.accountNumber)}${acc.accountName ? ` (${acc.accountName})` : ""}`,
+                        };
+                      })}
+                      value={selectedPaymentAccountId}
+                      onChange={(e) => setSelectedPaymentAccountId(e.target.value)}
+                    />
+                  )}
 
                   <Button
                     variant="primary"

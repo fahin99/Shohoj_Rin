@@ -7,6 +7,7 @@ import { TextInput, Select, CurrencyInput, Checkbox } from "../components/Input"
 import { EmptyState, EmptyIcons } from "../components/EmptyState";
 import { Alert } from "../components/Alert";
 import InstitutionCombobox from "../components/InstitutionCombobox";
+import { PaymentAccountsManager } from "../components/PaymentAccountsManager";
 import { profileApi, loansApi, trustApi, investorApi, guarantorApi } from "../lib/api/index";
 import type { GuarantorData } from "../lib/api/guarantor";
 import { formatDate, formatTaka } from "../lib/format";
@@ -1191,6 +1192,9 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                 </Card>
               </>
             )}
+
+            {/* Payment Accounts */}
+            <PaymentAccountsManager />
 
             <Card>
               <CardHeader

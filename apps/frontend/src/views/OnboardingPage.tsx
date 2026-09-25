@@ -7,11 +7,11 @@ import { Logo } from "../components/Logo";
 import { Button } from "../components/Button";
 import { TextInput, Select, Radio, Checkbox, FileUpload } from "../components/Input";
 import { Stepper } from "../components/Progress";
+import { Alert } from "../components/Alert";
 import InstitutionCombobox from "../components/InstitutionCombobox";
 import { profileApi, documentsApi, verificationApi, guarantorApi, paymentAccountsApi } from "../lib/api/index";
 import type { PageName } from "../types";
 import type { PaymentAccountType, PaymentProvider, UserPaymentAccount } from "@shohojrin/shared";
-import { gu } from "date-fns/locale";
 
 interface OnboardingPageProps {
   onNavigate: (page: PageName) => void;

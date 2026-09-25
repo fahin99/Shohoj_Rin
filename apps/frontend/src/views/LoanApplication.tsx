@@ -8,11 +8,13 @@ import { Stepper } from "../components/Progress";
 import { Alert } from "../components/Alert";
 import { CurrencyInput, Select, Textarea } from "../components/Input";
 import { formatTaka } from "../lib/format";
-import { loansApi, applicationsApi, profileApi } from "../lib/api/index";
+import { loansApi, applicationsApi, profileApi, paymentAccountsApi } from "../lib/api/index";
 import type { PageName, LoanProduct } from "../types";
 import { useTranslation } from "../lib/language-context";
 import { enumKey } from "../lib/enum-labels";
 import type { ProfileData } from "../lib/api/profile";
+import type { UserPaymentAccount } from "@shohojrin/shared";
+import { maskAccountNumber, getProviderBadge } from "../components/PaymentAccountsManager";
 
 interface Props {
   onNavigate: (page: PageName) => void;
@@ -33,6 +35,7 @@ interface FormState {
   amount: number;
   duration: string;
   purpose: string;
+  disbursementAccountId: string;
 }
 
 export default function LoanApplication({ onNavigate }: Props) {
@@ -46,6 +49,7 @@ export default function LoanApplication({ onNavigate }: Props) {
 
   const [loanProducts, setLoanProducts] = useState<LoanProduct[]>([]);
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [paymentAccounts, setPaymentAccounts] = useState<UserPaymentAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
@@ -54,12 +58,19 @@ export default function LoanApplication({ onNavigate }: Props) {
       setIsLoading(true);
       setLoadError("");
       try {
-        const [res, profileResponse] = await Promise.all([
+        const [res, profileResponse, accounts] = await Promise.all([
           loansApi.getLoanProducts(),
           profileApi.getProfile(),
+          paymentAccountsApi.getPaymentAccounts(),
         ]);
         setLoanProducts(res.products || []);
         setProfile(profileResponse.profile);
+        setPaymentAccounts(accounts);
+        // Pre-select the default payment account
+        const defaultAccount = accounts.find((a) => a.isDefault);
+        if (defaultAccount) {
+          setForm((f) => ({ ...f, disbursementAccountId: defaultAccount.accountId }));
+        }
       } catch (e) {
         console.error("Failed to load application data", e);
         setLoadError(t("common.requestFailed"));
@@ -79,6 +90,7 @@ export default function LoanApplication({ onNavigate }: Props) {
     amount: 0,
     duration: "",
     purpose: "",
+    disbursementAccountId: "",
   });
 
   // Init form defaults when products load
@@ -158,6 +170,7 @@ export default function LoanApplication({ onNavigate }: Props) {
         purpose: selectedLoan?.category ?? "personal",
         purposeDescription: form.purpose,
         ...(form.loanId ? { productId: form.loanId } : {}),
+        ...(form.disbursementAccountId ? { disbursementAccountId: form.disbursementAccountId } : {}),
       };
       await applicationsApi.createApplication(applicationData);
       onNavigate("application-status");
@@ -287,6 +300,21 @@ export default function LoanApplication({ onNavigate }: Props) {
                         error={errors.purpose}
                         onChange={(e) => update("purpose", e.target.value)}
                       />
+                      {paymentAccounts.length > 0 && (
+                        <Select
+                          label={t("paymentAccounts.disbursementAccount")}
+                          options={paymentAccounts.map((acc) => {
+                            const badge = getProviderBadge(acc.provider);
+                            return {
+                              value: acc.accountId,
+                              label: `${badge.label} — ${maskAccountNumber(acc.accountNumber)}${acc.accountName ? ` (${acc.accountName})` : ""}`,
+                            };
+                          })}
+                          value={form.disbursementAccountId}
+                          onChange={(e) => update("disbursementAccountId", e.target.value)}
+                          hint={t("paymentAccounts.disbursementAccountHint")}
+                        />
+                      )}
                     </>
                   )}
                   {step === 1 && (
@@ -372,6 +400,17 @@ export default function LoanApplication({ onNavigate }: Props) {
                           value={t("loanDetails.monthsUnit", { months: form.duration })}
                         />
                         <DataRow label={t("application.purpose")} value={form.purpose || "—"} />
+                        {(() => {
+                          const selectedAccount = paymentAccounts.find((a) => a.accountId === form.disbursementAccountId);
+                          if (!selectedAccount) return null;
+                          const badge = getProviderBadge(selectedAccount.provider);
+                          return (
+                            <DataRow
+                              label={t("paymentAccounts.disbursementAccount")}
+                              value={`${badge.label} — ${maskAccountNumber(selectedAccount.accountNumber)}`}
+                            />
+                          );
+                        })()}
                       </div>
                       <div className="border-t border-stone-200 pt-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">

@@ -8,7 +8,7 @@ import { Button } from "./Button";
 import { TextInput, Select, Checkbox } from "./Input";
 import { Modal, ConfirmModal } from "./Modal";
 import { Alert } from "./Alert";
-import { paymentAccountsApi } from "../lib/api";
+import { paymentAccountsApi } from "../lib/api/index";
 import type {
   UserPaymentAccount,
   PaymentAccountType,
@@ -91,7 +91,7 @@ export function PaymentAccountsManager({
 
       // If selectable and nothing selected yet, select default
       if (selectable && !selectedAccountId && data.length > 0) {
-        const def = data.find((a) => a.isDefault) || data[0];
+        const def = data.find((a: UserPaymentAccount) => a.isDefault) || data[0];
         onSelectAccount?.(def);
       }
     } catch (err) {
@@ -218,17 +218,13 @@ export function PaymentAccountsManager({
   return (
     <div className={`flex flex-col gap-4 ${className}`}>
       {error && (
-        <Alert variant="error" title={t("common.requestFailed")} onClose={() => setError(null)}>
+        <Alert variant="error" title={t("common.requestFailed")} dismissible>
           {error}
         </Alert>
       )}
 
       {successMsg && (
-        <Alert
-          variant="success"
-          title={t("paymentAccounts.title")}
-          onClose={() => setSuccessMsg(null)}
-        >
+        <Alert variant="success" title={t("paymentAccounts.title")} dismissible>
           {successMsg}
         </Alert>
       )}
@@ -254,7 +250,7 @@ export function PaymentAccountsManager({
               <p className="mt-1 text-xs text-stone-500 max-w-sm mx-auto">
                 {t("paymentAccounts.emptyDescription")}
               </p>
-              <Button variant="outline" size="sm" onClick={openAddModal} className="mt-4">
+              <Button variant="secondary" size="sm" onClick={openAddModal} className="mt-4">
                 + {t("paymentAccounts.addFirstAccount")}
               </Button>
             </div>
