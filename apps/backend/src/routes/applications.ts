@@ -258,13 +258,26 @@ router.get("/:id", requireAuth, async (req, res) => {
         });
       }
     }
-
+    const historyResult = await pool.query(
+      `SELECT
+        pd.decision,
+        pd.reason,
+        pd.decided_at AS "decidedAt",
+        u.username AS "decidedByUsername",
+        u.role AS "decidedByRole"
+      FROM partner_decisions pd
+      JOIN users u ON u.user_id = pd.decided_by
+      WHERE pd.application_id = $1
+      ORDER BY pd.decided_at DESC`,
+      [req.params.id],
+    );
     return res.status(200).json({
       success: true,
       data: {
         ...app,
         requestedAmount: parseFloat(app.requestedAmount),
         interestRate: app.interestRate ? parseFloat(app.interestRate) : null,
+        decisionHistory: historyResult.rows,
       },
     });
   } catch (error) {

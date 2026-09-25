@@ -13,6 +13,15 @@ export function requireAdmin(req: RequestWithAuth, res: Response, next: NextFunc
   }
   return next();
 }
+export function requireAdminOrPartnerAgent(req: RequestWithAuth, res: Response, next: NextFunction) {
+  if (!req.auth || (req.auth.role !== "admin" && req.auth.role !== "partner_agent")) {
+    return res.status(403).json({
+      success: false,
+      error: { message: "Admin or partner agent access required" },
+    });
+  }
+  return next();
+}
 
 // GET /api/v1/admin/users — list all users
 router.get("/users", requireAuth, requireAdmin, async (req, res) => {
@@ -396,9 +405,10 @@ router.get("/database-showcase/triggers", requireAuth, requireAdmin, async (_req
 });
 
 // PUT /api/v1/admin/applications/:id/review — approve/reject application
-router.put("/applications/:id/review", requireAuth, requireAdmin, async (req, res) => {
+router.put("/applications/:id/review", requireAuth, requireAdminOrPartnerAgent, async (req, res) => {
   const authReq = req as RequestWithAuth;
   const reviewerId = authReq.auth!.userId;
+  const reviewerRole = authReq.auth!.role;
 
   const { decision, reason } = req.body as { decision: string; reason?: string };
   if (!decision || !["approved", "rejected"].includes(decision)) {
@@ -431,6 +441,37 @@ router.put("/applications/:id/review", requireAuth, requireAdmin, async (req, re
     const app = appResult.rows[0] as any;
     const oldStatus = app.status;
 
+    // NEW: partner_agent may only review applications belonging to their own partner
+    if (reviewerRole === "partner_agent") {
+      const employeeResult = await client.query(
+        `SELECT partner_id FROM users WHERE user_id = $1`,
+        [reviewerId],
+      );
+      const employeePartnerId = employeeResult.rows[0]?.partner_id ?? null;
+      if (!employeePartnerId || employeePartnerId !== app.partner_id) {
+        await client.query("ROLLBACK");
+        return res.status(403).json({
+          success: false,
+          error: { message: "You can only review applications for your own partner organization" },
+        });
+      }
+    }
+
+    // NEW: reuse the existing verification/KYC state before allowing approval
+    if (decision === "approved") {
+      const verificationResult = await client.query(
+        `SELECT profile_completion_status FROM user_profiles WHERE user_id = $1`,
+        [app.user_id],
+      );
+      if (verificationResult.rows[0]?.profile_completion_status !== "verified") {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false,
+          error: { message: "Applicant's profile verification is not complete" },
+        });
+      }
+    }
+
     // Update application status
     await client.query(`UPDATE loan_applications SET status = $1 WHERE application_id = $2`, [
       decision,
@@ -438,6 +479,7 @@ router.put("/applications/:id/review", requireAuth, requireAdmin, async (req, re
     ]);
 
     // Record partner decision if partner is associated
+    // (decided_by already carries whichever authenticated user — admin or partner_agent — took the action)
     if (app.partner_id) {
       await client.query(
         `INSERT INTO partner_decisions (application_id, partner_id, decision, reason, decided_by)
