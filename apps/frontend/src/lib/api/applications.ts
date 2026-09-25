@@ -12,6 +12,7 @@ export interface ApplicationRecord {
   product?: string;
   amount?: number;
   requestedAmount?: number;
+  durationMonths?: number;
   submitted?: string;
   submittedAt?: string;
   createdAt?: string;
@@ -20,6 +21,7 @@ export interface ApplicationRecord {
 
 export async function createApplication(data: {
   requestedAmount: number;
+  durationMonths: number;
   purpose: string;
   purposeDescription?: string;
   partnerId?: string;

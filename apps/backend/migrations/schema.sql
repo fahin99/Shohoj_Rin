@@ -177,6 +177,7 @@ CREATE TABLE IF NOT EXISTS loan_applications (
   user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
   partner_id UUID REFERENCES funding_partners (partner_id) ON DELETE SET NULL,
   requested_amount DECIMAL(12,2) NOT NULL,
+    duration_months INTEGER NOT NULL DEFAULT 12,
   purpose VARCHAR(100) NOT NULL,
   purpose_description TEXT,
   status VARCHAR(20) NOT NULL DEFAULT 'draft',

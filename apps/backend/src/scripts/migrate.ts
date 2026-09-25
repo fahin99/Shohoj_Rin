@@ -69,6 +69,34 @@ async function ensureAccountIdentitySchema(client: PoolClient) {
   `);
 }
 
+async function ensureApplicationDurationSchema(client: PoolClient) {
+  await client.query(`
+    ALTER TABLE loan_applications
+      ADD COLUMN IF NOT EXISTS duration_months INTEGER NOT NULL DEFAULT 12
+  `);
+  await client.query(`
+    UPDATE loan_applications la
+    SET duration_months = lp.duration_months
+    FROM loan_products lp
+    WHERE la.product_id = lp.product_id
+      AND la.duration_months = 12
+      AND lp.duration_months <> 12
+  `);
+}
+
+async function ensureRepaymentProcedure(client: PoolClient) {
+  const schema = await fs.readFile(path.join(migrationDir, schemaFile), "utf8");
+  const procedureStart = schema.indexOf("CREATE OR REPLACE PROCEDURE process_repayment(");
+  const nextProcedureStart = schema.indexOf(
+    "CREATE OR REPLACE PROCEDURE generate_repayment_schedule(",
+    procedureStart,
+  );
+  if (procedureStart === -1 || nextProcedureStart === -1) {
+    throw new Error("Unable to locate process_repayment in schema.sql");
+  }
+  await client.query(schema.slice(procedureStart, nextProcedureStart));
+}
+
 async function listMigrationFiles() {
   const entries = await fs.readdir(migrationDir, { withFileTypes: true });
   return entries
@@ -459,6 +487,8 @@ async function migrate() {
       await ensureLenderMarketplaceSchema(client);
       await ensureFundingPartnerNameNormalizedIndex(client);
       await ensureLenderInvestorProfileInvariant(client);
+      await ensureApplicationDurationSchema(client);
+      await ensureRepaymentProcedure(client);
       await ensureLoanApplicationReference(client);
       await ensureBorrowerTrustSummaryView(client);
       await ensureDatabaseComputedFunctions(client);
@@ -477,6 +507,8 @@ async function migrate() {
     if (existingSchemaCheck.rows[0].exists) {
       await ensureAccountIdentitySchema(client);
       await ensureFundingCommitments(client);
+      await ensureApplicationDurationSchema(client);
+      await ensureRepaymentProcedure(client);
       await ensureLenderMarketplaceSchema(client);
       await ensureFundingPartnerNameNormalizedIndex(client);
       await ensureLenderInvestorProfileInvariant(client);

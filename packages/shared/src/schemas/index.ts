@@ -25,6 +25,7 @@ export const loginSchema = z.object({
 
 export const loanApplicationSchema = z.object({
   requestedAmount: z.number().positive("Amount must be positive"),
+  durationMonths: z.number().int().positive("Duration must be a positive number of months"),
   purpose: z.string().min(1, "Purpose is required"),
   purposeDescription: z.string().optional(),
   partnerId: z.string().uuid().optional(),

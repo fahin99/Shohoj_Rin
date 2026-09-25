@@ -280,8 +280,8 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                       </div>
                     </dl>
                     <ProgressBar
-                      value={activeLoan.paidMonths}
-                      max={activeLoan.durationMonths}
+                      value={activeLoan.amountRepaid}
+                      max={activeLoan.totalRepayable}
                       label={`${t("activeLoan.repaymentProgress")} — ${activeLoan.paidMonths} ${t("pagination.of")} ${activeLoan.durationMonths} ${t("loanDetails.monthsUnit")}`}
                       showValue
                       size="lg"

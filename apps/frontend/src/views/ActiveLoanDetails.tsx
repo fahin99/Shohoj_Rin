@@ -176,8 +176,8 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
             </p>
           </div>
           <ProgressBar
-            value={activeLoan.paidMonths}
-            max={activeLoan.durationMonths}
+            value={activeLoan.amountRepaid}
+            max={activeLoan.totalRepayable}
             showValue
             size="lg"
             color="teal"

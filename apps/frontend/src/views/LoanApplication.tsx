@@ -46,11 +46,6 @@ export default function LoanApplication({ onNavigate }: Props) {
     { label: t("application.stepReview") },
   ];
 
-  const durationOptions = [12, 18, 24, 36, 48].map((d) => ({
-    value: String(d),
-    label: t("loanDetails.monthsUnit", { count: d }),
-  }));
-
   const employmentOptions = [
     { value: "salaried", label: t("employment.employed-full") },
     { value: "self-employed", label: t("employment.self-employed") },
@@ -115,6 +110,16 @@ export default function LoanApplication({ onNavigate }: Props) {
 
   const selectedLoan = loanProducts.find((l) => l.id === form.loanId) ?? defaultLoan;
 
+  const durationOptions = Array.from(
+    new Set([12, 18, 24, 36, 48, selectedLoan.durationMonths]),
+  )
+    .filter((months) => months <= selectedLoan.durationMonths)
+    .sort((a, b) => a - b)
+    .map((months) => ({
+      value: String(months),
+      label: t("loanDetails.monthsUnit", { months }),
+    }));
+
   const emi = useMemo(
     () => calculateEmi(form.amount, selectedLoan.interestRate, Number(form.duration)),
     [form.amount, form.duration, selectedLoan],
@@ -166,6 +171,7 @@ export default function LoanApplication({ onNavigate }: Props) {
     try {
       const applicationData = {
         requestedAmount: form.amount,
+        durationMonths: Number(form.duration),
         purpose: selectedLoan.category ?? "personal",
         purposeDescription: form.purpose,
         ...(form.loanId ? { productId: form.loanId } : {}),
@@ -269,9 +275,7 @@ export default function LoanApplication({ onNavigate }: Props) {
                       <Select
                         label={t("loanDetails.repaymentDuration")}
                         required
-                        options={durationOptions.filter(
-                          (d) => Number(d.value) <= selectedLoan.durationMonths,
-                        )}
+                        options={durationOptions}
                         placeholder={t("application.errorDuration")}
                         value={form.duration}
                         error={errors.duration}

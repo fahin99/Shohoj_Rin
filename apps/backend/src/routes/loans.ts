@@ -31,6 +31,7 @@ router.post("/", requireAuth, async (req, res) => {
         la.partner_id,
         la.product_id,
         la.requested_amount,
+        la.duration_months AS application_duration_months,
         la.status AS application_status,
         lp.interest_rate,
         lp.duration_months
@@ -116,9 +117,9 @@ router.post("/", requireAuth, async (req, res) => {
     const interestRate =
       typeof app.interest_rate === "number" ? app.interest_rate : Number(app.interest_rate ?? 12.0);
     const tenureMonths =
-      typeof app.duration_months === "number"
-        ? app.duration_months
-        : Number(app.duration_months ?? 12);
+      typeof app.application_duration_months === "number"
+        ? app.application_duration_months
+        : Number(app.application_duration_months ?? app.duration_months ?? 12);
     const principal =
       typeof app.requested_amount === "number"
         ? app.requested_amount
@@ -286,7 +287,13 @@ router.get("/", requireAuth, async (req, res) => {
         la.purpose,
         lp.name AS "productName",
         (SELECT COUNT(*)::int FROM repayment_schedules rs WHERE rs.loan_id = l.loan_id) AS "totalInstallments",
-        (SELECT COUNT(*)::int FROM repayment_schedules rs WHERE rs.loan_id = l.loan_id AND rs.status = 'paid') AS "paidInstallments",
+        (SELECT COUNT(*)::int
+         FROM repayment_schedules rs
+         WHERE rs.loan_id = l.loan_id
+           AND EXISTS (
+             SELECT 1 FROM repayments r
+             WHERE r.schedule_id = rs.schedule_id AND r.status = 'completed'
+           )) AS "paidInstallments",
         COALESCE((SELECT SUM(rs.expected_amount) FROM repayment_schedules rs WHERE rs.loan_id = l.loan_id), 0) AS "totalExpected",
         COALESCE((SELECT SUM(r.amount_paid) FROM repayments r JOIN repayment_schedules rs ON rs.schedule_id = r.schedule_id WHERE rs.loan_id = l.loan_id AND r.status = 'completed'), 0) AS "totalPaid"
        FROM loans l
@@ -413,9 +420,19 @@ router.get("/:id", requireAuth, async (req, res) => {
     const scheduleResult = await pool.query(
       `SELECT
         COUNT(*) AS "totalInstallments",
-        COUNT(*) FILTER (WHERE status = 'paid') AS "paidInstallments",
+        COUNT(*) FILTER (
+          WHERE EXISTS (
+            SELECT 1 FROM repayments r
+            WHERE r.schedule_id = repayment_schedules.schedule_id AND r.status = 'completed'
+          )
+        ) AS "paidInstallments",
         COALESCE(SUM(expected_amount), 0) AS "totalExpected",
-        COALESCE(SUM(expected_amount) FILTER (WHERE status = 'paid'), 0) AS "totalPaid"
+        COALESCE((
+          SELECT SUM(r.amount_paid)
+          FROM repayments r
+          JOIN repayment_schedules paid_schedule ON paid_schedule.schedule_id = r.schedule_id
+          WHERE paid_schedule.loan_id = $1 AND r.status = 'completed'
+        ), 0) AS "totalPaid"
        FROM repayment_schedules
        WHERE loan_id = $1`,
       [req.params.id],

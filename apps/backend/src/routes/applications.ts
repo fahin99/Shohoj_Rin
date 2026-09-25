@@ -9,6 +9,7 @@ const router = Router();
 
 const createApplicationSchema = z.object({
   requestedAmount: z.number().positive("Amount must be positive"),
+  durationMonths: z.number().int().positive("Duration must be a positive number of months"),
   purpose: z.string().min(1, "Purpose is required"),
   purposeDescription: z.string().optional(),
   partnerId: z.string().uuid().optional(),
@@ -30,7 +31,8 @@ router.post("/", requireAuth, requireRole("borrower"), async (req, res) => {
     });
   }
 
-  const { requestedAmount, purpose, purposeDescription, partnerId, productId } = parsed.data;
+  const { requestedAmount, durationMonths, purpose, purposeDescription, partnerId, productId } =
+    parsed.data;
 
   const client = await pool.connect();
   try {
@@ -53,12 +55,33 @@ router.post("/", requireAuth, requireRole("borrower"), async (req, res) => {
     );
     const trustScoreId = trustResult.rows[0]?.score_id ?? null;
 
+    if (productId) {
+      const productResult = await client.query(
+        `SELECT duration_months FROM loan_products WHERE product_id = $1 AND is_active = TRUE`,
+        [productId],
+      );
+      if (productResult.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false,
+          error: { message: "Selected loan product is not available" },
+        });
+      }
+      if (durationMonths > Number(productResult.rows[0].duration_months)) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false,
+          error: { message: "Repayment duration exceeds the selected product limit" },
+        });
+      }
+    }
+
     const resolvedPartnerId = partnerId ?? null;
 
     const appResult = await client.query(
       `INSERT INTO loan_applications
-        (user_id, partner_id, product_id, requested_amount, purpose, purpose_description, status, trust_score_id, submitted_at)
-       VALUES ($1, $2, $3, $4, $5, $6, 'submitted', $7, NOW())
+        (user_id, partner_id, product_id, requested_amount, duration_months, purpose, purpose_description, status, trust_score_id, submitted_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'submitted', $8, NOW())
        RETURNING
         application_id AS "applicationId",
         reference_code AS "referenceCode",
@@ -66,6 +89,7 @@ router.post("/", requireAuth, requireRole("borrower"), async (req, res) => {
         partner_id AS "partnerId",
         product_id AS "productId",
         requested_amount AS "requestedAmount",
+        duration_months AS "durationMonths",
         purpose,
         purpose_description AS "purposeDescription",
         status,
@@ -76,6 +100,7 @@ router.post("/", requireAuth, requireRole("borrower"), async (req, res) => {
         resolvedPartnerId,
         productId ?? null,
         requestedAmount,
+        durationMonths,
         purpose,
         purposeDescription ?? null,
         trustScoreId,
@@ -150,6 +175,7 @@ router.get("/", requireAuth, async (req, res) => {
         la.partner_id AS "partnerId",
         la.product_id AS "productId",
         la.requested_amount AS "requestedAmount",
+        la.duration_months AS "durationMonths",
         la.purpose,
         la.purpose_description AS "purposeDescription",
         la.status,
@@ -208,6 +234,7 @@ router.get("/:id", requireAuth, async (req, res) => {
         la.partner_id AS "partnerId",
         la.product_id AS "productId",
         la.requested_amount AS "requestedAmount",
+        la.duration_months AS "durationMonths",
         la.purpose,
         la.purpose_description AS "purposeDescription",
         la.status,
