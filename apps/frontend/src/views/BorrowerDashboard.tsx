@@ -170,7 +170,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
             value={formatTaka(activeLoan ? activeLoan.monthlyPayment : 0)}
             hint={
               activeLoan && activeLoan.nextPaymentDate
-                ? `${t("dashboard.dueOn")} ${formatDate(activeLoan.nextPaymentDate)}`
+                ? t("dashboard.dueOn", { date: formatDate(activeLoan.nextPaymentDate) })
                 : t("dashboard.noPaymentsDue")
             }
             tone={activeLoan ? "attention" : undefined}
@@ -180,8 +180,11 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
             value={formatTaka(activeLoan ? activeLoan.amountRepaid : 0)}
             hint={
               activeLoan
-                ? `${activeLoan.paidMonths} ${t("pagination.of")} ${activeLoan.durationMonths} ${t("dashboard.instalments")}`
-                : `0 ${t("dashboard.instalments")}`
+                ? t("dashboard.instalments", {
+                    paid: activeLoan.paidMonths,
+                    total: activeLoan.durationMonths,
+                  })
+                : t("dashboard.instalments", { paid: 0, total: 0 })
             }
             tone={activeLoan ? "positive" : undefined}
           />
@@ -282,7 +285,10 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                     <ProgressBar
                       value={activeLoan.amountRepaid}
                       max={activeLoan.totalRepayable}
-                      label={`${t("activeLoan.repaymentProgress")} — ${activeLoan.paidMonths} ${t("pagination.of")} ${activeLoan.durationMonths} ${t("loanDetails.monthsUnit")}`}
+                      label={`${t("activeLoan.repaymentProgress")} — ${t("activeLoan.monthsPaid", {
+                        paid: activeLoan.paidMonths,
+                        total: activeLoan.durationMonths,
+                      })}`}
                       showValue
                       size="lg"
                       color="teal"
@@ -461,7 +467,7 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                   {formatTaka(activeLoan.monthlyPayment)}
                 </p>
                 <p className="mt-0.5 text-xs text-stone-600">
-                  {t("dashboard.dueOn")} {formatDate(activeLoan.nextPaymentDate)}
+                  {t("dashboard.dueOn", { date: formatDate(activeLoan.nextPaymentDate) })}
                 </p>
                 <Button
                   variant="primary"

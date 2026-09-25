@@ -205,7 +205,7 @@ export default function LoanApplication({ onNavigate }: Props) {
         <DataRow
           label={t("loanDetails.repaymentDuration")}
           value={t("loanDetails.monthsUnit", {
-            count: form.duration || selectedLoan.durationMonths,
+            months: form.duration || selectedLoan.durationMonths,
           })}
         />
         <div className="border-t border-stone-200 mt-2 pt-2">
@@ -354,7 +354,7 @@ export default function LoanApplication({ onNavigate }: Props) {
                         />
                         <DataRow
                           label={t("loanDetails.repaymentDuration")}
-                          value={t("loanDetails.monthsUnit", { count: form.duration })}
+                          value={t("loanDetails.monthsUnit", { months: form.duration })}
                         />
                         <DataRow label={t("application.purpose")} value={form.purpose || "—"} />
                       </div>

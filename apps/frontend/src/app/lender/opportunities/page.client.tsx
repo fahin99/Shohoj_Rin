@@ -232,7 +232,7 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                         <p className="text-sm font-semibold text-navy mt-0.5">
                           {opportunity.durationMonths == null
                             ? "—"
-                            : t("loanDetails.monthsUnit", { count: opportunity.durationMonths })}
+                            : t("loanDetails.monthsUnit", { months: opportunity.durationMonths })}
                         </p>
                       </div>
                     </div>
