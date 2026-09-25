@@ -261,7 +261,8 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
         {}
         <div className="mb-10">
           <p className="text-xs text-stone-500 mb-4 text-center">
-            {t("onboarding.stepOf", { step: step + 1, total: steps.length })} — {t("onboarding.letUsGetToKnowYou")}
+            {t("onboarding.stepOf", { step: step + 1, total: steps.length })} —{" "}
+            {t("onboarding.letUsGetToKnowYou")}
           </p>
           <Stepper steps={steps} currentStep={step} />
         </div>
@@ -272,9 +273,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
               <h2 className="text-2xl font-semibold text-navy mb-1">
                 {t("profile.personalIdentity")}
               </h2>
-              <p className="text-sm text-stone-500 mb-6">
-                {t("onboarding.identityHint")}
-              </p>
+              <p className="text-sm text-stone-500 mb-6">{t("onboarding.identityHint")}</p>
               <div className="grid grid-cols-1 gap-5">
                 <TextInput
                   label={t("profile.fullName")}
@@ -340,9 +339,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className="text-sm font-semibold text-navy">{t("profile.nidPhoto")}</p>
-                      <p className="text-xs text-stone-500">
-                        {t("profile.nidPhotoHint")}
-                      </p>
+                      <p className="text-xs text-stone-500">{t("profile.nidPhotoHint")}</p>
                     </div>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded bg-teal-light text-teal border border-teal/30">
                       {t("profile.oneTimeKyc")}
@@ -387,10 +384,10 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {}
           {step === 1 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">{t("profile.financialProfile")}</h2>
-              <p className="text-sm text-stone-500 mb-6">
-                {t("profile.financialProfileHint")}
-              </p>
+              <h2 className="text-2xl font-semibold text-navy mb-1">
+                {t("profile.financialProfile")}
+              </h2>
+              <p className="text-sm text-stone-500 mb-6">{t("profile.financialProfileHint")}</p>
               <div className="grid grid-cols-1 gap-5">
                 <TextInput
                   label={t("application.monthlyIncome")}
@@ -410,9 +407,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   prefix="৳"
                 />
                 <div>
-                  <p className="text-sm font-medium text-navy mb-3">
-                    {t("profile.existingLoans")}
-                  </p>
+                  <p className="text-sm font-medium text-navy mb-3">{t("profile.existingLoans")}</p>
                   <div className="flex gap-6">
                     <Radio
                       label={t("common.yes")}
@@ -442,10 +437,10 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {}
           {step === 2 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">{t("application.stepEmployment")}</h2>
-              <p className="text-sm text-stone-500 mb-6">
-                {t("application.employmentHint")}
-              </p>
+              <h2 className="text-2xl font-semibold text-navy mb-1">
+                {t("application.stepEmployment")}
+              </h2>
+              <p className="text-sm text-stone-500 mb-6">{t("application.employmentHint")}</p>
               <div className="grid grid-cols-1 gap-5">
                 <Select
                   label={t("application.employmentType")}
@@ -540,9 +535,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
               <h2 className="text-2xl font-semibold text-navy mb-1">
                 {t("profile.guarantorInfo")}
               </h2>
-              <p className="text-sm text-stone-500 mb-6">
-                {t("profile.guarantorHint")}
-              </p>
+              <p className="text-sm text-stone-500 mb-6">{t("profile.guarantorHint")}</p>
               <div className="grid grid-cols-1 gap-5">
                 <TextInput
                   label={t("profile.fullName")}
@@ -633,9 +626,7 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className="text-sm font-semibold text-navy">{t("profile.nidPhoto")}</p>
-                      <p className="text-xs text-stone-500">
-                        {t("profile.guarantorNidPhotoHint")}
-                      </p>
+                      <p className="text-xs text-stone-500">{t("profile.guarantorNidPhotoHint")}</p>
                     </div>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded bg-teal-light text-teal border border-teal/30">
                       {t("profile.oneTimeKyc")}
@@ -645,18 +636,26 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                     <FileUpload
                       label={t("profile.nidFrontPhoto")}
                       hint={t("profile.nidFrontHint")}
-                      onChange={(files) => handleFileUpload("guarantor_nid_front", files, "guarantorNidFrontUploaded")}
+                      onChange={(files) =>
+                        handleFileUpload("guarantor_nid_front", files, "guarantorNidFrontUploaded")
+                      }
                     />
                     <FileUpload
                       label={t("profile.nidBackPhoto")}
                       hint={t("profile.nidBackHint")}
-                      onChange={(files) => handleFileUpload("guarantor_nid_back", files, "guarantorNidBackUploaded")}
+                      onChange={(files) =>
+                        handleFileUpload("guarantor_nid_back", files, "guarantorNidBackUploaded")
+                      }
                     />
                     <FileUpload
                       label={t("profile.incomeProof")}
                       hint={t("profile.guarantorIncomeProofHint")}
                       onChange={(files) =>
-                        handleFileUpload("guarantor_income_proof", files, "guarantorIncomeProofUploaded")
+                        handleFileUpload(
+                          "guarantor_income_proof",
+                          files,
+                          "guarantorIncomeProofUploaded",
+                        )
                       }
                     />
                   </div>
@@ -673,10 +672,10 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {}
           {step === 4 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">{t("onboarding.financialGoals")}</h2>
-              <p className="text-sm text-stone-500 mb-6">
-                {t("onboarding.financialGoalsHint")}
-              </p>
+              <h2 className="text-2xl font-semibold text-navy mb-1">
+                {t("onboarding.financialGoals")}
+              </h2>
+              <p className="text-sm text-stone-500 mb-6">{t("onboarding.financialGoalsHint")}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {goalOptions.map((g) => (
                   <button
@@ -703,13 +702,15 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
           {}
           {step === 5 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">{t("onboarding.preferences")}</h2>
-              <p className="text-sm text-stone-500 mb-6">
-                {t("onboarding.preferencesHint")}
-              </p>
+              <h2 className="text-2xl font-semibold text-navy mb-1">
+                {t("onboarding.preferences")}
+              </h2>
+              <p className="text-sm text-stone-500 mb-6">{t("onboarding.preferencesHint")}</p>
               <div className="flex flex-col gap-5">
                 <div>
-                  <p className="text-sm font-medium text-navy mb-3">{t("onboarding.notificationPreferences")}</p>
+                  <p className="text-sm font-medium text-navy mb-3">
+                    {t("onboarding.notificationPreferences")}
+                  </p>
                   <div className="flex flex-col gap-3">
                     <Checkbox
                       label={t("onboarding.emailNotifs")}
@@ -733,7 +734,9 @@ export default function OnboardingPage({ onNavigate }: OnboardingPageProps) {
                   ]}
                 />
                 <div className="bg-emerald-light border border-emerald/30 rounded-[6px] p-4">
-                  <p className="text-sm font-semibold text-emerald mb-1">{t("onboarding.almostReady")}</p>
+                  <p className="text-sm font-semibold text-emerald mb-1">
+                    {t("onboarding.almostReady")}
+                  </p>
                   <p className="text-xs text-stone-600 leading-relaxed">
                     {t("onboarding.almostReadyHint")}
                   </p>

@@ -39,7 +39,9 @@ router.get("/", requireAuth, async (req, res) => {
     return res.status(200).json({ success: true, data: result.rows[0] ?? null });
   } catch (error) {
     console.error("Failed to fetch guarantor:", error);
-    return res.status(500).json({ success: false, error: { message: "Failed to fetch guarantor" } });
+    return res
+      .status(500)
+      .json({ success: false, error: { message: "Failed to fetch guarantor" } });
   }
 });
 
@@ -61,7 +63,14 @@ router.put("/", requireAuth, async (req, res) => {
       [userId],
     );
 
-    const values = [fullName, relationship, phone || null, email || null, nidNumber || null, address || null];
+    const values = [
+      fullName,
+      relationship,
+      phone || null,
+      email || null,
+      nidNumber || null,
+      address || null,
+    ];
 
     const result =
       existing.rows.length > 0

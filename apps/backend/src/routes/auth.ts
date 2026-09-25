@@ -91,12 +91,10 @@ async function createSession(db: Pick<PoolClient, "query">, userId: string, sess
 router.post("/register", async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        error: { message: "Invalid registration data", details: parsed.error.flatten() },
-      });
+    return res.status(400).json({
+      success: false,
+      error: { message: "Invalid registration data", details: parsed.error.flatten() },
+    });
   }
   const username = parsed.data.username.trim();
   const email = normalizeEmail(parsed.data.email);
@@ -116,12 +114,10 @@ router.post("/register", async (req, res) => {
     );
     if (existingUser.rowCount && existingUser.rowCount > 0) {
       await client.query("ROLLBACK");
-      return res
-        .status(409)
-        .json({
-          success: false,
-          error: { message: "An account with this username, email, or phone already exists" },
-        });
+      return res.status(409).json({
+        success: false,
+        error: { message: "An account with this username, email, or phone already exists" },
+      });
     }
     const role = parsed.data.role || "borrower";
     const userResult = await client.query<AuthUserRow & { role: string }>(
@@ -148,12 +144,10 @@ router.post("/register", async (req, res) => {
       "code" in error &&
       (error as { code?: string }).code === "23505"
     ) {
-      return res
-        .status(409)
-        .json({
-          success: false,
-          error: { message: "An account with this username, email, or phone already exists" },
-        });
+      return res.status(409).json({
+        success: false,
+        error: { message: "An account with this username, email, or phone already exists" },
+      });
     }
     console.error("Registration failed:", error);
     return res.status(500).json({ success: false, error: { message: "Failed to create account" } });
@@ -164,12 +158,10 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        error: { message: "Invalid login data", details: parsed.error.flatten() },
-      });
+    return res.status(400).json({
+      success: false,
+      error: { message: "Invalid login data", details: parsed.error.flatten() },
+    });
   }
   const email = parsed.data.email ? normalizeEmail(parsed.data.email) : null;
   const phone = parsed.data.phone ? normalizePhone(parsed.data.phone) : null;
@@ -236,11 +228,9 @@ router.get("/me", requireAuth, requireUserProfile, (req, res) => {
 });
 router.get("/session", requireAuth, requireUserProfile, (req, res) => {
   const authReq = req as RequestWithAuth;
-  return res
-    .status(200)
-    .json({
-      success: true,
-      data: { authenticated: true, user: authReq.user, session: authReq.auth },
-    });
+  return res.status(200).json({
+    success: true,
+    data: { authenticated: true, user: authReq.user, session: authReq.auth },
+  });
 });
 export default router;

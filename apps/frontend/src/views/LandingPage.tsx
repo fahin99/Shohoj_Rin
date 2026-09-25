@@ -203,13 +203,17 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
 
               <div className="bg-stone-50 border border-stone-200 rounded-[4px] p-3">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs text-stone-500">{t("activeLoan.repaymentProgress")}</span>
+                  <span className="text-xs text-stone-500">
+                    {t("activeLoan.repaymentProgress")}
+                  </span>
                   <span className="text-xs tabular-nums text-navy">14 / 48 months</span>
                 </div>
                 <div className="w-full h-2 bg-stone-200 rounded-full overflow-hidden">
                   <div className="h-full bg-teal rounded-full" style={{ width: "29%" }} />
                 </div>
-                <p className="text-xs text-stone-400 mt-1.5">{t("activeLoan.nextPayment")}: Dec 15, 2025</p>
+                <p className="text-xs text-stone-400 mt-1.5">
+                  {t("activeLoan.nextPayment")}: Dec 15, 2025
+                </p>
               </div>
             </div>
 
@@ -294,9 +298,7 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
                 {t("landing.educationEyebrow")}
               </p>
               <h2 className="font-display text-4xl text-navy">{t("landing.educationTitle")}</h2>
-              <p className="text-stone-500 mt-2 max-w-lg">
-                {t("landing.educationBody")}
-              </p>
+              <p className="text-stone-500 mt-2 max-w-lg">{t("landing.educationBody")}</p>
             </div>
             <Button variant="tertiary" size="sm" onClick={() => onNavigate("education")}>
               {t("landing.allArticles")}
@@ -331,9 +333,7 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
             {t("landing.trustEyebrow")}
           </p>
           <h2 className="font-display text-4xl text-navy mb-3">{t("landing.trustTitle")}</h2>
-          <p className="text-stone-500 max-w-lg mx-auto">
-            {t("landing.trustBody")}
-          </p>
+          <p className="text-stone-500 max-w-lg mx-auto">{t("landing.trustBody")}</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -363,9 +363,7 @@ export default function LandingPage({ onNavigate, user }: LandingPageProps) {
               <br />
               {t("landing.ctaTitle2")}
             </h2>
-            <p className="text-stone-400 max-w-md leading-relaxed">
-              {t("landing.ctaBody")}
-            </p>
+            <p className="text-stone-400 max-w-md leading-relaxed">{t("landing.ctaBody")}</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 shrink-0">
             <Button variant="primary" size="lg" onClick={() => onNavigate("auth")}>

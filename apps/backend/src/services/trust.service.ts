@@ -199,7 +199,7 @@ export function calculateInitialTrustScore(
     0.25 * (fScore - neutral) +
     0.15 * (bScore - neutral) +
     0.15 * (vScore - neutral) +
-    0.10 * (cScore - neutral);
+    0.1 * (cScore - neutral);
 
   const finalScore = Math.max(0, Math.min(100, Math.round((baseline + adjustment) * 100) / 100));
 

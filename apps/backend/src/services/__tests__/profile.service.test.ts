@@ -29,7 +29,9 @@ describe("updateProfile", () => {
       institutionId: null,
     });
 
-    const [sql, values] = query.mock.calls.find(([sql]) => String(sql).includes("UPDATE user_profiles"))!;
+    const [sql, values] = query.mock.calls.find(([sql]) =>
+      String(sql).includes("UPDATE user_profiles"),
+    )!;
     expect(sql).toContain("full_name = $2");
     expect(sql).toContain("monthly_income = $3");
     expect(sql).toContain("institution_id = $4");
@@ -126,7 +128,9 @@ describe("updateProfile", () => {
       incomeSource: "salary",
     });
 
-    const [sql, values] = query.mock.calls.find(([sql]) => String(sql).includes("UPDATE user_profiles"))!;
+    const [sql, values] = query.mock.calls.find(([sql]) =>
+      String(sql).includes("UPDATE user_profiles"),
+    )!;
     expect(sql).toContain("city = $2");
     expect(sql).toContain("district = $3");
     expect(sql).toContain("occupation = $4");
@@ -142,7 +146,10 @@ describe("updateProfile", () => {
       .mockResolvedValueOnce({ rowCount: 0, rows: [] })
       .mockResolvedValueOnce({ rowCount: 0, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ username: "new_username", email: "test@example.com" }] })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ username: "new_username", email: "test@example.com" }],
+      })
       .mockResolvedValueOnce({ rowCount: 0, rows: [] });
 
     const result = await updateProfile("user-1", { username: "new_username" });

@@ -391,7 +391,11 @@ export default function ProfilePage({ onNavigate, user }: Props) {
     if (!lenderForm) return;
     const cleanUsername = lenderForm.username.trim();
     if (cleanUsername) {
-      if (cleanUsername.length < 3 || cleanUsername.length > 50 || !/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)) {
+      if (
+        cleanUsername.length < 3 ||
+        cleanUsername.length > 50 ||
+        !/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)
+      ) {
         setLenderSaveError("Username must be 3-50 letters, numbers, dots, underscores, or hyphens");
         return;
       }
@@ -470,7 +474,11 @@ export default function ProfilePage({ onNavigate, user }: Props) {
     if (!form) return;
     const cleanUsername = form.username.trim();
     if (cleanUsername) {
-      if (cleanUsername.length < 3 || cleanUsername.length > 50 || !/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)) {
+      if (
+        cleanUsername.length < 3 ||
+        cleanUsername.length > 50 ||
+        !/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)
+      ) {
         setSaveError("Username must be 3-50 letters, numbers, dots, underscores, or hyphens");
         return;
       }
@@ -602,7 +610,9 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                         size="sm"
                         dot
                       >
-                        {t(enumKey("verification", investorProfile.verificationStatus ?? "pending"))}
+                        {t(
+                          enumKey("verification", investorProfile.verificationStatus ?? "pending"),
+                        )}
                       </Badge>
                       <Badge
                         variant={
@@ -612,8 +622,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                         size="sm"
                         dot
                       >
-                        KYC:{" "}
-                        {t(enumKey("verification", investorProfile.kycStatus ?? "incomplete"))}
+                        KYC: {t(enumKey("verification", investorProfile.kycStatus ?? "incomplete"))}
                       </Badge>
                     </div>
                   </div>
@@ -693,12 +702,17 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                         label={t("profile.riskPreference")}
                         value={lenderForm.riskPreference}
                         onChange={(e) => updateLenderForm("riskPreference", e.target.value)}
-                        options={riskPreferenceOptions.map(o => ({...o, label: t(enumKey("risk", o.value))}))}
+                        options={riskPreferenceOptions.map((o) => ({
+                          ...o,
+                          label: t(enumKey("risk", o.value)),
+                        }))}
                         placeholder="Select"
                       />
                     </div>
                     <div className="border-t border-stone-200 pt-5 flex flex-col gap-2">
-                      <p className="text-sm font-medium text-navy">{t("profile.preferredCategories")}</p>
+                      <p className="text-sm font-medium text-navy">
+                        {t("profile.preferredCategories")}
+                      </p>
                       {supportedCategories.map((category) => (
                         <Checkbox
                           key={category.value}
@@ -721,12 +735,12 @@ export default function ProfilePage({ onNavigate, user }: Props) {
               ) : null}
 
               <Card>
-                <CardHeader
-                  title={t("profile.company")}
-                  description={t("profile.companyHint")}
-                />
+                <CardHeader title={t("profile.company")} description={t("profile.companyHint")} />
                 <CardBody>
-                  <DataRow label={t("auth.username") || "Username"} value={currentUsername ? `@${currentUsername}` : "—"} />
+                  <DataRow
+                    label={t("auth.username") || "Username"}
+                    value={currentUsername ? `@${currentUsername}` : "—"}
+                  />
                   <DataRow label="Company name" value={investorProfile.company?.name || "—"} />
                   <DataRow label="Address" value={investorProfile.company?.address || "—"} />
                   <DataRow label="Branch" value={investorProfile.company?.branch || "—"} />
@@ -765,7 +779,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                     label={t("profile.riskPreference")}
                     value={
                       investorProfile.riskPreference
-                        ? (t(enumKey("risk", investorProfile.riskPreference)))
+                        ? t(enumKey("risk", investorProfile.riskPreference))
                         : "—"
                     }
                   />
@@ -863,7 +877,9 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       size="sm"
                       dot
                     >
-                      {t(enumKey("verification", profile.profile_completion_status ?? "incomplete"))}
+                      {t(
+                        enumKey("verification", profile.profile_completion_status ?? "incomplete"),
+                      )}
                     </Badge>
                     {completionItems.length > 0 && (
                       <span className="text-xs text-stone-500">
@@ -961,7 +977,10 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       label="Employment type"
                       value={form.employmentType}
                       onChange={(e) => updateForm("employmentType", e.target.value)}
-                      options={employmentOptions.map(o => ({...o, label: t(enumKey("employment", o.value))}))}
+                      options={employmentOptions.map((o) => ({
+                        ...o,
+                        label: t(enumKey("employment", o.value)),
+                      }))}
                       placeholder="Select"
                     />
                     <TextInput
@@ -1023,7 +1042,10 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                 <Card>
                   <CardHeader title={t("profile.personalIdentity")} />
                   <CardBody>
-                    <DataRow label={t("auth.username") || "Username"} value={currentUsername ? `@${currentUsername}` : "—"} />
+                    <DataRow
+                      label={t("auth.username") || "Username"}
+                      value={currentUsername ? `@${currentUsername}` : "—"}
+                    />
                     <DataRow label="Full name" value={profile.full_name || "—"} />
                     <DataRow
                       label="Date of birth"
@@ -1091,7 +1113,11 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                     title={t("profile.guarantorInfo")}
                     description={t("profile.guarantorHint")}
                     action={
-                      <Button variant="secondary" size="sm" onClick={() => onNavigate("onboarding")}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onNavigate("onboarding")}
+                      >
                         {guarantor ? t("profile.updateGuarantor") : t("profile.addGuarantor")}
                       </Button>
                     }
@@ -1117,7 +1143,9 @@ export default function ProfilePage({ onNavigate, user }: Props) {
                       <div className="flex items-center justify-between py-1.5">
                         <span className="text-sm text-stone-500">Verification status</span>
                         <Badge variant={guarantor.isVerified ? "success" : "warning"} size="sm" dot>
-                          {guarantor.isVerified ? t(enumKey("verification", "approved")) : t(enumKey("verification", "pending"))}
+                          {guarantor.isVerified
+                            ? t(enumKey("verification", "approved"))
+                            : t(enumKey("verification", "pending"))}
                         </Badge>
                       </div>
                     </CardBody>

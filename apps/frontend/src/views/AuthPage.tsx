@@ -26,7 +26,7 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
   const [role, setRole] = useState<"borrower" | "lender">("borrower");
-  
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -124,13 +124,9 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
           <h2 className="font-display text-4xl text-white leading-tight mb-4">
             {t("landing.heroTitle1")}
           </h2>
-          <p className="text-stone-400 leading-relaxed">
-            {t("landing.heroBody")}
-          </p>
+          <p className="text-stone-400 leading-relaxed">{t("landing.heroBody")}</p>
         </div>
-        <p className="text-xs text-stone-600">
-          {t("app.copyright")}
-        </p>
+        <p className="text-xs text-stone-600">{t("app.copyright")}</p>
       </div>
 
       {/* Right Form */}

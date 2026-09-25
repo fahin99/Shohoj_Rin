@@ -50,7 +50,10 @@ export default function SettingsPage({ onNavigate, user }: Props) {
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [usernameSuccess, setUsernameSuccess] = useState(false);
 
-  const userName = getDisplayName(user, currentUsername ? `@${currentUsername}` : t("settings.account"));
+  const userName = getDisplayName(
+    user,
+    currentUsername ? `@${currentUsername}` : t("settings.account"),
+  );
 
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
@@ -74,8 +77,8 @@ export default function SettingsPage({ onNavigate, user }: Props) {
       setIsEditingUsername(false);
       setUsernameSuccess(true);
       router.refresh();
-    } catch (err: any) {
-      setUsernameError(err?.message || "Failed to update username");
+    } catch (err) {
+      setUsernameError(err instanceof Error ? err.message : "Failed to update username");
     } finally {
       setUsernameSaving(false);
     }
@@ -90,9 +93,7 @@ export default function SettingsPage({ onNavigate, user }: Props) {
       router.replace("/");
       router.refresh();
     } catch (error) {
-      setLogoutError(
-        error instanceof Error ? error.message : t("settings.logoutFailedTitle"),
-      );
+      setLogoutError(error instanceof Error ? error.message : t("settings.logoutFailedTitle"));
     } finally {
       setLogoutLoading(false);
     }
@@ -136,7 +137,12 @@ export default function SettingsPage({ onNavigate, user }: Props) {
             />
             <CardBody>
               {usernameSuccess && !isEditingUsername && (
-                <Alert variant="success" title="Username updated successfully" dismissible className="mb-4">
+                <Alert
+                  variant="success"
+                  title="Username updated successfully"
+                  dismissible
+                  className="mb-4"
+                >
                   Your username has been updated to @{currentUsername}.
                 </Alert>
               )}
@@ -202,7 +208,10 @@ export default function SettingsPage({ onNavigate, user }: Props) {
           </Card>
 
           <Card>
-            <CardHeader title={t("settings.security")} description={t("settings.securityDescription")} />
+            <CardHeader
+              title={t("settings.security")}
+              description={t("settings.securityDescription")}
+            />
             <CardBody className="flex flex-col gap-4">
               <Alert variant="info" title={t("settings.changePasswordTitle")}>
                 {t("settings.changePasswordBody")}

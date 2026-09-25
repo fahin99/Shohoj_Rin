@@ -93,7 +93,8 @@ const bn: Record<TranslationKey, string> = {
 
   // ── marketplace ──
   "marketplace.title": "ঋণ মার্কেটপ্লেস",
-  "marketplace.description": "বাংলাদেশজুড়ে বিশ্বস্ত ঋণদাতাদের কাছ থেকে ঋণ পণ্য তুলনা করুন এবং মিনিটেই আবেদন করুন।",
+  "marketplace.description":
+    "বাংলাদেশজুড়ে বিশ্বস্ত ঋণদাতাদের কাছ থেকে ঋণ পণ্য তুলনা করুন এবং মিনিটেই আবেদন করুন।",
   "marketplace.searchPlaceholder": "ঋণের নাম বা প্রদানকারী দিয়ে খুঁজুন",
   "marketplace.sortRecommended": "প্রস্তাবিত",
   "marketplace.sortInterestAsc": "সুদের হার: কম থেকে বেশি",
@@ -102,7 +103,8 @@ const bn: Record<TranslationKey, string> = {
   "marketplace.loansFound_one": "{count}টি ঋণ পাওয়া গেছে",
   "marketplace.loansFound_other": "{count}টি ঋণ পাওয়া গেছে",
   "marketplace.emptyTitle": "আপনার ফিল্টারের সাথে কোনো ঋণ মেলেনি",
-  "marketplace.emptyDescription": "একটি ভিন্ন বিভাগ চেষ্টা করুন অথবা সব উপলব্ধ ঋণ পণ্য দেখতে আপনার অনুসন্ধান মুছে ফেলুন।",
+  "marketplace.emptyDescription":
+    "একটি ভিন্ন বিভাগ চেষ্টা করুন অথবা সব উপলব্ধ ঋণ পণ্য দেখতে আপনার অনুসন্ধান মুছে ফেলুন।",
   "marketplace.clearFilters": "ফিল্টার মুছুন",
   "marketplace.viewDetails": "বিস্তারিত দেখুন",
   "marketplace.apply": "আবেদন করুন",
@@ -138,7 +140,8 @@ const bn: Record<TranslationKey, string> = {
   "loanDetails.repaymentDuration": "পরিশোধের মেয়াদ",
   "loanDetails.estimatedEmi": "আনুমানিক মাসিক কিস্তি (EMI)",
   "loanDetails.applyForThisLoan": "এই ঋণের জন্য আবেদন করুন",
-  "loanDetails.estimateDisclaimer": "এটি শুধুমাত্র একটি হিসাব। আপনার আবেদন পর্যালোচনার পর চূড়ান্ত শর্তাবলী নিশ্চিত করা হবে।",
+  "loanDetails.estimateDisclaimer":
+    "এটি শুধুমাত্র একটি হিসাব। আপনার আবেদন পর্যালোচনার পর চূড়ান্ত শর্তাবলী নিশ্চিত করা হবে।",
   "loanDetails.monthsUnit": "{months} মাস",
 
   // ── application form ──
@@ -154,11 +157,13 @@ const bn: Record<TranslationKey, string> = {
   "application.employmentType": "কর্মসংস্থানের ধরন",
   "application.monthlyIncome": "মাসিক আয়",
   "application.readyToSubmit": "জমা দেওয়ার জন্য প্রস্তুত",
-  "application.readyToSubmitBody": "নিচের বিবরণ পর্যালোচনা করুন। জমা দেওয়ার আগে পরিবর্তন করতে পেছনে যেতে পারেন।",
+  "application.readyToSubmitBody":
+    "নিচের বিবরণ পর্যালোচনা করুন। জমা দেওয়ার আগে পরিবর্তন করতে পেছনে যেতে পারেন।",
   "application.summary": "আবেদনের সারসংক্ষেপ",
   "application.estimatedEmi": "আনুমানিক মাসিক কিস্তি (EMI)",
   "application.identityVerified": "পরিচয় ও ঠিকানা যাচাইকৃত",
-  "application.identityVerifiedBody": "আপনার পূর্ণ নাম, জাতীয় পরিচয়পত্র, NID ছবি এবং বর্তমান ঠিকানা আপনার অনবোর্ডিং প্রোফাইল থেকে সংযুক্ত করা হয়েছে।",
+  "application.identityVerifiedBody":
+    "আপনার পূর্ণ নাম, জাতীয় পরিচয়পত্র, NID ছবি এবং বর্তমান ঠিকানা আপনার অনবোর্ডিং প্রোফাইল থেকে সংযুক্ত করা হয়েছে।",
   "application.profileKyc": "প্রোফাইল KYC",
   "application.submit": "আবেদন জমা দিন",
   "application.submitting": "জমা দেওয়া হচ্ছে…",
@@ -189,7 +194,8 @@ const bn: Record<TranslationKey, string> = {
   "dashboard.amountBorrowed": "ধার করা পরিমাণ",
   "dashboard.viewLoanDetails": "ঋণের বিবরণ দেখুন",
   "dashboard.emptyLoanTitle": "এখনো কোনো সক্রিয় ঋণ নেই",
-  "dashboard.emptyLoanDescription": "উপলব্ধ ঋণসমূহ দেখুন এবং আপনার আর্থিক যাত্রা শুরু করতে মিনিটেই আবেদন করুন।",
+  "dashboard.emptyLoanDescription":
+    "উপলব্ধ ঋণসমূহ দেখুন এবং আপনার আর্থিক যাত্রা শুরু করতে মিনিটেই আবেদন করুন।",
   "dashboard.exploreLoans": "ঋণ খুঁজুন",
   "dashboard.learnMore": "আরও জানুন",
   "dashboard.recentTransactions": "সাম্প্রতিক লেনদেন",
@@ -203,7 +209,8 @@ const bn: Record<TranslationKey, string> = {
   "dashboard.payNow": "এখনই পরিশোধ করুন",
   "dashboard.lookingForFinancing": "অর্থায়ন খুঁজছেন?",
   "dashboard.compareLoanOptions": "ঋণের বিকল্প তুলনা করুন",
-  "dashboard.compareLoanOptionsBody": "স্বচ্ছ শর্তাবলী, দ্রুত অনুমোদন এবং স্পষ্ট পরিশোধের শর্তাবলী।",
+  "dashboard.compareLoanOptionsBody":
+    "স্বচ্ছ শর্তাবলী, দ্রুত অনুমোদন এবং স্পষ্ট পরিশোধের শর্তাবলী।",
   "dashboard.txCompleted": "সম্পন্ন",
   "dashboard.txFailed": "ব্যর্থ",
   "dashboard.txPending": "অপেক্ষমাণ",
@@ -241,7 +248,8 @@ const bn: Record<TranslationKey, string> = {
   "activeLoan.agreementHint": "আপনার ঋণের স্বাক্ষরিত চুক্তি এবং প্রকাশ নথি।",
   "activeLoan.downloadPdf": "PDF ডাউনলোড করুন",
   "activeLoan.emptyTitle": "এখনো কোনো সক্রিয় ঋণ নেই",
-  "activeLoan.emptyDescription": "আপনার বর্তমানে কোনো সক্রিয় ঋণ নেই। ঋণের বিকল্প খুঁজুন এবং মিনিটেই অনলাইনে আবেদন করুন।",
+  "activeLoan.emptyDescription":
+    "আপনার বর্তমানে কোনো সক্রিয় ঋণ নেই। ঋণের বিকল্প খুঁজুন এবং মিনিটেই অনলাইনে আবেদন করুন।",
   "activeLoan.scheduleMonth": "মাস",
   "activeLoan.scheduleDue": "বাকির তারিখ",
   "activeLoan.schedulePrincipal": "আসল",
@@ -269,7 +277,8 @@ const bn: Record<TranslationKey, string> = {
   "repayment.amountDue": "বাকি পরিমাণ",
   "repayment.due": "বাকি",
   "repayment.overdueTitle": "পরিশোধ মেয়াদোত্তীর্ণ",
-  "repayment.overdueBody": "এই কিস্তিটি মেয়াদোত্তীর্ণ। ৩ দিনের মধ্যে পরিশোধ না করলে বিলম্ব ফি প্রযোজ্য হতে পারে।",
+  "repayment.overdueBody":
+    "এই কিস্তিটি মেয়াদোত্তীর্ণ। ৩ দিনের মধ্যে পরিশোধ না করলে বিলম্ব ফি প্রযোজ্য হতে পারে।",
   "repayment.selectInstallment": "পরিশোধের জন্য একটি কিস্তি নির্বাচন করুন",
   "repayment.installmentNumber": "কিস্তি #{number}",
   "repayment.expectedAmount": "প্রত্যাশিত",
@@ -291,7 +300,8 @@ const bn: Record<TranslationKey, string> = {
   "repayment.emptyDescription": "আপনার বর্তমানে পরিশোধ প্রয়োজন এমন কোনো সক্রিয় ঋণ নেই।",
   "repayment.confirmTitle": "পেমেন্ট নিশ্চিত করুন",
   "repayment.confirmBody": "আপনি কিস্তি #{number} এর জন্য {amount} পরিশোধ করতে চলেছেন।",
-  "repayment.mvpDisclaimer": "এই MVP সরাসরি সিস্টেমে পরিশোধ রেকর্ড করে। কোনো বাহ্যিক পেমেন্ট গেটওয়ে সংযুক্ত নেই।",
+  "repayment.mvpDisclaimer":
+    "এই MVP সরাসরি সিস্টেমে পরিশোধ রেকর্ড করে। কোনো বাহ্যিক পেমেন্ট গেটওয়ে সংযুক্ত নেই।",
   "repayment.successTitleCompleted": "ঋণ সম্পূর্ণ পরিশোধিত! 🎉",
   "repayment.successTitle": "পেমেন্ট সফল হয়েছে",
   "repayment.successBodyCompleted": "অভিনন্দন! আপনি আপনার ঋণের সব পরিশোধ সম্পন্ন করেছেন।",
@@ -313,11 +323,13 @@ const bn: Record<TranslationKey, string> = {
   "appStatusPage.filterApproved": "অনুমোদিত ও বিতরণকৃত",
   "appStatusPage.filterRejected": "প্রত্যাখ্যাত",
   "appStatusPage.emptyTitle": "এখানে কোনো আবেদন নেই",
-  "appStatusPage.emptyDescription": "একটি ভিন্ন ফিল্টার চেষ্টা করুন, অথবা একটি নতুন ঋণ আবেদন শুরু করুন।",
+  "appStatusPage.emptyDescription":
+    "একটি ভিন্ন ফিল্টার চেষ্টা করুন, অথবা একটি নতুন ঋণ আবেদন শুরু করুন।",
   "appStatusPage.activeInMyLoans": "আমার ঋণে সক্রিয়",
   "appStatusPage.submittedOn": "{date} তারিখে জমা দেওয়া হয়েছে",
   "appStatusPage.infoRequiredTitle": "অতিরিক্ত তথ্য প্রয়োজন",
-  "appStatusPage.infoRequiredBody": "এই আবেদনটি পর্যালোচনা চালিয়ে যেতে {provider} একটি হালনাগাদ ব্যাংক বিবরণী প্রয়োজন।",
+  "appStatusPage.infoRequiredBody":
+    "এই আবেদনটি পর্যালোচনা চালিয়ে যেতে {provider} একটি হালনাগাদ ব্যাংক বিবরণী প্রয়োজন।",
   "appStatusPage.submitDocuments": "নথি জমা দিন",
   "appStatusPage.verifyAndDisburse": "যাচাই ও ঋণ বিতরণ করুন",
   "appStatusPage.goToMyLoans": "আমার ঋণে দেখুন →",
@@ -342,12 +354,14 @@ const bn: Record<TranslationKey, string> = {
   "profile.noGuarantor": "এখনো কোনো জামিনদারের তথ্য যোগ করা হয়নি।",
   "profile.noGuarantorHint": "আপনার আবেদন শক্তিশালী করতে অনবোর্ডিং থেকে একজন জামিনদার যোগ করুন।",
   "profile.trustScore": "ট্রাস্ট স্কোর",
-  "profile.trustScoreHint": "ঋণদাতারা আপনার আবেদনের সাথে ব্যবহার করেন এমন একটি ব্যাখ্যাযোগ্য স্কোর।",
+  "profile.trustScoreHint":
+    "ঋণদাতারা আপনার আবেদনের সাথে ব্যবহার করেন এমন একটি ব্যাখ্যাযোগ্য স্কোর।",
   "profile.firstTimeBorrower": "প্রথমবার ঋণগ্রহীতা",
   "profile.confidence": "নির্ভরযোগ্যতা",
   "profile.lastUpdated": "সর্বশেষ আপডেট {date}",
   "profile.noTrustScoreTitle": "এখনো কোনো ট্রাস্ট স্কোর নেই",
-  "profile.noTrustScoreDescription": "ট্রাস্ট স্কোর তৈরি করতে আপনার প্রোফাইল ও যাচাইকরণ সম্পূর্ণ করুন।",
+  "profile.noTrustScoreDescription":
+    "ট্রাস্ট স্কোর তৈরি করতে আপনার প্রোফাইল ও যাচাইকরণ সম্পূর্ণ করুন।",
   "profile.notFoundTitle": "প্রোফাইল পাওয়া যায়নি",
   "profile.notFoundDescription": "আমরা আপনার অ্যাকাউন্টের জন্য কোনো প্রোফাইল খুঁজে পাইনি।",
   "profile.company": "কোম্পানি / প্রতিষ্ঠান",
@@ -376,7 +390,8 @@ const bn: Record<TranslationKey, string> = {
   "settings.security": "নিরাপত্তা",
   "settings.securityDescription": "সহজ ঋণে আপনি কীভাবে সাইন ইন করেন তা পরিচালনা করুন।",
   "settings.changePasswordTitle": "পাসওয়ার্ড পরিবর্তন করুন",
-  "settings.changePasswordBody": "এই পৃষ্ঠা থেকে পাসওয়ার্ড পরিবর্তন এখনো উপলব্ধ নয়। শীঘ্রই আবার দেখুন।",
+  "settings.changePasswordBody":
+    "এই পৃষ্ঠা থেকে পাসওয়ার্ড পরিবর্তন এখনো উপলব্ধ নয়। শীঘ্রই আবার দেখুন।",
   "settings.logoutFailedTitle": "লগ আউট করা যায়নি",
   "settings.logOutAction": "লগ আউট",
   "settings.logOutHint": "এই ডিভাইসে আপনার সেশন শেষ করুন।",
@@ -419,7 +434,8 @@ const bn: Record<TranslationKey, string> = {
   // ── landing page ──
   "landing.heroTitle1": "আর্থিক বিষয়",
   "landing.heroTitleEmphasis": "সহজ হয়ে গেল।",
-  "landing.heroBody": "আপনার জীবনের সাথে মানানসই ঋণ খুঁজুন, প্রতিটি শর্ত স্পষ্টভাবে বুঝুন এবং চাপ ছাড়াই আপনার পরিশোধ পরিচালনা করুন। সহজ ঋণ প্রথমবার ঋণগ্রহীতাদের জন্য তৈরি।",
+  "landing.heroBody":
+    "আপনার জীবনের সাথে মানানসই ঋণ খুঁজুন, প্রতিটি শর্ত স্পষ্টভাবে বুঝুন এবং চাপ ছাড়াই আপনার পরিশোধ পরিচালনা করুন। সহজ ঋণ প্রথমবার ঋণগ্রহীতাদের জন্য তৈরি।",
   "landing.startExploring": "ঋণ খোঁজা শুরু করুন",
   "landing.learnAboutBorrowing": "ঋণ নেওয়া সম্পর্কে জানুন",
   "landing.statLoansFacilitated": "সহায়তাকৃত ঋণ",
@@ -432,20 +448,24 @@ const bn: Record<TranslationKey, string> = {
   "landing.viewAllLoans": "সব ঋণ দেখুন →",
   "landing.educationEyebrow": "আপনার জ্ঞান তৈরি করুন",
   "landing.educationTitle": "আর্থিক শিক্ষা",
-  "landing.educationBody": "টাকা বোঝা উচিত ধার নেওয়ার আগে। আমাদের গাইডগুলো আর্থিক ধারণাগুলোকে সহজবোধ্য করে তোলে।",
+  "landing.educationBody":
+    "টাকা বোঝা উচিত ধার নেওয়ার আগে। আমাদের গাইডগুলো আর্থিক ধারণাগুলোকে সহজবোধ্য করে তোলে।",
   "landing.allArticles": "সব নিবন্ধ →",
   "landing.trustEyebrow": "কেন সহজ ঋণ",
   "landing.trustTitle": "বিশ্বাসের উপর নির্মিত",
-  "landing.trustBody": "আমরা এই প্ল্যাটফর্মের প্রতিটি অংশ এমনভাবে ডিজাইন করেছি যাতে আপনি সবসময় জানেন আর্থিকভাবে আপনার অবস্থান কোথায়।",
+  "landing.trustBody":
+    "আমরা এই প্ল্যাটফর্মের প্রতিটি অংশ এমনভাবে ডিজাইন করেছি যাতে আপনি সবসময় জানেন আর্থিকভাবে আপনার অবস্থান কোথায়।",
   "landing.ctaTitle1": "আপনার অর্থনীতির",
   "landing.ctaTitle2": "নিয়ন্ত্রণ নিতে প্রস্তুত?",
-  "landing.ctaBody": "৫০,০০০+ মানুষের সাথে যোগ দিন যারা সঠিক ঋণ খুঁজে পেতে এবং স্পষ্টভাবে তাদের পরিশোধ পরিচালনা করতে সহজ ঋণ ব্যবহার করেছেন।",
+  "landing.ctaBody":
+    "৫০,০০০+ মানুষের সাথে যোগ দিন যারা সঠিক ঋণ খুঁজে পেতে এবং স্পষ্টভাবে তাদের পরিশোধ পরিচালনা করতে সহজ ঋণ ব্যবহার করেছেন।",
   "landing.createFreeAccount": "বিনামূল্যে অ্যাকাউন্ট তৈরি করুন",
   "landing.exploreLoansFirst": "প্রথমে ঋণ খুঁজুন",
 
   // ── lender dashboard / opportunities ──
   "lender.welcomeBack": "স্বাগতম, {name}",
-  "lender.subtitle": "আপনার মোতায়েনকৃত মূলধন, অর্থায়িত ঋণ ট্র্যাক করুন এবং অর্থায়নের জন্য নতুন আবেদন পর্যালোচনা করুন।",
+  "lender.subtitle":
+    "আপনার মোতায়েনকৃত মূলধন, অর্থায়িত ঋণ ট্র্যাক করুন এবং অর্থায়নের জন্য নতুন আবেদন পর্যালোচনা করুন।",
   "lender.totalDeployed": "মোট মোতায়েনকৃত",
   "lender.acrossLoans": "{count}টি ঋণ জুড়ে",
   "lender.activeLoans": "সক্রিয় ঋণ",
@@ -482,7 +502,8 @@ const bn: Record<TranslationKey, string> = {
 
   // ── admin ──
   "admin.title": "অ্যাডমিন ড্যাশবোর্ড",
-  "admin.description": "আবেদন, ব্যবহারকারী, প্রদানকারী এবং প্ল্যাটফর্মের স্বাস্থ্য পর্যবেক্ষণ করুন।",
+  "admin.description":
+    "আবেদন, ব্যবহারকারী, প্রদানকারী এবং প্ল্যাটফর্মের স্বাস্থ্য পর্যবেক্ষণ করুন।",
   "admin.pendingReview": "পর্যালোচনার অপেক্ষায়",
   "admin.approvalRate": "অনুমোদনের হার",
   "admin.totalDisbursed": "মোট বিতরণকৃত",
@@ -508,7 +529,8 @@ const bn: Record<TranslationKey, string> = {
   "education.eyebrow": "আর্থিক শিক্ষা",
   "education.title1": "টাকা বুঝুন",
   "education.titleEmphasis": "ধার নেওয়ার আগে।",
-  "education.body": "সুদ, পরিশোধ, ঋণ এবং পরিকল্পনার উপর স্পষ্ট, জারগনমুক্ত গাইড — বাংলাদেশজুড়ে প্রথমবার ঋণগ্রহীতাদের জন্য লেখা।",
+  "education.body":
+    "সুদ, পরিশোধ, ঋণ এবং পরিকল্পনার উপর স্পষ্ট, জারগনমুক্ত গাইড — বাংলাদেশজুড়ে প্রথমবার ঋণগ্রহীতাদের জন্য লেখা।",
   "education.searchPlaceholder": "নিবন্ধ খুঁজুন...",
   "education.featured": "বৈশিষ্ট্যযুক্ত",
   "education.readGuide": "গাইড পড়ুন",
@@ -516,14 +538,16 @@ const bn: Record<TranslationKey, string> = {
   "education.emptyDescription": "একটি ভিন্ন অনুসন্ধান শব্দ বা বিভাগ চেষ্টা করুন।",
   "education.calculatorEyebrow": "নিজে চেষ্টা করুন",
   "education.calculatorTitle": "ঋণ খরচ ক্যালকুলেটর",
-  "education.calculatorBody": "পরিমাণ, হার এবং মেয়াদ কীভাবে আপনার মাসিক কিস্তি পরিবর্তন করে তা দেখুন।",
+  "education.calculatorBody":
+    "পরিমাণ, হার এবং মেয়াদ কীভাবে আপনার মাসিক কিস্তি পরিবর্তন করে তা দেখুন।",
   "education.loanAmount": "ঋণের পরিমাণ",
   "education.interestRateLabel": "সুদের হার (% বার্ষিক)",
   "education.tenureLabel": "মেয়াদ (মাস)",
   "education.monthlyInstalment": "মাসিক কিস্তি (EMI)",
   "education.totalInterest": "মোট সুদ",
   "education.totalRepayment": "মোট পরিশোধ",
-  "education.calculatorDisclaimer": "শুধুমাত্র হিসাব। প্রকৃত অফার ঋণদাতা এবং আপনার যোগ্যতার উপর নির্ভর করে।",
+  "education.calculatorDisclaimer":
+    "শুধুমাত্র হিসাব। প্রকৃত অফার ঋণদাতা এবং আপনার যোগ্যতার উপর নির্ভর করে।",
   "education.glossaryEyebrow": "মূল পরিভাষা",
   "education.glossaryTitle": "শব্দকোষ",
   "education.faqEyebrow": "সাধারণ প্রশ্ন",

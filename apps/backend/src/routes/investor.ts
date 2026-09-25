@@ -41,7 +41,12 @@ async function ensureRepaymentSchedules(
     await client.query(
       `INSERT INTO repayment_schedules (loan_id, installment_number, due_date, expected_amount, status)
        VALUES ($1, $2, $3, $4, 'pending')`,
-      [loanId, item.installmentNumber, item.dueDate.toISOString().split("T")[0], Number(item.totalInstallment)],
+      [
+        loanId,
+        item.installmentNumber,
+        item.dueDate.toISOString().split("T")[0],
+        Number(item.totalInstallment),
+      ],
     );
   }
 }
@@ -126,7 +131,9 @@ router.get("/profile", requireAuth, requireLender, async (req, res) => {
     return res.status(200).json({ success: true, data: { ...result.rows[0], company } });
   } catch (error) {
     console.error("Failed to fetch investor profile:", error);
-    return res.status(500).json({ success: false, error: { message: "Failed to fetch investor profile" } });
+    return res
+      .status(500)
+      .json({ success: false, error: { message: "Failed to fetch investor profile" } });
   }
 });
 
@@ -143,7 +150,9 @@ router.put("/profile", requireAuth, requireLender, async (req, res) => {
   const data = parsed.data;
   const allowedCategories = ["education", "emergency", "business", "personal", "development"];
   if (data.preferredCategories) {
-    const invalid = data.preferredCategories.filter((category) => !allowedCategories.includes(category));
+    const invalid = data.preferredCategories.filter(
+      (category) => !allowedCategories.includes(category),
+    );
     if (invalid.length > 0) {
       return res.status(400).json({
         success: false,
@@ -164,9 +173,14 @@ router.put("/profile", requireAuth, requireLender, async (req, res) => {
       );
       if (existing.rowCount && existing.rowCount > 0) {
         await client.query("ROLLBACK");
-        return res.status(409).json({ success: false, error: { message: "This username is already taken" } });
+        return res
+          .status(409)
+          .json({ success: false, error: { message: "This username is already taken" } });
       }
-      await client.query(`UPDATE users SET username = $1, updated_at = NOW() WHERE user_id = $2`, [newUsername, userId]);
+      await client.query(`UPDATE users SET username = $1, updated_at = NOW() WHERE user_id = $2`, [
+        newUsername,
+        userId,
+      ]);
     }
 
     if (data.companyName) {
@@ -180,11 +194,19 @@ router.put("/profile", requireAuth, requireLender, async (req, res) => {
            branch = COALESCE(EXCLUDED.branch, funding_partners.branch),
            goal = COALESCE(EXCLUDED.goal, funding_partners.goal)
          RETURNING partner_id`,
-        [companyName, data.companyAddress ?? null, data.companyBranch ?? null, data.companyGoal ?? null],
+        [
+          companyName,
+          data.companyAddress ?? null,
+          data.companyBranch ?? null,
+          data.companyGoal ?? null,
+        ],
       );
       const partnerId: string = partnerResult.rows[0].partner_id;
 
-      await client.query(`UPDATE users SET partner_id = $1 WHERE user_id = $2`, [partnerId, userId]);
+      await client.query(`UPDATE users SET partner_id = $1 WHERE user_id = $2`, [
+        partnerId,
+        userId,
+      ]);
     }
 
     const result = await client.query(
@@ -233,7 +255,9 @@ router.put("/profile", requireAuth, requireLender, async (req, res) => {
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Failed to update investor profile:", error);
-    return res.status(500).json({ success: false, error: { message: "Failed to update investor profile" } });
+    return res
+      .status(500)
+      .json({ success: false, error: { message: "Failed to update investor profile" } });
   } finally {
     client.release();
   }
@@ -343,7 +367,9 @@ router.get("/opportunities", requireAuth, requireLender, async (req, res) => {
     return res.status(200).json({ success: true, data: opportunities });
   } catch (error) {
     console.error("Failed to fetch opportunities:", error);
-    return res.status(500).json({ success: false, error: { message: "Failed to fetch opportunities" } });
+    return res
+      .status(500)
+      .json({ success: false, error: { message: "Failed to fetch opportunities" } });
   }
 });
 
@@ -368,15 +394,21 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
     );
     if (matchResult.rowCount === 0) {
       await client.query("ROLLBACK");
-      return res.status(404).json({ success: false, error: { message: "This application is not available to you" } });
+      return res
+        .status(404)
+        .json({ success: false, error: { message: "This application is not available to you" } });
     }
     if (matchResult.rows[0].status === "accepted") {
       await client.query("ROLLBACK");
-      return res.status(409).json({ success: false, error: { message: "You have already accepted this application" } });
+      return res
+        .status(409)
+        .json({ success: false, error: { message: "You have already accepted this application" } });
     }
     if (matchResult.rows[0].status === "rejected") {
       await client.query("ROLLBACK");
-      return res.status(409).json({ success: false, error: { message: "You have already rejected this application" } });
+      return res
+        .status(409)
+        .json({ success: false, error: { message: "You have already rejected this application" } });
     }
 
     const appResult = await client.query(
@@ -395,7 +427,9 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
     const app = appResult.rows[0] as any;
     if (!["submitted", "under_review", "approved"].includes(app.status)) {
       await client.query("ROLLBACK");
-      return res.status(400).json({ success: false, error: { message: "Application is not eligible for funding" } });
+      return res
+        .status(400)
+        .json({ success: false, error: { message: "Application is not eligible for funding" } });
     }
 
     const existingCommitment = await client.query(
@@ -407,7 +441,9 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
     );
     if (existingCommitment.rowCount) {
       await client.query("ROLLBACK");
-      return res.status(409).json({ success: false, error: { message: "You have already funded this application" } });
+      return res
+        .status(409)
+        .json({ success: false, error: { message: "You have already funded this application" } });
     }
 
     const committedResult = await client.query(
@@ -416,12 +452,20 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
        WHERE application_id = $1 AND status = 'committed'`,
       [applicationId],
     );
-    const remainingAmount = Math.round((Number(app.requested_amount) - Number(committedResult.rows[0].committed_amount)) * 100) / 100;
+    const remainingAmount =
+      Math.round(
+        (Number(app.requested_amount) - Number(committedResult.rows[0].committed_amount)) * 100,
+      ) / 100;
     const fundingAmount = Math.round(parsed.data.amount * 100) / 100;
 
     if (fundingAmount <= 0 || fundingAmount > remainingAmount) {
       await client.query("ROLLBACK");
-      return res.status(400).json({ success: false, error: { message: "Funding amount must not exceed the remaining requested amount" } });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: { message: "Funding amount must not exceed the remaining requested amount" },
+        });
     }
 
     const commitmentResult = await client.query(
@@ -432,7 +476,8 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
     );
     const commitment = commitmentResult.rows[0] as any;
     const totalCommittedAmount = Number(committedResult.rows[0].committed_amount) + fundingAmount;
-    const applicationStatus = totalCommittedAmount >= Number(app.requested_amount) ? "approved" : app.status;
+    const applicationStatus =
+      totalCommittedAmount >= Number(app.requested_amount) ? "approved" : app.status;
 
     if (applicationStatus === "approved" && app.status !== "approved") {
       await client.query(
@@ -617,11 +662,20 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
     });
   } catch (error) {
     await client.query("ROLLBACK");
-    if (typeof error === "object" && error && "code" in error && (error as { code?: string }).code === "23505") {
-      return res.status(409).json({ success: false, error: { message: "You have already funded this application" } });
+    if (
+      typeof error === "object" &&
+      error &&
+      "code" in error &&
+      (error as { code?: string }).code === "23505"
+    ) {
+      return res
+        .status(409)
+        .json({ success: false, error: { message: "You have already funded this application" } });
     }
     console.error("Failed to fund opportunity:", error);
-    return res.status(500).json({ success: false, error: { message: "Failed to record funding commitment" } });
+    return res
+      .status(500)
+      .json({ success: false, error: { message: "Failed to record funding commitment" } });
   } finally {
     client.release();
   }
@@ -630,7 +684,9 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
 router.post("/applications/:applicationId/reject", requireAuth, requireLender, async (req, res) => {
   const userId = (req as RequestWithAuth).auth!.userId;
   const applicationId = req.params.applicationId;
-  const parsed = z.object({ reason: z.string().trim().max(500).optional() }).safeParse(req.body ?? {});
+  const parsed = z
+    .object({ reason: z.string().trim().max(500).optional() })
+    .safeParse(req.body ?? {});
   if (!parsed.success) {
     return res.status(400).json({ success: false, error: { message: "Invalid request" } });
   }
@@ -647,11 +703,15 @@ router.post("/applications/:applicationId/reject", requireAuth, requireLender, a
     );
     if (matchResult.rowCount === 0) {
       await client.query("ROLLBACK");
-      return res.status(404).json({ success: false, error: { message: "This application is not available to you" } });
+      return res
+        .status(404)
+        .json({ success: false, error: { message: "This application is not available to you" } });
     }
     if (matchResult.rows[0].status === "accepted") {
       await client.query("ROLLBACK");
-      return res.status(409).json({ success: false, error: { message: "You have already accepted this application" } });
+      return res
+        .status(409)
+        .json({ success: false, error: { message: "You have already accepted this application" } });
     }
 
     await client.query(
@@ -672,7 +732,9 @@ router.post("/applications/:applicationId/reject", requireAuth, requireLender, a
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Failed to reject application:", error);
-    return res.status(500).json({ success: false, error: { message: "Failed to reject application" } });
+    return res
+      .status(500)
+      .json({ success: false, error: { message: "Failed to reject application" } });
   } finally {
     client.release();
   }
@@ -751,16 +813,24 @@ router.get("/portfolio", requireAuth, requireLender, async (req, res) => {
       };
     });
 
-    const totalDeployed = fundedLoans.reduce((sum: number, loan: any) => sum + loan.fundedAmount, 0);
+    const totalDeployed = fundedLoans.reduce(
+      (sum: number, loan: any) => sum + loan.fundedAmount,
+      0,
+    );
     const activeLoans = fundedLoans.filter((loan: any) => loan.loanStatus === "active").length;
-    const totalExpected = fundedLoans.reduce((sum: number, loan: any) => sum + loan.totalExpected, 0);
+    const totalExpected = fundedLoans.reduce(
+      (sum: number, loan: any) => sum + loan.totalExpected,
+      0,
+    );
     const totalPaid = fundedLoans.reduce((sum: number, loan: any) => sum + loan.totalPaid, 0);
     const weightedYield = fundedLoans.reduce(
       (sum: number, loan: any) => sum + (Number(loan.interestRate) || 0) * loan.fundedAmount,
       0,
     );
-    const averageYield = totalDeployed > 0 ? Math.round((weightedYield / totalDeployed) * 100) / 100 : 0;
-    const repaymentRate = totalExpected > 0 ? Math.round((totalPaid / totalExpected) * 10000) / 100 : 0;
+    const averageYield =
+      totalDeployed > 0 ? Math.round((weightedYield / totalDeployed) * 100) / 100 : 0;
+    const repaymentRate =
+      totalExpected > 0 ? Math.round((totalPaid / totalExpected) * 10000) / 100 : 0;
     const atRiskExposure = fundedLoans
       .filter((loan: any) => ["overdue", "delinquent", "defaulted"].includes(loan.loanStatus))
       .reduce((sum: number, loan: any) => sum + loan.remainingAmount, 0);
@@ -779,7 +849,9 @@ router.get("/portfolio", requireAuth, requireLender, async (req, res) => {
     });
   } catch (error) {
     console.error("Failed to fetch portfolio:", error);
-    return res.status(500).json({ success: false, error: { message: "Failed to fetch portfolio" } });
+    return res
+      .status(500)
+      .json({ success: false, error: { message: "Failed to fetch portfolio" } });
   }
 });
 

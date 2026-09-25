@@ -33,7 +33,9 @@ function statusToStage(status: string): number {
     case "submitted":
       return 1;
     case "under-review":
+    case "under_review":
     case "info-required":
+    case "info_required":
       return 2;
     case "approved":
     case "rejected":
@@ -54,7 +56,13 @@ function matchesFilter(status: AppStatus, filter: FilterId) {
   if (filter === "all") return true;
   if (filter === "approved") return status === "approved" || status === "disbursed";
   if (filter === "rejected") return status === "rejected";
-  return status === "submitted" || status === "under-review" || status === "info-required";
+  return (
+    status === "submitted" ||
+    status === "under-review" ||
+    status === "under_review" ||
+    status === "info-required" ||
+    status === "info_required"
+  );
 }
 
 export default function ApplicationStatus({ onNavigate }: Props) {
@@ -119,7 +127,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
     t("appStatusPage.stage1"),
     t("appStatusPage.stage2"),
     t("appStatusPage.stage3"),
-    t("appStatusPage.stage4")
+    t("appStatusPage.stage4"),
   ];
 
   function getTimelineFor(app: StoredApplication) {
@@ -131,7 +139,10 @@ export default function ApplicationStatus({ onNavigate }: Props) {
         done: app.stage >= 2,
       },
       {
-        label: app.status === "rejected" ? t(enumKey("appStatus", "rejected")) : t("appStatusPage.stage3"),
+        label:
+          app.status === "rejected"
+            ? t(enumKey("appStatus", "rejected"))
+            : t("appStatusPage.stage3"),
         date: app.stage >= 3 ? t("loanStatus.completed") : t(enumKey("appStatus", "under-review")),
         done: app.stage >= 3,
       },
@@ -158,7 +169,12 @@ export default function ApplicationStatus({ onNavigate }: Props) {
         />
 
         {verifiedAlert && (
-          <Alert variant="success" title={t("appStatusPage.verifiedAlert")} dismissible className="mb-6">
+          <Alert
+            variant="success"
+            title={t("appStatusPage.verifiedAlert")}
+            dismissible
+            className="mb-6"
+          >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <span>{t("appStatusPage.verifiedAlert")}</span>
               <Button
@@ -203,7 +219,10 @@ export default function ApplicationStatus({ onNavigate }: Props) {
               icon={EmptyIcons.search}
               title={t("appStatusPage.emptyTitle")}
               description={t("appStatusPage.emptyDescription")}
-              action={{ label: t("dashboard.exploreLoans"), onClick: () => onNavigate("loan-marketplace") }}
+              action={{
+                label: t("dashboard.exploreLoans"),
+                onClick: () => onNavigate("loan-marketplace"),
+              }}
             />
           </Card>
         ) : (
@@ -231,7 +250,8 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                       </div>
                       <p className="text-sm text-stone-500 truncate">{app.provider}</p>
                       <p className="text-xs tabular-nums text-stone-400 mt-1">
-                        {app.referenceCode ? `${app.referenceCode} · ` : ""}{t("appStatusPage.submittedOn")} {formatDate(app.submitted)}
+                        {app.referenceCode ? `${app.referenceCode} · ` : ""}
+                        {t("appStatusPage.submittedOn")} {formatDate(app.submitted)}
                       </p>
                     </div>
                     <div className="shrink-0 flex flex-col items-end gap-2">
@@ -243,7 +263,11 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                   </div>
 
                   {app.status === "info-required" && (
-                    <Alert variant="warning" title={t("appStatusPage.infoRequiredTitle")} className="mt-4">
+                    <Alert
+                      variant="warning"
+                      title={t("appStatusPage.infoRequiredTitle")}
+                      className="mt-4"
+                    >
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
                         <span>
                           {t("appStatusPage.infoRequiredBody", { provider: app.provider })}
@@ -267,7 +291,7 @@ export default function ApplicationStatus({ onNavigate }: Props) {
                     />
                   </div>
 
-                    <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between">
+                  <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between">
                     <div>
                       {!showGoToLoans && isPrivilegedUser ? (
                         <Button

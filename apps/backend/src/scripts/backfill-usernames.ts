@@ -7,7 +7,10 @@ async function main() {
   console.log(`Found ${usersWithNull.rows.length} users with NULL username.`);
 
   for (const u of usersWithNull.rows) {
-    let base = u.email.split("@")[0].toLowerCase().replace(/[^a-z0-9_.-]/g, "_");
+    let base = u.email
+      .split("@")[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9_.-]/g, "_");
     if (base.length < 3) base = `${base}_usr`;
     let candidate = base;
     let counter = 1;

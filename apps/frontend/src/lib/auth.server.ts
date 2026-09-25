@@ -111,7 +111,7 @@ export async function requireAuthenticatedUser() {
 }
 
 export async function requireAdminUser() {
-  const user =await requireAuthenticatedUser();
+  const user = await requireAuthenticatedUser();
   if (user.role !== "admin") {
     redirect("/dashboard");
   }

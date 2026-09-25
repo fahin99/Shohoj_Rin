@@ -70,10 +70,10 @@ export async function updateProfile(userId: string, data: ProfileUpdateInput) {
         error.code = "USERNAME_TAKEN";
         throw error;
       }
-      await client.query(
-        `UPDATE users SET username = $1, updated_at = NOW() WHERE user_id = $2`,
-        [trimmedUsername, userId],
-      );
+      await client.query(`UPDATE users SET username = $1, updated_at = NOW() WHERE user_id = $2`, [
+        trimmedUsername,
+        userId,
+      ]);
     }
 
     let profileRow = null;

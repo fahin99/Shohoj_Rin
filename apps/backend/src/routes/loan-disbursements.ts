@@ -36,7 +36,7 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
     }
 
     const loan = loanResult.rows[0];
-    
+
     if (req.auth!.role === "borrower") {
       await client.query("ROLLBACK");
       return res.status(403).json({ success: false, error: { message: "Access denied" } });
@@ -84,10 +84,10 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
     const loanStatusAfterDisbursement =
       totalDisbursedAfter >= principalAmount ? "active" : "pending_disbursement";
 
-    await client.query(
-      `UPDATE loans SET status = $2, updated_at = NOW() WHERE loan_id = $1`,
-      [parsed.data.loanId, loanStatusAfterDisbursement],
-    );
+    await client.query(`UPDATE loans SET status = $2, updated_at = NOW() WHERE loan_id = $1`, [
+      parsed.data.loanId,
+      loanStatusAfterDisbursement,
+    ]);
 
     if (totalDisbursedAfter >= principalAmount) {
       await client.query(

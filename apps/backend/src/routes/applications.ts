@@ -249,7 +249,7 @@ router.get("/:id", requireAuth, async (req, res) => {
         `SELECT 1 FROM lender_application_matches WHERE application_id = $1 AND lender_user_id = $2
          UNION
          SELECT 1 FROM funding_commitments WHERE application_id = $1 AND lender_user_id = $2`,
-        [req.params.id, userId]
+        [req.params.id, userId],
       );
       if (accessCheck.rowCount === 0) {
         return res.status(403).json({
@@ -278,6 +278,5 @@ router.get("/:id", requireAuth, async (req, res) => {
 // router.post("/draft", requireAuth, async (req, res) => {
 //   const authReq = req as RequestWithAuth;
 //   const userId = authReq.auth!.userId;
-
 
 export default router;

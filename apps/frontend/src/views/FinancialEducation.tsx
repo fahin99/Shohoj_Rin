@@ -157,9 +157,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
             <br />
             <em className="not-italic text-teal">{t("education.titleEmphasis")}</em>
           </h1>
-          <p className="text-stone-500 leading-relaxed">
-            {t("education.body")}
-          </p>
+          <p className="text-stone-500 leading-relaxed">{t("education.body")}</p>
         </div>
       </section>
       {}
@@ -246,9 +244,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
             <h2 className="font-display text-3xl md:text-4xl text-navy mb-2">
               {t("education.calculatorTitle")}
             </h2>
-            <p className="text-stone-500">
-              {t("education.calculatorBody")}
-            </p>
+            <p className="text-stone-500">{t("education.calculatorBody")}</p>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-8 bg-offwhite border-[1.5px] border-navy rounded-[8px] shadow-nb p-6">
             <div className="flex flex-col gap-5 min-w-0">
@@ -292,21 +288,23 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-white border border-stone-200 rounded-[6px] p-4">
-                  <p className="text-xs text-stone-500 font-medium">{t("education.totalInterest")}</p>
+                  <p className="text-xs text-stone-500 font-medium">
+                    {t("education.totalInterest")}
+                  </p>
                   <p className="tabular-nums text-lg font-semibold text-navy mt-1">
                     {formatTaka(Math.round(totalInterest))}
                   </p>
                 </div>
                 <div className="bg-white border border-stone-200 rounded-[6px] p-4">
-                  <p className="text-xs text-stone-500 font-medium">{t("education.totalRepayment")}</p>
+                  <p className="text-xs text-stone-500 font-medium">
+                    {t("education.totalRepayment")}
+                  </p>
                   <p className="tabular-nums text-lg font-semibold text-navy mt-1">
                     {formatTaka(Math.round(totalRepayment))}
                   </p>
                 </div>
               </div>
-              <p className="text-xs text-stone-400 mt-1">
-                {t("education.calculatorDisclaimer")}
-              </p>
+              <p className="text-xs text-stone-400 mt-1">{t("education.calculatorDisclaimer")}</p>
             </div>
           </div>
         </div>
@@ -317,7 +315,9 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
           <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
             {t("education.glossaryEyebrow")}
           </p>
-          <h2 className="font-display text-3xl md:text-4xl text-navy">{t("education.glossaryTitle")}</h2>
+          <h2 className="font-display text-3xl md:text-4xl text-navy">
+            {t("education.glossaryTitle")}
+          </h2>
         </div>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
           {glossary.map((g) => (
@@ -335,7 +335,9 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
             <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-2">
               {t("education.faqEyebrow")}
             </p>
-            <h2 className="font-display text-3xl md:text-4xl text-navy">{t("education.faqTitle")}</h2>
+            <h2 className="font-display text-3xl md:text-4xl text-navy">
+              {t("education.faqTitle")}
+            </h2>
           </div>
           <div className="flex flex-col gap-3">
             {faqs.map((f, i) => (
@@ -362,9 +364,7 @@ export default function FinancialEducation({ onNavigate, user }: Props) {
             <h2 className="font-display text-3xl md:text-4xl text-white mb-3">
               {t("education.ctaTitle")}
             </h2>
-            <p className="text-stone-400 max-w-md leading-relaxed">
-              {t("education.ctaBody")}
-            </p>
+            <p className="text-stone-400 max-w-md leading-relaxed">{t("education.ctaBody")}</p>
           </div>
           <Button
             variant="primary"

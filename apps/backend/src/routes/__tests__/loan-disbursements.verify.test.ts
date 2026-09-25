@@ -30,7 +30,8 @@ const ADMIN_ID = "00000000-0000-4000-8000-0000000000a1";
 function makeClient() {
   const query = vi.fn(async (sql: string, params: any[] = []) => {
     const text = String(sql);
-    if (text === "BEGIN" || text === "COMMIT" || text === "ROLLBACK") return { rowCount: 0, rows: [] };
+    if (text === "BEGIN" || text === "COMMIT" || text === "ROLLBACK")
+      return { rowCount: 0, rows: [] };
     if (text.includes("FROM loans WHERE loan_id")) {
       return {
         rowCount: 1,

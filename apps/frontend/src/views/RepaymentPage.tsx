@@ -124,9 +124,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
       setSuccess(true);
     } catch (e) {
       setConfirmOpen(false);
-      setErrorMessage(
-        e instanceof Error ? e.message : t("repayment.paymentFailed"),
-      );
+      setErrorMessage(e instanceof Error ? e.message : t("repayment.paymentFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -238,10 +236,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
   return (
     <AppLayout onNavigate={onNavigate} currentPage="repayment">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
-        <PageHeader
-          title={t("repayment.title")}
-          description={`${activeLoan.name}`}
-        />
+        <PageHeader title={t("repayment.title")} description={`${activeLoan.name}`} />
 
         {errorMessage && (
           <Alert variant="error" title={t("repayment.paymentFailed")} className="mb-4">
@@ -269,7 +264,11 @@ export default function RepaymentPage({ onNavigate }: Props) {
                     })}
                   </p>
                 </div>
-                <Badge variant={totalOutstanding > 0 ? "warning" : "success"} dot className="shrink-0">
+                <Badge
+                  variant={totalOutstanding > 0 ? "warning" : "success"}
+                  dot
+                  className="shrink-0"
+                >
                   {totalOutstanding > 0 ? t("repayment.due") : t("activeLoan.statusPaid")}
                 </Badge>
               </div>
@@ -339,11 +338,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
                     header: t("activeLoan.scheduleStatus"),
                     render: (r) => (
                       <div className="flex items-center gap-2 justify-end">
-                        <Badge
-                          variant={scheduleStatusVariant[r.status]}
-                          size="sm"
-                          dot
-                        >
+                        <Badge variant={scheduleStatusVariant[r.status]} size="sm" dot>
                           {t(enumKey("activeLoan.status", r.status))}
                         </Badge>
                         {r.outstandingAmount > 0 && (
@@ -453,9 +448,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
                       />
                       <DataRow
                         label={t("repayment.remainingAfter")}
-                        value={formatTaka(
-                          Math.max(0, totalOutstanding - parsedAmount),
-                        )}
+                        value={formatTaka(Math.max(0, totalOutstanding - parsedAmount))}
                       />
                     </div>
                   </>
@@ -512,9 +505,7 @@ export default function RepaymentPage({ onNavigate }: Props) {
             />
             <DataRow
               label={t("repayment.remainingAfter")}
-              value={formatTaka(
-                Math.max(0, totalOutstanding - parsedAmount),
-              )}
+              value={formatTaka(Math.max(0, totalOutstanding - parsedAmount))}
             />
           </div>
         </Modal>

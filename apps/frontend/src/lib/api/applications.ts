@@ -31,14 +31,27 @@ export async function createApplication(data: {
   });
 }
 
+export function normalizeAppStatus(rawStatus?: string | null): AppStatus {
+  if (!rawStatus) return "submitted";
+  const s = rawStatus.replace(/_/g, "-");
+  return s as AppStatus;
+}
+
 export async function getApplications(params?: { status?: string; page?: number }) {
   const searchParams = new URLSearchParams();
   if (params?.status && params.status !== "all") searchParams.set("status", params.status);
   if (params?.page) searchParams.set("page", String(params.page));
   const qs = searchParams.toString();
-  return apiRequest<{ applications: ApplicationRecord[]; total: number }>(
+  const res = await apiRequest<{ applications: ApplicationRecord[]; total: number }>(
     `/applications${qs ? `?${qs}` : ""}`,
   );
+  return {
+    ...res,
+    applications: (res.applications || []).map((app) => ({
+      ...app,
+      status: normalizeAppStatus(app.status),
+    })),
+  };
 }
 
 export async function getApplication(id: string) {

@@ -129,7 +129,11 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
   ];
 
   const columns = [
-    { key: "month", header: t("activeLoan.scheduleMonth"), render: (r: RepaymentScheduleRow) => `#${r.month}` },
+    {
+      key: "month",
+      header: t("activeLoan.scheduleMonth"),
+      render: (r: RepaymentScheduleRow) => `#${r.month}`,
+    },
     {
       key: "dueDate",
       header: t("activeLoan.scheduleDue"),
@@ -295,8 +299,14 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
               />
               <CardBody>
                 <DataRow label={t("loanDetails.loanAmount")} value={formatTaka(amount)} />
-                <DataRow label={t("loanDetails.interestRate")} value={formatPercent(loan.interestRate)} />
-                <DataRow label={t("loanDetails.repaymentPeriod")} value={t("loanDetails.monthsUnit", { months: duration })} />
+                <DataRow
+                  label={t("loanDetails.interestRate")}
+                  value={formatPercent(loan.interestRate)}
+                />
+                <DataRow
+                  label={t("loanDetails.repaymentPeriod")}
+                  value={t("loanDetails.monthsUnit", { months: duration })}
+                />
                 <div className="border-t border-stone-200 mt-2 pt-2">
                   <DataRow
                     label={t("loanDetails.totalInterest")}
@@ -347,7 +357,10 @@ export default function LoanDetails({ onNavigate, productId }: Props) {
                       max={loan.maxAmount}
                       step={1000}
                       onChange={(e) => setAmount(Number(e.target.value) || loan.minAmount)}
-                      hint={t("loanDetails.estimateHint", { min: formatTaka(loan.minAmount), max: formatTaka(loan.maxAmount) })}
+                      hint={t("loanDetails.estimateHint", {
+                        min: formatTaka(loan.minAmount),
+                        max: formatTaka(loan.maxAmount),
+                      })}
                     />
                     <input
                       type="range"

@@ -150,10 +150,10 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
           </div>
         ) : opportunities.length === 0 ? (
           <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-8">
-            <h2 className="text-sm font-semibold text-navy">{t("lender.noMatchingOpportunities")}</h2>
-            <p className="text-sm text-stone-500 mt-1">
+            <h2 className="text-sm font-semibold text-navy">
               {t("lender.noMatchingOpportunities")}
-            </p>
+            </h2>
+            <p className="text-sm text-stone-500 mt-1">{t("lender.noMatchingOpportunities")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -261,14 +261,14 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                       {isExpanded && (
                         <div className="mt-4 border-t border-stone-200 pt-3 flex flex-col gap-2.5">
                           {opportunity.trustFactors.length === 0 ? (
-                            <p className="text-xs text-stone-500">
-                              {t("common.notAvailable")}
-                            </p>
+                            <p className="text-xs text-stone-500">{t("common.notAvailable")}</p>
                           ) : (
                             opportunity.trustFactors.map((factor) => (
                               <div key={`${opportunity.applicationId}-${factor.name}`}>
                                 <div className="flex items-center justify-between gap-3 text-xs">
-                                  <span className="font-medium text-navy">{t(enumKey("trustFactor", factor.name))}</span>
+                                  <span className="font-medium text-navy">
+                                    {t(enumKey("trustFactor", factor.name))}
+                                  </span>
                                   <span className="tabular-nums text-stone-500">
                                     {factor.score}
                                     {factor.weight == null
@@ -310,7 +310,9 @@ export default function LenderOpportunitiesPageClient({ user }: { user: StoredUs
                         onClick={() => void handleReject(opportunity)}
                         disabled={isFunding || rejectingId === opportunity.applicationId}
                       >
-                        {rejectingId === opportunity.applicationId ? t("common.loading") : t("lender.notNow")}
+                        {rejectingId === opportunity.applicationId
+                          ? t("common.loading")
+                          : t("lender.notNow")}
                       </Button>
                       <Button
                         type="button"

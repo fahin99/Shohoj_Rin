@@ -254,7 +254,12 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
       hideBelow: "md",
       render: (r) => <span className="text-stone-500">{r.product}</span>,
     },
-    { key: "amount", header: t("loanDetails.loanAmount"), numeric: true, render: (r) => formatTaka(r.amount) },
+    {
+      key: "amount",
+      header: t("loanDetails.loanAmount"),
+      numeric: true,
+      render: (r) => formatTaka(r.amount),
+    },
     {
       key: "rate",
       header: t("loanDetails.interestRate"),
@@ -269,7 +274,12 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
       hideBelow: "lg",
       render: (r) => `${r.tenure} ${t("loanDetails.monthsUnit")}`,
     },
-    { key: "repaid", header: t("activeLoan.repaid"), numeric: true, render: (r) => `${r.repaidPct}%` },
+    {
+      key: "repaid",
+      header: t("activeLoan.repaid"),
+      numeric: true,
+      render: (r) => `${r.repaidPct}%`,
+    },
     {
       key: "remaining",
       header: t("lender.remaining"),
@@ -283,7 +293,11 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
       hideBelow: "lg",
       render: (r) => (r.nextDueDate ? formatDate(r.nextDueDate) : "—"),
     },
-    { key: "status", header: t("settings.status"), render: (r) => <LoanStatusBadge status={r.status} /> },
+    {
+      key: "status",
+      header: t("settings.status"),
+      render: (r) => <LoanStatusBadge status={r.status} />,
+    },
   ];
   const maxDeployed =
     monthlyPerformance.length > 0 ? Math.max(...monthlyPerformance.map((m) => m.deployed)) : 1;
@@ -338,9 +352,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between items-start mb-5">
               <div className="min-w-0">
                 <h2 className="text-sm font-semibold text-navy">{t("lender.capitalDeployed")}</h2>
-                <p className="text-xs text-stone-500 mt-0.5">
-                  {t("lender.monthlyDisbursed")}
-                </p>
+                <p className="text-xs text-stone-500 mt-0.5">{t("lender.monthlyDisbursed")}</p>
               </div>
             </div>
             <div className="flex items-end gap-3 sm:gap-4 h-40 px-1">
@@ -381,12 +393,12 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
         <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] mb-6">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between items-center px-5 py-4 border-b border-stone-200">
             <h2 className="text-sm font-semibold text-navy min-w-0">{t("lender.fundedLoans")}</h2>
-            <span className="text-xs text-stone-500 shrink-0">{fundedLoans.length} {t("common.loans", "loans")}</span>
+            <span className="text-xs text-stone-500 shrink-0">
+              {fundedLoans.length} {t("common.loans", "loans")}
+            </span>
           </div>
           {fundedLoans.length === 0 ? (
-            <p className="px-5 py-8 text-sm text-stone-500">
-              {t("lender.noFundedLoans")}
-            </p>
+            <p className="px-5 py-8 text-sm text-stone-500">{t("lender.noFundedLoans")}</p>
           ) : (
             <DataTable
               caption={t("lender.fundedLoans")}
@@ -400,12 +412,16 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
         <div className="bg-white border-[1.5px] border-stone-200 rounded-[8px] p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-navy">{t("lender.fundingOpportunities")}</h2>
+              <h2 className="text-sm font-semibold text-navy">
+                {t("lender.fundingOpportunities")}
+              </h2>
               <p className="text-xs text-stone-500 mt-0.5">
                 {t("lender.fundingOpportunitiesHint")}
               </p>
             </div>
-            <span className="text-xs text-stone-500">{visibleOpportunities.length} {t("lender.available")}</span>
+            <span className="text-xs text-stone-500">
+              {visibleOpportunities.length} {t("lender.available")}
+            </span>
           </div>
           {fundError && (
             <Alert variant="error" title={t("lender.fundingNotRecorded")} className="mb-5">
@@ -413,9 +429,7 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
             </Alert>
           )}
           {visibleOpportunities.length === 0 ? (
-            <p className="text-sm text-stone-500">
-              {t("lender.noMatchingOpportunities")}
-            </p>
+            <p className="text-sm text-stone-500">{t("lender.noMatchingOpportunities")}</p>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {opportunities
@@ -433,7 +447,8 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                       <div className="flex items-start justify-between gap-3 min-w-0">
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-navy truncate">
-                            {op.borrowerName ?? "Borrower"} · {op.purpose ?? t("application.purpose")}
+                            {op.borrowerName ?? "Borrower"} ·{" "}
+                            {op.purpose ?? t("application.purpose")}
                           </p>
                           <p className="text-xs text-stone-500 mt-0.5 truncate">
                             {op.productName ?? t("application.loanProduct")}
@@ -469,7 +484,9 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                           <p className="text-stone-400">{t("lender.rateAndTenure")}</p>
                           <p className="tabular-nums font-medium text-navy">
                             {op.interestRate != null ? formatPercent(op.interestRate) : "—"}
-                            {op.durationMonths ? ` · ${op.durationMonths} ${t("loanDetails.monthsUnit")}` : ""}
+                            {op.durationMonths
+                              ? ` · ${op.durationMonths} ${t("loanDetails.monthsUnit")}`
+                              : ""}
                           </p>
                         </div>
                       </div>
@@ -482,9 +499,24 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                           </span>
                         </div>
                         <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-stone-600">
-                          <span>{t("lender.identity")}: {op.identityVerified ? t("verification.approved") : t("verification.pending")}</span>
-                          <span>{t("lender.address")}: {op.addressVerified ? t("verification.approved") : t("verification.pending")}</span>
-                          <span>{t("lender.income")}: {op.incomeVerified ? t("verification.approved") : t("verification.pending")}</span>
+                          <span>
+                            {t("lender.identity")}:{" "}
+                            {op.identityVerified
+                              ? t("verification.approved")
+                              : t("verification.pending")}
+                          </span>
+                          <span>
+                            {t("lender.address")}:{" "}
+                            {op.addressVerified
+                              ? t("verification.approved")
+                              : t("verification.pending")}
+                          </span>
+                          <span>
+                            {t("lender.income")}:{" "}
+                            {op.incomeVerified
+                              ? t("verification.approved")
+                              : t("verification.pending")}
+                          </span>
                         </div>
                         <button
                           type="button"
@@ -500,7 +532,9 @@ export default function LenderDashboard({ onNavigate, user }: Props) {
                                 key={`${op.applicationId}-${f.name}`}
                                 className="flex items-center justify-between gap-2"
                               >
-                                <span className="truncate">{factorNameLabel[f.name] ?? f.name}</span>
+                                <span className="truncate">
+                                  {factorNameLabel[f.name] ?? f.name}
+                                </span>
                                 <span className="tabular-nums text-stone-500">
                                   {Math.round(f.score)}
                                 </span>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { Button } from "../components/Button";
-import { Badge, LoanStatusBadge } from "../components/Badge";
+import { Badge, LoanStatusBadge, AppStatusBadge } from "../components/Badge";
 import { ProgressBar } from "../components/Progress";
 import { StatCard } from "../components/StatCard";
 import { Card, CardBody, CardHeader } from "../components/Card";
@@ -100,9 +100,20 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
 
   const now = new Date();
   const hour = now.getHours();
-  const greeting = hour < 12 ? t("dashboard.greetingMorning") : hour < 17 ? t("dashboard.greetingAfternoon") : t("dashboard.greetingEvening");
+  const greeting =
+    hour < 12
+      ? t("dashboard.greetingMorning")
+      : hour < 17
+        ? t("dashboard.greetingAfternoon")
+        : t("dashboard.greetingEvening");
   const openApplications = applications.filter(
-    (a) => a.status === "under-review" || a.status === "info-required" || a.status === "submitted" || a.status === "approved",
+    (a) =>
+      a.status === "under-review" ||
+      a.status === "under_review" ||
+      a.status === "info-required" ||
+      a.status === "info_required" ||
+      a.status === "submitted" ||
+      a.status === "approved",
   );
   const userName = getDisplayName(user, user?.profile?.fullName || "User");
   const firstName = userName.split(" ")[0] ?? userName;
@@ -226,14 +237,20 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                         </dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-xs text-stone-500">{t("loanDetails.repaymentDuration")}</dt>
+                        <dt className="text-xs text-stone-500">
+                          {t("loanDetails.repaymentDuration")}
+                        </dt>
                         <dd className="mt-0.5 tabular-nums font-semibold text-navy">
                           {activeLoan.durationMonths} {t("loanDetails.monthsUnit")}
                         </dd>
                       </div>
                     </dl>
                     <div className="mt-4 flex flex-wrap items-center justify-end gap-3 border-t border-stone-100 pt-4">
-                      <Button variant="tertiary" size="sm" onClick={() => onNavigate("active-loan")}>
+                      <Button
+                        variant="tertiary"
+                        size="sm"
+                        onClick={() => onNavigate("active-loan")}
+                      >
                         {t("dashboard.viewLoanDetails")}
                       </Button>
                     </div>
@@ -248,7 +265,9 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                         </dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-xs text-stone-500">{t("dashboard.remainingBalance")}</dt>
+                        <dt className="text-xs text-stone-500">
+                          {t("dashboard.remainingBalance")}
+                        </dt>
                         <dd className="mt-0.5 tabular-nums font-semibold text-navy">
                           {formatTaka(activeLoan.remainingBalance)}
                         </dd>
@@ -275,7 +294,11 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                           {formatTaka(activeLoan.monthlyPayment)}
                         </span>
                       </p>
-                      <Button variant="tertiary" size="sm" onClick={() => onNavigate("active-loan")}>
+                      <Button
+                        variant="tertiary"
+                        size="sm"
+                        onClick={() => onNavigate("active-loan")}
+                      >
                         {t("dashboard.viewLoanDetails")}
                       </Button>
                     </div>
@@ -288,8 +311,14 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                   icon={EmptyIcons.loans}
                   title={t("dashboard.emptyLoanTitle")}
                   description={t("dashboard.emptyLoanDescription")}
-                  action={{ label: t("dashboard.exploreLoans"), onClick: () => onNavigate("loan-marketplace") }}
-                  secondaryAction={{ label: t("dashboard.learnMore"), onClick: () => onNavigate("education") }}
+                  action={{
+                    label: t("dashboard.exploreLoans"),
+                    onClick: () => onNavigate("loan-marketplace"),
+                  }}
+                  secondaryAction={{
+                    label: t("dashboard.learnMore"),
+                    onClick: () => onNavigate("education"),
+                  }}
                 />
               </div>
             )}
@@ -408,32 +437,11 @@ export default function BorrowerDashboard({ onNavigate, user }: BorrowerDashboar
                             {app.product}
                           </p>
                         </div>
-                        <Badge
-                          variant={
-                            app.status === "disbursed"
-                              ? "teal"
-                              : app.status === "approved"
-                                ? "success"
-                                : app.status === "rejected"
-                                  ? "error"
-                                  : "warning"
-                          }
-                          size="sm"
-                          dot
-                        >
-                          {app.status === "under-review"
-                            ? t("dashboard.appInReview")
-                            : app.status === "info-required"
-                              ? t("dashboard.appInfoNeeded")
-                              : app.status === "approved"
-                                ? t("dashboard.appApproved")
-                                : app.status === "disbursed"
-                                  ? t("dashboard.appDisbursed")
-                                  : t("dashboard.appRejected")}
-                        </Badge>
+                        <AppStatusBadge status={app.status ?? "submitted"} />
                       </div>
                       <p className="mt-1.5 text-xs text-stone-500">
-                        {formatTaka(app.amount || 0)} · {t("appStatusPage.submittedOn")} {formatDate(app.submitted || "")}
+                        {formatTaka(app.amount || 0)} · {t("appStatusPage.submittedOn")}{" "}
+                        {formatDate(app.submitted || "")}
                       </p>
                     </button>
                   ))

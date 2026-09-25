@@ -52,10 +52,22 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
   const [preferredCategories, setPreferredCategories] = useState<string[]>([]);
 
   const localizedSteps = [
-    { label: t("onboarding.stepPersonalInfo", { defaultValue: "Personal Info" }), sublabel: t("onboarding.stepPersonalInfoSub", { defaultValue: "Details" }) },
-    { label: t("onboarding.stepCapacity", { defaultValue: "Capacity" }), sublabel: t("onboarding.stepCapacitySub", { defaultValue: "Funding" }) },
-    { label: t("onboarding.stepPreferences", { defaultValue: "Preferences" }), sublabel: t("onboarding.stepPreferencesSub", { defaultValue: "Risk" }) },
-    { label: t("onboarding.stepLoanPurposes", { defaultValue: "Loan Purposes" }), sublabel: t("onboarding.stepLoanPurposesSub", { defaultValue: "Priority" }) },
+    {
+      label: t("onboarding.stepPersonalInfo", { defaultValue: "Personal Info" }),
+      sublabel: t("onboarding.stepPersonalInfoSub", { defaultValue: "Details" }),
+    },
+    {
+      label: t("onboarding.stepCapacity", { defaultValue: "Capacity" }),
+      sublabel: t("onboarding.stepCapacitySub", { defaultValue: "Funding" }),
+    },
+    {
+      label: t("onboarding.stepPreferences", { defaultValue: "Preferences" }),
+      sublabel: t("onboarding.stepPreferencesSub", { defaultValue: "Risk" }),
+    },
+    {
+      label: t("onboarding.stepLoanPurposes", { defaultValue: "Loan Purposes" }),
+      sublabel: t("onboarding.stepLoanPurposesSub", { defaultValue: "Priority" }),
+    },
   ];
 
   const update = (k: string, v: string) => setData((d) => ({ ...d, [k]: v }));
@@ -118,7 +130,9 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
   };
   const next = async () => {
     if (step === 0 && !data.companyName.trim()) {
-      setCompanyNameError(t("application.errorCompanyName", { defaultValue: "Company name is required" }));
+      setCompanyNameError(
+        t("application.errorCompanyName", { defaultValue: "Company name is required" }),
+      );
       return;
     }
     if (step < localizedSteps.length - 1) {
@@ -182,21 +196,28 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-10">
         <div className="mb-10">
           <p className="text-xs text-stone-500 mb-4 text-center">
-            {t("onboarding.stepOf", { current: step + 1, total: localizedSteps.length })} — {t("onboarding.setupLenderProfile", { defaultValue: "setup your lender profile" })}
+            {t("onboarding.stepOf", { current: step + 1, total: localizedSteps.length })} —{" "}
+            {t("onboarding.setupLenderProfile", { defaultValue: "setup your lender profile" })}
           </p>
           <Stepper steps={localizedSteps} currentStep={step} />
         </div>
         <div className="bg-white border-[1.5px] border-navy rounded-[8px] shadow-nb p-6 md:p-8">
           {step === 0 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">{t("profile.personalIdentity", { defaultValue: "Personal information" })}</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">
+                {t("profile.personalIdentity", { defaultValue: "Personal information" })}
+              </h2>
               <p className="text-sm text-stone-500 mb-6">
-                {t("onboarding.personalInfoDesc", { defaultValue: "Basic details for your investor profile." })}
+                {t("onboarding.personalInfoDesc", {
+                  defaultValue: "Basic details for your investor profile.",
+                })}
               </p>
               <div className="grid grid-cols-1 gap-5">
                 <TextInput
                   label={t("profile.fullName", { defaultValue: "Full name" })}
-                  placeholder={t("input.placeholderFullName", { defaultValue: "e.g., Tanvir Hossain" })}
+                  placeholder={t("input.placeholderFullName", {
+                    defaultValue: "e.g., Tanvir Hossain",
+                  })}
                   required
                   value={data.fullName}
                   onChange={(e) => update("fullName", e.target.value)}
@@ -211,14 +232,14 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
                 <div className="border-t border-stone-200 pt-5 mt-2">
                   <div className="mb-4">
                     <p className="text-sm font-semibold text-navy">{t("profile.company")}</p>
-                    <p className="text-xs text-stone-500">
-                      {t("profile.companyHint")}
-                    </p>
+                    <p className="text-xs text-stone-500">{t("profile.companyHint")}</p>
                   </div>
                   <div className="grid grid-cols-1 gap-5">
                     <TextInput
                       label={t("profile.companyName", { defaultValue: "Company name" })}
-                      placeholder={t("input.placeholderCompanyName", { defaultValue: "e.g., Bengal Microfinance Bank" })}
+                      placeholder={t("input.placeholderCompanyName", {
+                        defaultValue: "e.g., Bengal Microfinance Bank",
+                      })}
                       required
                       value={data.companyName}
                       onChange={(e) => {
@@ -229,19 +250,25 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
                     />
                     <TextInput
                       label={t("profile.companyAddress", { defaultValue: "Company address" })}
-                      placeholder={t("input.placeholderCompanyAddress", { defaultValue: "House, road, area, city" })}
+                      placeholder={t("input.placeholderCompanyAddress", {
+                        defaultValue: "House, road, area, city",
+                      })}
                       value={data.companyAddress}
                       onChange={(e) => update("companyAddress", e.target.value)}
                     />
                     <TextInput
                       label={t("profile.branch", { defaultValue: "Branch" })}
-                      placeholder={t("input.placeholderBranch", { defaultValue: "e.g., Dhanmondi Branch" })}
+                      placeholder={t("input.placeholderBranch", {
+                        defaultValue: "e.g., Dhanmondi Branch",
+                      })}
                       value={data.companyBranch}
                       onChange={(e) => update("companyBranch", e.target.value)}
                     />
                     <TextInput
                       label={t("profile.companyGoal", { defaultValue: "Company / lending goal" })}
-                      placeholder={t("input.placeholderCompanyGoal", { defaultValue: "e.g., Expand access to education financing" })}
+                      placeholder={t("input.placeholderCompanyGoal", {
+                        defaultValue: "e.g., Expand access to education financing",
+                      })}
                       value={data.companyGoal}
                       onChange={(e) => update("companyGoal", e.target.value)}
                     />
@@ -249,9 +276,16 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
                 </div>
                 <div className="border-t border-stone-200 pt-5 mt-2">
                   <div className="mb-4">
-                    <p className="text-sm font-semibold text-navy">{t("profile.organizationDocuments", { defaultValue: "Organization Documents" })}</p>
+                    <p className="text-sm font-semibold text-navy">
+                      {t("profile.organizationDocuments", {
+                        defaultValue: "Organization Documents",
+                      })}
+                    </p>
                     <p className="text-xs text-stone-500">
-                      {t("profile.organizationDocumentsHint", { defaultValue: "Upload documents that establish your organization's identity, registration, and legitimacy. All documents are optional for now." })}
+                      {t("profile.organizationDocumentsHint", {
+                        defaultValue:
+                          "Upload documents that establish your organization's identity, registration, and legitimacy. All documents are optional for now.",
+                      })}
                     </p>
                   </div>
 
@@ -273,7 +307,9 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
                     />
 
                     <FileUpload
-                      label={t("profile.incorporationCertificate", { defaultValue: "Certificate of Incorporation / Registration" })}
+                      label={t("profile.incorporationCertificate", {
+                        defaultValue: "Certificate of Incorporation / Registration",
+                      })}
                       hint={t("common.optional")}
                       onChange={(files) =>
                         handleDocumentUpload(
@@ -285,7 +321,9 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
                     />
 
                     <FileUpload
-                      label={t("profile.regulatoryLicense", { defaultValue: "Regulatory / Operating License" })}
+                      label={t("profile.regulatoryLicense", {
+                        defaultValue: "Regulatory / Operating License",
+                      })}
                       hint={t("common.optional")}
                       onChange={(files) =>
                         handleDocumentUpload(
@@ -303,13 +341,19 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
 
           {step === 1 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">{t("profile.fundingCapacity", { defaultValue: "Funding capacity" })}</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">
+                {t("profile.fundingCapacity", { defaultValue: "Funding capacity" })}
+              </h2>
               <p className="text-sm text-stone-500 mb-6">
-                {t("profile.fundingCapacityHint", { defaultValue: "How much capital do you plan to deploy over the next 12 months?" })}
+                {t("profile.fundingCapacityHint", {
+                  defaultValue: "How much capital do you plan to deploy over the next 12 months?",
+                })}
               </p>
               <div className="grid grid-cols-1 gap-5">
                 <TextInput
-                  label={t("profile.estimatedFundingCapacity", { defaultValue: "Estimated funding capacity" })}
+                  label={t("profile.estimatedFundingCapacity", {
+                    defaultValue: "Estimated funding capacity",
+                  })}
                   type="number"
                   placeholder="500000"
                   value={data.fundingCapacity}
@@ -324,13 +368,19 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
 
           {step === 2 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">{t("profile.riskPreferences", { defaultValue: "Risk & preferences" })}</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">
+                {t("profile.riskPreferences", { defaultValue: "Risk & preferences" })}
+              </h2>
               <p className="text-sm text-stone-500 mb-6">
-                {t("profile.riskPreferencesHint", { defaultValue: "Help us tailor investment opportunities to your goals." })}
+                {t("profile.riskPreferencesHint", {
+                  defaultValue: "Help us tailor investment opportunities to your goals.",
+                })}
               </p>
               <div className="flex flex-col gap-6">
                 <div>
-                  <p className="text-sm font-medium text-navy mb-3">{t("profile.riskPreference", { defaultValue: "Risk preference" })}</p>
+                  <p className="text-sm font-medium text-navy mb-3">
+                    {t("profile.riskPreference", { defaultValue: "Risk preference" })}
+                  </p>
                   <div className="flex flex-col sm:flex-row gap-4">
                     <Radio
                       label={t(enumKey("risk", "conservative"))}
@@ -355,9 +405,18 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
                     />
                   </div>
                   <p className="text-xs text-stone-500 mt-2">
-                    {data.riskPreference === "conservative" && t("profile.riskDescConservative", { defaultValue: "Prioritize low-risk loans with stable, lower returns." })}
-                    {data.riskPreference === "moderate" && t("profile.riskDescModerate", { defaultValue: "Balance between risk and returns." })}
-                    {data.riskPreference === "aggressive" && t("profile.riskDescAggressive", { defaultValue: "Higher returns with higher risk tolerance." })}
+                    {data.riskPreference === "conservative" &&
+                      t("profile.riskDescConservative", {
+                        defaultValue: "Prioritize low-risk loans with stable, lower returns.",
+                      })}
+                    {data.riskPreference === "moderate" &&
+                      t("profile.riskDescModerate", {
+                        defaultValue: "Balance between risk and returns.",
+                      })}
+                    {data.riskPreference === "aggressive" &&
+                      t("profile.riskDescAggressive", {
+                        defaultValue: "Higher returns with higher risk tolerance.",
+                      })}
                   </p>
                 </div>
 
@@ -366,9 +425,18 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
                   value={data.investmentGoals}
                   onChange={(e) => update("investmentGoals", e.target.value)}
                   options={[
-                    { value: "growth", label: t(enumKey("goal", "growth"), { defaultValue: "Capital Growth" }) },
-                    { value: "income", label: t(enumKey("goal", "income"), { defaultValue: "Regular Income" }) },
-                    { value: "impact", label: t(enumKey("goal", "impact"), { defaultValue: "Social Impact" }) },
+                    {
+                      value: "growth",
+                      label: t(enumKey("goal", "growth"), { defaultValue: "Capital Growth" }),
+                    },
+                    {
+                      value: "income",
+                      label: t(enumKey("goal", "income"), { defaultValue: "Regular Income" }),
+                    },
+                    {
+                      value: "impact",
+                      label: t(enumKey("goal", "impact"), { defaultValue: "Social Impact" }),
+                    },
                   ]}
                 />
               </div>
@@ -377,9 +445,14 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
 
           {step === 3 && (
             <div>
-              <h2 className="text-2xl font-semibold text-navy mb-1">{t("profile.preferredCategories", { defaultValue: "Loan purposes I support" })}</h2>
+              <h2 className="text-2xl font-semibold text-navy mb-1">
+                {t("profile.preferredCategories", { defaultValue: "Loan purposes I support" })}
+              </h2>
               <p className="text-sm text-stone-500 mb-6">
-                {t("profile.preferredCategoriesHint", { defaultValue: "Pick the loan purposes you want to fund and order them by priority. Lenders see highest-priority applications before lower-priority ones." })}
+                {t("profile.preferredCategoriesHint", {
+                  defaultValue:
+                    "Pick the loan purposes you want to fund and order them by priority. Lenders see highest-priority applications before lower-priority ones.",
+                })}
               </p>
 
               <div className="mb-5">
@@ -410,11 +483,16 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
 
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">
-                  {t("profile.priorityOrder", { count: preferredCategories.length, defaultValue: `Priority order (${preferredCategories.length} selected)` })}
+                  {t("profile.priorityOrder", {
+                    count: preferredCategories.length,
+                    defaultValue: `Priority order (${preferredCategories.length} selected)`,
+                  })}
                 </p>
                 {preferredCategories.length === 0 ? (
                   <p className="text-xs text-stone-500 italic">
-                    {t("profile.noCategoriesSelected", { defaultValue: "No categories selected yet. Pick one above to get started." })}
+                    {t("profile.noCategoriesSelected", {
+                      defaultValue: "No categories selected yet. Pick one above to get started.",
+                    })}
                   </p>
                 ) : (
                   <ol className="flex flex-col gap-2">
@@ -475,7 +553,9 @@ export default function InvestorOnboarding({ onNavigate }: Props) {
               {step + 1}/{localizedSteps.length}
             </span>
             <Button variant="primary" size="md" onClick={next} loading={saving}>
-              {step === localizedSteps.length - 1 ? `${t("onboarding.finishSetup")} →` : `${t("common.continue")} →`}
+              {step === localizedSteps.length - 1
+                ? `${t("onboarding.finishSetup")} →`
+                : `${t("common.continue")} →`}
             </Button>
           </div>
         </div>

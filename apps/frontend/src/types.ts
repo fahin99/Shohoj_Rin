@@ -20,14 +20,16 @@ export type PageName =
   | "settings";
 
 export type LoanStatus =
-  | "pending_disbursement"
-  | "active"
-  | "completed"
-  | "overdue"
-  | "delinquent"
-  | "defaulted";
+  "pending_disbursement" | "active" | "completed" | "overdue" | "delinquent" | "defaulted";
 export type AppStatus =
-  "submitted" | "under-review" | "info-required" | "approved" | "rejected" | "disbursed";
+  | "submitted"
+  | "under-review"
+  | "under_review"
+  | "info-required"
+  | "info_required"
+  | "approved"
+  | "rejected"
+  | "disbursed";
 export type TransactionType = "payment" | "repayment" | "disbursement" | "fee" | "refund";
 
 export interface LoanProduct {

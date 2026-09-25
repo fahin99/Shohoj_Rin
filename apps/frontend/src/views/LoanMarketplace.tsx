@@ -90,10 +90,7 @@ export default function LoanMarketplace({ onNavigate }: Props) {
   return (
     <AppLayout onNavigate={onNavigate} currentPage="loan-marketplace">
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
-        <PageHeader
-          title={t("marketplace.title")}
-          description={t("marketplace.description")}
-        />
+        <PageHeader title={t("marketplace.title")} description={t("marketplace.description")} />
         <div className="flex flex-col gap-4 mb-5">
           <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_14rem] gap-3">
             <SearchInput
@@ -135,7 +132,9 @@ export default function LoanMarketplace({ onNavigate }: Props) {
           </div>
         </div>
         <p className="text-sm text-stone-500 mb-4">
-          {t(total === 1 ? "marketplace.loansFound_one" : "marketplace.loansFound_other", { count: total })}
+          {t(total === 1 ? "marketplace.loansFound_one" : "marketplace.loansFound_other", {
+            count: total,
+          })}
         </p>
         {pageItems.length === 0 ? (
           <EmptyState

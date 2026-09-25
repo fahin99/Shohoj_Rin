@@ -91,7 +91,8 @@ const en = {
 
   // ── marketplace ──
   "marketplace.title": "Loan marketplace",
-  "marketplace.description": "Compare loan products from trusted lenders across Bangladesh and apply in minutes.",
+  "marketplace.description":
+    "Compare loan products from trusted lenders across Bangladesh and apply in minutes.",
   "marketplace.searchPlaceholder": "Search by loan name or provider",
   "marketplace.sortRecommended": "Recommended",
   "marketplace.sortInterestAsc": "Interest rate: low to high",
@@ -100,7 +101,8 @@ const en = {
   "marketplace.loansFound_one": "{count} loan found",
   "marketplace.loansFound_other": "{count} loans found",
   "marketplace.emptyTitle": "No loans match your filters",
-  "marketplace.emptyDescription": "Try a different category or clear your search to see all available loan products.",
+  "marketplace.emptyDescription":
+    "Try a different category or clear your search to see all available loan products.",
   "marketplace.clearFilters": "Clear filters",
   "marketplace.viewDetails": "View details",
   "marketplace.apply": "Apply",
@@ -136,7 +138,8 @@ const en = {
   "loanDetails.repaymentDuration": "Repayment duration",
   "loanDetails.estimatedEmi": "Estimated monthly EMI",
   "loanDetails.applyForThisLoan": "Apply for this loan",
-  "loanDetails.estimateDisclaimer": "This is an estimate. Final terms are confirmed after your application is reviewed.",
+  "loanDetails.estimateDisclaimer":
+    "This is an estimate. Final terms are confirmed after your application is reviewed.",
   "loanDetails.monthsUnit": "{months} months",
 
   // ── application form ──
@@ -152,11 +155,13 @@ const en = {
   "application.employmentType": "Employment type",
   "application.monthlyIncome": "Monthly income",
   "application.readyToSubmit": "Ready to submit",
-  "application.readyToSubmitBody": "Please review your details below. You can go back to make changes before submitting.",
+  "application.readyToSubmitBody":
+    "Please review your details below. You can go back to make changes before submitting.",
   "application.summary": "Application summary",
   "application.estimatedEmi": "Estimated monthly EMI",
   "application.identityVerified": "Identity & Address Verified",
-  "application.identityVerifiedBody": "Your Full Name, National ID, NID photo, and Present Address are linked from your onboarding profile.",
+  "application.identityVerifiedBody":
+    "Your Full Name, National ID, NID photo, and Present Address are linked from your onboarding profile.",
   "application.profileKyc": "Profile KYC",
   "application.submit": "Submit application",
   "application.submitting": "Submitting…",
@@ -187,7 +192,8 @@ const en = {
   "dashboard.amountBorrowed": "Amount borrowed",
   "dashboard.viewLoanDetails": "View loan details",
   "dashboard.emptyLoanTitle": "No active loans yet",
-  "dashboard.emptyLoanDescription": "Explore available loans and apply in minutes to get started on your financial journey.",
+  "dashboard.emptyLoanDescription":
+    "Explore available loans and apply in minutes to get started on your financial journey.",
   "dashboard.exploreLoans": "Explore loans",
   "dashboard.learnMore": "Learn more",
   "dashboard.recentTransactions": "Recent transactions",
@@ -201,7 +207,8 @@ const en = {
   "dashboard.payNow": "Pay now",
   "dashboard.lookingForFinancing": "Looking for financing?",
   "dashboard.compareLoanOptions": "Compare loan options",
-  "dashboard.compareLoanOptionsBody": "Transparent terms, fast approval, and clear repayment terms.",
+  "dashboard.compareLoanOptionsBody":
+    "Transparent terms, fast approval, and clear repayment terms.",
   "dashboard.txCompleted": "Completed",
   "dashboard.txFailed": "Failed",
   "dashboard.txPending": "Pending",
@@ -239,7 +246,8 @@ const en = {
   "activeLoan.agreementHint": "Signed agreement and disclosure documents for your loan.",
   "activeLoan.downloadPdf": "Download PDF",
   "activeLoan.emptyTitle": "No active loans yet",
-  "activeLoan.emptyDescription": "You do not currently have any active loans. Explore loan options and apply online in minutes.",
+  "activeLoan.emptyDescription":
+    "You do not currently have any active loans. Explore loan options and apply online in minutes.",
   "activeLoan.scheduleMonth": "Month",
   "activeLoan.scheduleDue": "Due date",
   "activeLoan.schedulePrincipal": "Principal",
@@ -267,7 +275,8 @@ const en = {
   "repayment.amountDue": "Amount due",
   "repayment.due": "Due",
   "repayment.overdueTitle": "Payment overdue",
-  "repayment.overdueBody": "This instalment is past due. A late fee may apply if not paid within 3 days.",
+  "repayment.overdueBody":
+    "This instalment is past due. A late fee may apply if not paid within 3 days.",
   "repayment.selectInstallment": "Select an installment to pay",
   "repayment.installmentNumber": "Installment #{number}",
   "repayment.expectedAmount": "Expected",
@@ -289,10 +298,12 @@ const en = {
   "repayment.emptyDescription": "You do not currently have any active loans requiring repayment.",
   "repayment.confirmTitle": "Confirm payment",
   "repayment.confirmBody": "You are about to pay {amount} for installment #{number}.",
-  "repayment.mvpDisclaimer": "This MVP records the repayment directly in the system. No external payment gateway is connected.",
+  "repayment.mvpDisclaimer":
+    "This MVP records the repayment directly in the system. No external payment gateway is connected.",
   "repayment.successTitleCompleted": "Loan Fully Repaid! 🎉",
   "repayment.successTitle": "Payment successful",
-  "repayment.successBodyCompleted": "Congratulations! You have completed all repayments for your loan.",
+  "repayment.successBodyCompleted":
+    "Congratulations! You have completed all repayments for your loan.",
   "repayment.successBody": "Your payment has been received and applied to your loan.",
   "repayment.receiptNo": "Receipt no.",
   "repayment.trustScoreUpdated": "Trust score updated to {score}/100 ({band})",
@@ -315,7 +326,8 @@ const en = {
   "appStatusPage.activeInMyLoans": "Active in My Loans",
   "appStatusPage.submittedOn": "Submitted {date}",
   "appStatusPage.infoRequiredTitle": "Additional information needed",
-  "appStatusPage.infoRequiredBody": "{provider} needs an updated bank statement to continue reviewing this application.",
+  "appStatusPage.infoRequiredBody":
+    "{provider} needs an updated bank statement to continue reviewing this application.",
   "appStatusPage.submitDocuments": "Submit documents",
   "appStatusPage.verifyAndDisburse": "Verify & Disburse Loan",
   "appStatusPage.goToMyLoans": "View in My Loans →",
@@ -345,7 +357,8 @@ const en = {
   "profile.confidence": "Confidence",
   "profile.lastUpdated": "Last updated {date}",
   "profile.noTrustScoreTitle": "No trust score yet",
-  "profile.noTrustScoreDescription": "Complete your profile and verification to generate a trust score.",
+  "profile.noTrustScoreDescription":
+    "Complete your profile and verification to generate a trust score.",
   "profile.notFoundTitle": "Profile not found",
   "profile.notFoundDescription": "We couldn't find a profile for your account.",
   "profile.company": "Company / organization",
@@ -374,7 +387,8 @@ const en = {
   "settings.security": "Security",
   "settings.securityDescription": "Manage how you sign in to Shohoj Rin.",
   "settings.changePasswordTitle": "Change password",
-  "settings.changePasswordBody": "Changing your password from this page isn't available yet. Check back soon.",
+  "settings.changePasswordBody":
+    "Changing your password from this page isn't available yet. Check back soon.",
   "settings.logoutFailedTitle": "Couldn't log out",
   "settings.logOutAction": "Log out",
   "settings.logOutHint": "End your session on this device.",
@@ -417,7 +431,8 @@ const en = {
   // ── landing page ──
   "landing.heroTitle1": "Finance made",
   "landing.heroTitleEmphasis": "simpler.",
-  "landing.heroBody": "Discover loans that fit your life, understand every term clearly, and manage your repayments without stress. Shohoj Rin is built for first-time borrowers.",
+  "landing.heroBody":
+    "Discover loans that fit your life, understand every term clearly, and manage your repayments without stress. Shohoj Rin is built for first-time borrowers.",
   "landing.startExploring": "Start Exploring Loans",
   "landing.learnAboutBorrowing": "Learn About Borrowing",
   "landing.statLoansFacilitated": "Loans facilitated",
@@ -430,20 +445,24 @@ const en = {
   "landing.viewAllLoans": "View all loans →",
   "landing.educationEyebrow": "Build your knowledge",
   "landing.educationTitle": "Financial education",
-  "landing.educationBody": "Understanding money should come before borrowing it. Our guides make financial concepts approachable.",
+  "landing.educationBody":
+    "Understanding money should come before borrowing it. Our guides make financial concepts approachable.",
   "landing.allArticles": "All articles →",
   "landing.trustEyebrow": "Why Shohoj Rin",
   "landing.trustTitle": "Built on trust",
-  "landing.trustBody": "We designed every part of this platform so you always know exactly where you stand financially.",
+  "landing.trustBody":
+    "We designed every part of this platform so you always know exactly where you stand financially.",
   "landing.ctaTitle1": "Ready to take",
   "landing.ctaTitle2": "control of your finances?",
-  "landing.ctaBody": "Join over 50,000 people who have used Shohoj Rin to find the right loan and manage their repayments clearly.",
+  "landing.ctaBody":
+    "Join over 50,000 people who have used Shohoj Rin to find the right loan and manage their repayments clearly.",
   "landing.createFreeAccount": "Create free account",
   "landing.exploreLoansFirst": "Explore loans first",
 
   // ── lender dashboard / opportunities ──
   "lender.welcomeBack": "Welcome back, {name}",
-  "lender.subtitle": "Track your deployed capital, funded loans, and review new applications to fund.",
+  "lender.subtitle":
+    "Track your deployed capital, funded loans, and review new applications to fund.",
   "lender.totalDeployed": "Total deployed",
   "lender.acrossLoans": "Across {count} loans",
   "lender.activeLoans": "Active loans",
@@ -459,7 +478,8 @@ const en = {
   "lender.fundedLoans": "Funded loans",
   "lender.noFundedLoans": "No funded loans yet. Fund an opportunity below to get started.",
   "lender.fundingOpportunities": "Funding opportunities",
-  "lender.fundingOpportunitiesHint": "Real borrower applications matched to your preferred categories.",
+  "lender.fundingOpportunitiesHint":
+    "Real borrower applications matched to your preferred categories.",
   "lender.available": "{count} available",
   "lender.fundingNotRecorded": "Funding not recorded",
   "lender.noMatchingOpportunities": "No new opportunities match your preferences right now.",
@@ -506,7 +526,8 @@ const en = {
   "education.eyebrow": "Financial education",
   "education.title1": "Understand money",
   "education.titleEmphasis": "before you borrow it.",
-  "education.body": "Clear, jargon-free guides on interest, repayment, credit, and planning — written for first-time borrowers across Bangladesh.",
+  "education.body":
+    "Clear, jargon-free guides on interest, repayment, credit, and planning — written for first-time borrowers across Bangladesh.",
   "education.searchPlaceholder": "Search articles...",
   "education.featured": "Featured",
   "education.readGuide": "Read guide",
@@ -521,7 +542,8 @@ const en = {
   "education.monthlyInstalment": "Monthly instalment (EMI)",
   "education.totalInterest": "Total interest",
   "education.totalRepayment": "Total repayment",
-  "education.calculatorDisclaimer": "Estimate only. Actual offers depend on the lender and your eligibility.",
+  "education.calculatorDisclaimer":
+    "Estimate only. Actual offers depend on the lender and your eligibility.",
   "education.glossaryEyebrow": "Key terms",
   "education.glossaryTitle": "Glossary",
   "education.faqEyebrow": "Common questions",

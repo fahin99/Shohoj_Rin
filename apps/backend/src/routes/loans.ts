@@ -68,16 +68,22 @@ router.post("/", requireAuth, async (req, res) => {
 
     if (!["submitted", "under_review", "approved"].includes(app.application_status)) {
       await client.query("ROLLBACK");
-      return res.status(400).json({ success: false, error: { message: "Application is not eligible for loan creation" } });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: { message: "Application is not eligible for loan creation" },
+        });
     }
 
-    const existingLoan = await client.query(
-      `SELECT loan_id FROM loans WHERE application_id = $1`,
-      [parsed.data.applicationId],
-    );
+    const existingLoan = await client.query(`SELECT loan_id FROM loans WHERE application_id = $1`, [
+      parsed.data.applicationId,
+    ]);
     if (Number(existingLoan.rowCount) > 0) {
       await client.query("ROLLBACK");
-      return res.status(409).json({ success: false, error: { message: "Loan already created for this application" } });
+      return res
+        .status(409)
+        .json({ success: false, error: { message: "Loan already created for this application" } });
     }
     const fundingResult = await client.query(
       `SELECT COALESCE(SUM(amount), 0) AS committed_amount
@@ -97,7 +103,8 @@ router.post("/", requireAuth, async (req, res) => {
       });
     }
 
-    const partnerId = app.partner_id ?? (await getFunderPartnerId(client, parsed.data.applicationId));
+    const partnerId =
+      app.partner_id ?? (await getFunderPartnerId(client, parsed.data.applicationId));
     if (!partnerId) {
       await client.query("ROLLBACK");
       return res.status(400).json({
@@ -106,9 +113,16 @@ router.post("/", requireAuth, async (req, res) => {
       });
     }
 
-    const interestRate = typeof app.interest_rate === "number" ? app.interest_rate : Number(app.interest_rate ?? 12.0);
-    const tenureMonths = typeof app.duration_months === "number" ? app.duration_months : Number(app.duration_months ?? 12);
-    const principal = typeof app.requested_amount === "number" ? app.requested_amount : Number(app.requested_amount);
+    const interestRate =
+      typeof app.interest_rate === "number" ? app.interest_rate : Number(app.interest_rate ?? 12.0);
+    const tenureMonths =
+      typeof app.duration_months === "number"
+        ? app.duration_months
+        : Number(app.duration_months ?? 12);
+    const principal =
+      typeof app.requested_amount === "number"
+        ? app.requested_amount
+        : Number(app.requested_amount);
 
     const offerResult = await client.query(
       `INSERT INTO loan_offers

@@ -64,22 +64,34 @@ export function LoanStatusBadge({ status }: { status: LoanStatus }) {
     defaulted: { variant: "error", label: "Defaulted" },
   };
   const { variant } = map[status];
-  return <Badge variant={variant} dot>{t(enumKey("loanStatus", status))}</Badge>;
+  return (
+    <Badge variant={variant} dot>
+      {t(enumKey("loanStatus", status))}
+    </Badge>
+  );
 }
 
 export function AppStatusBadge({ status }: { status: AppStatus }) {
   const { t } = useTranslation();
-  const toneMap: Record<AppStatus, BadgeVariant> = {
+  const toneMap: Record<string, BadgeVariant> = {
     submitted: "info",
     "under-review": "warning",
+    under_review: "warning",
     "info-required": "warning",
+    info_required: "warning",
     approved: "success",
     rejected: "error",
     disbursed: "teal",
   };
+  const normalizedKey =
+    status === "under_review"
+      ? "under-review"
+      : status === "info_required"
+        ? "info-required"
+        : status;
   return (
-    <Badge variant={toneMap[status]} dot>
-      {t(enumKey("appStatus", status))}
+    <Badge variant={toneMap[status] ?? "neutral"} dot>
+      {t(enumKey("appStatus", normalizedKey))}
     </Badge>
   );
 }

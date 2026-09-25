@@ -70,12 +70,10 @@ router.post("/", requireAuth, async (req: RequestWithAuth, res) => {
     );
     if (Number(existing.rows[0].total) > 0) {
       await client.query("ROLLBACK");
-      return res
-        .status(409)
-        .json({
-          success: false,
-          error: { message: "Repayment schedules already generated for this loan" },
-        });
+      return res.status(409).json({
+        success: false,
+        error: { message: "Repayment schedules already generated for this loan" },
+      });
     }
 
     await client.query(`CALL generate_repayment_schedule($1, $2, $3, $4, $5)`, [

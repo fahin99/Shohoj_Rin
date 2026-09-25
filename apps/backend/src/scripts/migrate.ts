@@ -78,10 +78,14 @@ async function listMigrationFiles() {
 }
 
 async function ensureFundingCommitments(client: PoolClient) {
-  const tableExists = await client.query(`SELECT to_regclass('public.funding_commitments') AS table_name`);
+  const tableExists = await client.query(
+    `SELECT to_regclass('public.funding_commitments') AS table_name`,
+  );
   if (tableExists.rows[0].table_name) return;
 
-  console.log("Canonical schema is missing funding_commitments; repairing it from schema.sql definition...");
+  console.log(
+    "Canonical schema is missing funding_commitments; repairing it from schema.sql definition...",
+  );
   await client.query(`
     CREATE TABLE funding_commitments (
       commitment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -195,7 +199,9 @@ async function ensureFundingPartnerNameNormalizedIndex(client: PoolClient) {
  * backfill any pre-existing lender accounts that predate the trigger.
  */
 async function ensureLenderInvestorProfileInvariant(client: PoolClient) {
-  const tableExists = await client.query(`SELECT to_regclass('public.investor_profiles') AS table_name`);
+  const tableExists = await client.query(
+    `SELECT to_regclass('public.investor_profiles') AS table_name`,
+  );
   if (!tableExists.rows[0].table_name) return;
 
   await client.query(`
@@ -445,7 +451,9 @@ async function migrate() {
         (file) => file !== schemaFile && !file.startsWith("2026_08_31_fix_funding_commitments"),
       );
       for (const migrationName of pendingFiles) {
-        throw new Error(`Unexpected SQL migration file found: ${migrationName}. Keep schema.sql as the sole canonical SQL file.`);
+        throw new Error(
+          `Unexpected SQL migration file found: ${migrationName}. Keep schema.sql as the sole canonical SQL file.`,
+        );
       }
 
       await ensureLenderMarketplaceSchema(client);

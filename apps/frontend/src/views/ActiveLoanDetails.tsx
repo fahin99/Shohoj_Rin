@@ -65,7 +65,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
             loansApi.getLoanTransactions(loan.id),
             loansApi.getRepaymentSchedule(loan.id),
           ]);
-            setTransactions(txs || []);
+          setTransactions(txs || []);
           setRepaymentSchedule(sched || []);
         }
       } catch (e) {
@@ -101,8 +101,14 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
               icon={EmptyIcons.loans}
               title={t("activeLoan.emptyTitle")}
               description={t("activeLoan.emptyDescription")}
-              action={{ label: t("dashboard.exploreLoans"), onClick: () => onNavigate("loan-marketplace") }}
-              secondaryAction={{ label: t("dashboard.learnMore"), onClick: () => onNavigate("education") }}
+              action={{
+                label: t("dashboard.exploreLoans"),
+                onClick: () => onNavigate("loan-marketplace"),
+              }}
+              secondaryAction={{
+                label: t("dashboard.learnMore"),
+                onClick: () => onNavigate("education"),
+              }}
             />
           </div>
         </div>
@@ -117,7 +123,9 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between sm:items-start mb-6">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-widest text-teal mb-1">
-              {activeLoan.status === "pending_disbursement" ? "Approved Loan" : t("activeLoan.eyebrow")}
+              {activeLoan.status === "pending_disbursement"
+                ? "Approved Loan"
+                : t("activeLoan.eyebrow")}
             </p>
             <h1 className="text-2xl sm:text-3xl font-semibold text-navy truncate">
               {activeLoan.name}
@@ -138,7 +146,10 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
             label={t("activeLoan.repaid")}
             value={formatTaka(activeLoan.amountRepaid)}
             tone="positive"
-            hint={t("activeLoan.monthsPaid", { paid: activeLoan.paidMonths, total: activeLoan.durationMonths })}
+            hint={t("activeLoan.monthsPaid", {
+              paid: activeLoan.paidMonths,
+              total: activeLoan.durationMonths,
+            })}
           />
           <StatCard
             label={t("activeLoan.remainingBalance")}
@@ -154,9 +165,14 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
         </div>
         <Card variant="raised" className="p-5 mb-6">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between sm:items-center mb-4">
-            <h2 className="text-base font-semibold text-navy">{t("activeLoan.repaymentProgress")}</h2>
+            <h2 className="text-base font-semibold text-navy">
+              {t("activeLoan.repaymentProgress")}
+            </h2>
             <p className="text-sm text-stone-500 shrink-0">
-              {t("activeLoan.monthsPaid", { paid: activeLoan.paidMonths, total: activeLoan.durationMonths })}
+              {t("activeLoan.monthsPaid", {
+                paid: activeLoan.paidMonths,
+                total: activeLoan.durationMonths,
+              })}
             </p>
           </div>
           <ProgressBar
@@ -168,7 +184,10 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
           />
           <div className="flex flex-wrap items-center justify-between gap-2 mt-4 pt-4 border-t border-stone-100">
             <p className="text-sm text-stone-500">
-              {t("activeLoan.nextDueDate", { date: formatDate(activeLoan.nextPaymentDate), remaining })}
+              {t("activeLoan.nextDueDate", {
+                date: formatDate(activeLoan.nextPaymentDate),
+                remaining,
+              })}
             </p>
             {activeLoan.status === "pending_disbursement" ? (
               <p className="text-sm font-medium text-stone-500">Available after disbursement</p>
@@ -180,18 +199,30 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
           </div>
         </Card>
         <Card variant="plain" className="mb-6">
-          <CardHeader title={t("activeLoan.costBreakdown")} description={t("activeLoan.costBreakdownHint")} />
+          <CardHeader
+            title={t("activeLoan.costBreakdown")}
+            description={t("activeLoan.costBreakdownHint")}
+          />
           <CardBody>
             <DataRow label={t("activeLoan.principal")} value={formatTaka(activeLoan.principal)} />
-            <DataRow label={t("loanDetails.interestRate")} value={formatPercent(activeLoan.interestRate)} />
-            <DataRow label={t("activeLoan.interestPaid")} value={formatTaka(activeLoan.interestPaid)} />
+            <DataRow
+              label={t("loanDetails.interestRate")}
+              value={formatPercent(activeLoan.interestRate)}
+            />
+            <DataRow
+              label={t("activeLoan.interestPaid")}
+              value={formatTaka(activeLoan.interestPaid)}
+            />
             <DataRow label={t("activeLoan.feesPaid")} value={formatTaka(activeLoan.feesPaid)} />
             <DataRow
               label={t("activeLoan.totalRepayable")}
               value={formatTaka(activeLoan.totalRepayable)}
               emphasis
             />
-            <DataRow label={t("activeLoan.totalPaidSoFar")} value={formatTaka(activeLoan.amountRepaid)} />
+            <DataRow
+              label={t("activeLoan.totalPaidSoFar")}
+              value={formatTaka(activeLoan.amountRepaid)}
+            />
             <DataRow
               label={t("activeLoan.remainingBalance")}
               value={formatTaka(activeLoan.remainingBalance)}
@@ -203,8 +234,16 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
           <div className="px-4 sm:px-5 pt-4">
             <Tabs
               tabs={[
-                { id: "schedule", label: t("activeLoan.repaymentSchedule"), count: repaymentSchedule.length },
-                { id: "transactions", label: t("activeLoan.transactionHistory"), count: transactions.length },
+                {
+                  id: "schedule",
+                  label: t("activeLoan.repaymentSchedule"),
+                  count: repaymentSchedule.length,
+                },
+                {
+                  id: "transactions",
+                  label: t("activeLoan.transactionHistory"),
+                  count: transactions.length,
+                },
               ]}
               activeTab={tab}
               onChange={(id) => setTab(id as typeof tab)}
@@ -214,10 +253,16 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
             <DataTable
               caption={t("activeLoan.repaymentSchedule")}
               rows={repaymentSchedule}
-              rowKey={(r) => String((r as RepaymentScheduleRow & { scheduleId: string }).scheduleId)}
+              rowKey={(r) =>
+                String((r as RepaymentScheduleRow & { scheduleId: string }).scheduleId)
+              }
               columns={[
                 { key: "month", header: t("activeLoan.scheduleMonth"), render: (r) => r.month },
-                { key: "due", header: t("activeLoan.scheduleDue"), render: (r) => formatDate(r.dueDate) },
+                {
+                  key: "due",
+                  header: t("activeLoan.scheduleDue"),
+                  render: (r) => formatDate(r.dueDate),
+                },
                 {
                   key: "principal",
                   header: t("activeLoan.schedulePrincipal"),
@@ -242,13 +287,21 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
                   key: "paid",
                   header: t("activeLoan.schedulePaid"),
                   numeric: true,
-                  render: (r) => <span className={r.paidAmount > 0 ? "text-emerald" : ""}>{formatTaka(r.paidAmount)}</span>,
+                  render: (r) => (
+                    <span className={r.paidAmount > 0 ? "text-emerald" : ""}>
+                      {formatTaka(r.paidAmount)}
+                    </span>
+                  ),
                 },
                 {
                   key: "outstanding",
                   header: t("activeLoan.scheduleOutstanding"),
                   numeric: true,
-                  render: (r) => <span className={r.outstandingAmount > 0 ? "text-coral font-medium" : ""}>{formatTaka(r.outstandingAmount)}</span>,
+                  render: (r) => (
+                    <span className={r.outstandingAmount > 0 ? "text-coral font-medium" : ""}>
+                      {formatTaka(r.outstandingAmount)}
+                    </span>
+                  ),
                 },
                 {
                   key: "status",
@@ -335,9 +388,7 @@ export default function ActiveLoanDetails({ onNavigate }: Props) {
           <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:flex sm:justify-between sm:items-center">
             <div className="min-w-0">
               <h2 className="text-sm font-semibold text-navy">{t("activeLoan.agreement")}</h2>
-              <p className="text-xs text-stone-500 mt-0.5">
-                {t("activeLoan.agreementHint")}
-              </p>
+              <p className="text-xs text-stone-500 mt-0.5">{t("activeLoan.agreementHint")}</p>
             </div>
             <Button variant="secondary" size="sm" className="shrink-0">
               {t("activeLoan.downloadPdf")}

@@ -33,33 +33,39 @@
 
 **Purpose** — Authentication identity. Contains _only_ credentials, system role, and account status. All profile data lives elsewhere.
 
-| Column           | Type         | Constraints                    | Description                                        |
-| ---------------- | ------------ | ------------------------------ | -------------------------------------------------- |
-| `user_id`        | UUID         | **PK**                         | Unique user identifier                             |
-| `email`          | VARCHAR(255) | UNIQUE, NOT NULL               | Login email address                                |
-| `phone`          | VARCHAR(20)  | UNIQUE                         | Optional phone login                               |
-| `password_hash`  | VARCHAR(255) | NOT NULL                       | Securely hashed password (bcrypt / argon2)         |
-| `role`           | VARCHAR(20)  | NOT NULL, DEFAULT `'borrower'` | System role — `borrower`, `admin`, `partner_agent` |
-| `account_status` | VARCHAR(20)  | NOT NULL, DEFAULT `'active'`   | `active`, `suspended`, `deactivated`               |
-| `email_verified` | BOOLEAN      | NOT NULL, DEFAULT FALSE        | Whether email has been confirmed                   |
-| `created_at`     | TIMESTAMPTZ  | NOT NULL, DEFAULT NOW()        | Registration timestamp                             |
-| `updated_at`     | TIMESTAMPTZ  | NOT NULL, DEFAULT NOW()        | Last modification timestamp                        |
+| Column           | Type         | Constraints                                       | Description                                                  |
+| ---------------- | ------------ | ------------------------------------------------- | ------------------------------------------------------------ |
+| `user_id`        | UUID         | **PK**                                            | Unique user identifier                                       |
+| `username`       | VARCHAR(50)  |                                                   | Optional username handle                                     |
+| `email`          | VARCHAR(255) | UNIQUE, NOT NULL                                  | Login email address                                          |
+| `phone`          | VARCHAR(20)  | UNIQUE                                            | Optional phone login                                         |
+| `password_hash`  | VARCHAR(255) | NOT NULL                                          | Securely hashed password (bcrypt / argon2)                   |
+| `role`           | VARCHAR(20)  | NOT NULL, DEFAULT `'borrower'`                    | System role — `borrower`, `lender`, `admin`, `partner_agent` |
+| `account_status` | VARCHAR(20)  | NOT NULL, DEFAULT `'active'`                      | `active`, `suspended`, `deactivated`                         |
+| `partner_id`     | UUID         | **FK → funding_partners(partner_id)** ON DEL SET NULL | Linked institutional partner (for `partner_agent`)           |
+| `email_verified` | BOOLEAN      | NOT NULL, DEFAULT FALSE                           | Whether email has been confirmed                             |
+| `created_at`     | TIMESTAMPTZ  | NOT NULL, DEFAULT NOW()                           | Registration timestamp                                       |
+| `updated_at`     | TIMESTAMPTZ  | NOT NULL, DEFAULT NOW()                           | Last modification timestamp                                  |
 
 **Primary Key:** `user_id`
-**Foreign Keys:** None
+**Foreign Keys:** `partner_id` → `funding_partners(partner_id)`
 **Relationships:**
 
-- 1 → 1 `user_profiles`
+- 1 → 1 `user_profiles` (for borrowers)
+- 1 → 1 `investor_profiles` (for lenders)
+- N → 1 `funding_partners` (for partner agents)
 - 1 → N `login_sessions`
 - 1 → N `verification_requests`
 - 1 → N `trust_scores`
-- 1 → N `loan_applications`
+- 1 → N `loan_applications` (borrower applications)
+- 1 → N `funding_commitments` (lender commitments)
+- 1 → N `lender_application_matches` (lender opportunity matches)
 - 1 → N `fraud_flags`
 - 1 → N `audit_logs`
 - 1 → N `notifications`
 - 1 → N `guarantors`
 
-**Justification:** Authentication changes independently from profile data. Keeping this table lean improves security (fewer fields exposed during auth queries) and satisfies 3NF by separating credentials from biographical data.
+**Justification:** Authentication changes independently from profile data. Keeping this table lean improves security (fewer fields exposed during auth queries) and satisfies 3NF by separating credentials from biographical and role-specific data.
 
 ---
 
@@ -115,26 +121,32 @@
 
 **Purpose** — Borrower biographical and demographic data. Separated from `users` to keep authentication lean and allow future profile types.
 
-| Column                  | Type          | Constraints                      | Description                                     |
-| ----------------------- | ------------- | -------------------------------- | ----------------------------------------------- |
-| `profile_id`            | UUID          | **PK**                           | Unique profile identifier                       |
-| `user_id`               | UUID          | **FK → users**, UNIQUE, NOT NULL | One-to-one link to auth identity                |
-| `full_name`             | VARCHAR(255)  | NOT NULL                         | Legal full name                                 |
-| `date_of_birth`         | DATE          |                                  | Date of birth                                   |
-| `gender`                | VARCHAR(20)   |                                  | `male`, `female`, `other`, `prefer_not_to_say`  |
-| `nid_number`            | VARCHAR(50)   | UNIQUE                           | National ID number                              |
-| `address_line`          | TEXT          |                                  | Street address                                  |
-| `city`                  | VARCHAR(100)  |                                  | City/municipality                               |
-| `district`              | VARCHAR(100)  |                                  | District                                        |
-| `postal_code`           | VARCHAR(20)   |                                  | Postal code                                     |
-| `occupation`            | VARCHAR(100)  |                                  | Current occupation / profession                 |
-| `monthly_family_income` | DECIMAL(12,2) |                                  | Household income                                |
-| `institution_id`        | UUID          | **FK → institutions**            | Current institution (nullable for non-students) |
-| `student_id`            | VARCHAR(100)  |                                  | Student ID at institution                       |
-| `enrollment_year`       | INTEGER       |                                  | Year of enrollment                              |
-| `profile_photo_url`     | TEXT          |                                  | Path to profile photograph                      |
-| `created_at`            | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()          | Profile creation                                |
-| `updated_at`            | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()          | Last modification                               |
+| Column                      | Type          | Constraints                      | Description                                                                                   |
+| --------------------------- | ------------- | -------------------------------- | --------------------------------------------------------------------------------------------- |
+| `profile_id`                | UUID          | **PK**                           | Unique profile identifier                                                                     |
+| `user_id`                   | UUID          | **FK → users**, UNIQUE, NOT NULL | One-to-one link to auth identity                                                              |
+| `full_name`                 | VARCHAR(255)  |                                  | Legal full name                                                                               |
+| `date_of_birth`             | DATE          |                                  | Date of birth                                                                                 |
+| `gender`                    | VARCHAR(20)   |                                  | `male`, `female`, `other`, `prefer_not_to_say`                                                |
+| `nid_number`                | VARCHAR(50)   | UNIQUE                           | National ID number                                                                            |
+| `address_line`              | TEXT          |                                  | Street address                                                                                |
+| `city`                      | VARCHAR(100)  |                                  | City/municipality                                                                             |
+| `district`                  | VARCHAR(100)  |                                  | District                                                                                      |
+| `postal_code`               | VARCHAR(20)   |                                  | Postal code                                                                                   |
+| `occupation`                | VARCHAR(100)  |                                  | Current occupation / profession                                                               |
+| `monthly_family_income`     | DECIMAL(12,2) |                                  | Household income                                                                              |
+| `institution_id`            | UUID          | **FK → institutions**            | Current institution (nullable for non-students)                                               |
+| `student_id`                | VARCHAR(100)  |                                  | Student ID at institution                                                                     |
+| `enrollment_year`           | INTEGER       |                                  | Year of enrollment                                                                            |
+| `profile_photo_url`         | TEXT          |                                  | Path to profile photograph                                                                    |
+| `profile_completion_status` | VARCHAR(30)   | NOT NULL, DEFAULT `'incomplete'` | `incomplete`, `pending_verification`, `under_review`, `verified`, `rejected`, `needs_update` |
+| `employment_type`           | VARCHAR(50)   |                                  | e.g., `full_time`, `part_time`, `student`, `freelance`                                        |
+| `employer_name`             | VARCHAR(255)  |                                  | Name of employer or business                                                                  |
+| `monthly_income`            | DECIMAL(12,2) |                                  | Individual borrower monthly income                                                            |
+| `monthly_savings`           | DECIMAL(12,2) |                                  | Estimated monthly savings                                                                     |
+| `income_source`             | VARCHAR(100)  |                                  | Primary income stream description                                                             |
+| `created_at`                | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()          | Profile creation                                                                              |
+| `updated_at`                | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()          | Last modification                                                                             |
 
 **Primary Key:** `profile_id`
 **Foreign Keys:** `user_id` → `users(user_id)`, `institution_id` → `institutions(institution_id)`
@@ -144,6 +156,35 @@
 - N → 1 `institutions`
 
 **Justification:** Profile data changes independently from auth credentials and at a different frequency. Splitting them avoids a bloated users table and satisfies 3NF — `institution_id` removes the transitive dependency that would exist if institution details were stored inline.
+
+---
+
+### 2.3 `investor_profiles`
+
+**Purpose** — Profile, investment preferences, and compliance tracking for lenders and individual/institutional investors. Created automatically when a user registers or is upgraded to the `lender` role via database trigger (`trg_users_ensure_lender_investor_profile`).
+
+| Column                 | Type          | Constraints                            | Description                                                                                   |
+| ---------------------- | ------------- | -------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `investor_profile_id`  | UUID          | **PK**                                 | Unique investor profile identifier                                                            |
+| `user_id`              | UUID          | **FK → users**, UNIQUE, NOT NULL       | Linked lender user account                                                                    |
+| `display_name`         | VARCHAR(255)  |                                        | Public display name or pseudonym shown on loan opportunities                                  |
+| `company`              | VARCHAR(255)  |                                        | Organization or institutional affiliation                                                     |
+| `address`              | TEXT          |                                        | Physical mailing / business address                                                           |
+| `verification_status`  | VARCHAR(30)   | NOT NULL, DEFAULT `'pending'`          | `pending`, `approved`, `rejected`                                                             |
+| `funding_capacity`     | DECIMAL(14,2) |                                        | Total liquid capital committed or available for lending                                       |
+| `preferred_categories` | TEXT[]        |                                        | Array of loan purposes matching lender preferences (e.g., `{"tuition", "device"}`)           |
+| `risk_preference`      | VARCHAR(30)   |                                        | `conservative`, `moderate`, `aggressive`                                                      |
+| `max_exposure`         | DECIMAL(14,2) |                                        | Maximum exposure cap per borrower or loan category                                            |
+| `account_status`       | VARCHAR(20)   | NOT NULL, DEFAULT `'active'`           | `active`, `suspended`, `deactivated`                                                          |
+| `kyc_status`           | VARCHAR(30)   | NOT NULL, DEFAULT `'incomplete'`       | `incomplete`, `pending_verification`, `under_review`, `verified`, `rejected`, `needs_update` |
+| `created_at`           | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()                | Profile creation timestamp                                                                    |
+| `updated_at`           | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()                | Last modification timestamp                                                                   |
+
+**Primary Key:** `investor_profile_id`  
+**Foreign Keys:** `user_id` → `users(user_id)` ON DELETE CASCADE  
+**Relationships:** 1 → 1 `users`
+
+**Justification:** Separating investor/lender metadata from borrower profiles adheres to Single Responsibility and 3NF. An investor does not possess student or university credentials, while a borrower does not have investment risk parameters or capital exposure caps.
 
 ---
 
@@ -280,31 +321,67 @@
 
 ---
 
-### 5.1 `loan_applications`
+### 5.1 `loan_products`
+
+**Purpose** — Catalog of standardized loan packages offered by institutional partners. Defines parameters like duration, interest rate, bounds, and eligibility rules.
+
+| Column            | Type          | Constraints                            | Description                                                 |
+| ----------------- | ------------- | -------------------------------------- | ----------------------------------------------------------- |
+| `product_id`      | UUID          | **PK**                                 | Unique product identifier                                   |
+| `partner_id`      | UUID          | **FK → funding_partners**, NOT NULL    | Sponsoring institutional partner                            |
+| `name`            | VARCHAR(255)  | NOT NULL                               | Product name (e.g., "Student Laptop Financing", "Semester Tuition Aid") |
+| `category`        | VARCHAR(50)   | NOT NULL                               | Category (`education`, `technology`, `emergency`, `business`) |
+| `min_amount`      | DECIMAL(12,2) | NOT NULL                               | Minimum loan amount                                         |
+| `max_amount`      | DECIMAL(12,2) | NOT NULL                               | Maximum loan amount                                         |
+| `interest_rate`   | DECIMAL(5,2)  | NOT NULL                               | Annual interest rate (%)                                    |
+| `duration_months` | INTEGER       | NOT NULL                               | Standard tenure in months                                   |
+| `description`     | TEXT          |                                        | Marketing and terms overview                                |
+| `eligibility`     | JSONB         | DEFAULT `'[]'::jsonb`                  | Array of structured eligibility criteria                     |
+| `tags`            | TEXT[]        | DEFAULT `'{}'`                         | Filterable search tags                                      |
+| `is_active`       | BOOLEAN       | NOT NULL, DEFAULT TRUE                 | Whether this product is open for applications               |
+| `created_at`      | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()                | Record creation                                             |
+| `updated_at`      | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()                | Last modification                                           |
+
+**Primary Key:** `product_id`  
+**Foreign Keys:** `partner_id` → `funding_partners(partner_id)` ON DELETE CASCADE  
+**Relationships:**
+- N → 1 `funding_partners`
+- 1 → N `loan_applications`
+
+**Justification:** Standardized loan products allow partners to define reusable financing programs without duplicating loan parameters across individual applications.
+
+---
+
+### 5.2 `loan_applications`
 
 **Purpose** — A borrower's _request_ for a loan. May be rejected, withdrawn, or approved — it is not a loan until approved and disbursed.
 
-| Column                | Type          | Constraints                 | Description                                                                                                              |
-| --------------------- | ------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `application_id`      | UUID          | **PK**                      | Unique application identifier                                                                                            |
-| `user_id`             | UUID          | **FK → users**, NOT NULL    | Applicant                                                                                                                |
-| `partner_id`          | UUID          | **FK → funding_partners**   | Targeted partner (nullable for platform-matched)                                                                         |
-| `requested_amount`    | DECIMAL(12,2) | NOT NULL                    | Amount requested                                                                                                         |
-| `purpose`             | VARCHAR(100)  | NOT NULL                    | Loan purpose (`tuition`, `device`, `medical`, `business`, `other`)                                                       |
-| `purpose_description` | TEXT          |                             | Detailed purpose narrative                                                                                               |
-| `status`              | VARCHAR(20)   | NOT NULL, DEFAULT `'draft'` | `draft`, `submitted`, `under_review`, `approved`, `rejected`, `disbursed`, `active`, `completed`, `overdue`, `defaulted` |
-| `trust_score_id`      | UUID          | **FK → trust_scores**       | Trust score snapshot at time of application                                                                              |
-| `submitted_at`        | TIMESTAMPTZ   |                             | Submission timestamp                                                                                                     |
-| `created_at`          | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()     | Draft creation time                                                                                                      |
-| `updated_at`          | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()     | Last status change                                                                                                       |
+| Column                | Type          | Constraints                    | Description                                                                                                              |
+| --------------------- | ------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `application_id`      | UUID          | **PK**                         | Unique application identifier                                                                                            |
+| `reference_code`      | VARCHAR(20)   | UNIQUE (partial index)         | Human-friendly tracking reference (e.g. `APP-2026-XXXX`)                                                                 |
+| `user_id`             | UUID          | **FK → users**, NOT NULL       | Applicant (borrower)                                                                                                     |
+| `partner_id`          | UUID          | **FK → funding_partners**      | Targeted partner (nullable for platform/p2p-matched)                                                                     |
+| `product_id`          | UUID          | **FK → loan_products**         | Selected loan product package (nullable for custom request)                                                              |
+| `requested_amount`    | DECIMAL(12,2) | NOT NULL                       | Amount requested                                                                                                         |
+| `purpose`             | VARCHAR(100)  | NOT NULL                       | Loan purpose (`tuition`, `device`, `medical`, `business`, `other`)                                                       |
+| `purpose_description` | TEXT          |                                | Detailed purpose narrative                                                                                               |
+| `status`              | VARCHAR(20)   | NOT NULL, DEFAULT `'draft'`    | `draft`, `submitted`, `under_review`, `approved`, `rejected`, `disbursed`, `active`, `completed`, `overdue`, `defaulted` |
+| `trust_score_id`      | UUID          | **FK → trust_scores**          | Trust score snapshot at time of application                                                                              |
+| `submitted_at`        | TIMESTAMPTZ   |                                | Submission timestamp                                                                                                     |
+| `created_at`          | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()        | Draft creation time                                                                                                      |
+| `updated_at`          | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()        | Last status change                                                                                                       |
 
-**Primary Key:** `application_id`
-**Foreign Keys:** `user_id` → `users(user_id)`, `partner_id` → `funding_partners(partner_id)`, `trust_score_id` → `trust_scores(score_id)`
+**Primary Key:** `application_id`  
+**Foreign Keys:** `user_id` → `users(user_id)`, `partner_id` → `funding_partners(partner_id)`, `product_id` → `loan_products(product_id)`, `trust_score_id` → `trust_scores(score_id)`  
 **Relationships:**
 
 - N → 1 `users`
 - N → 1 `funding_partners`
+- N → 1 `loan_products`
 - N → 1 `trust_scores`
+- 1 → N `funding_commitments`
+- 1 → N `lender_application_matches`
 - 1 → 0..1 `loan_offers`
 - 1 → 0..1 `loans`
 - 1 → N `partner_decisions`
@@ -313,7 +390,59 @@
 
 ---
 
-### 5.2 `loan_offers`
+### 5.3 `funding_commitments`
+
+**Purpose** — Records explicit capital allocations by lenders toward a specific loan application. Prevents over-committing and enables multi-lender syndicated microloans or direct P2P funding.
+
+| Column           | Type          | Constraints                            | Description                                        |
+| ---------------- | ------------- | -------------------------------------- | -------------------------------------------------- |
+| `commitment_id`  | UUID          | **PK**                                 | Unique commitment identifier                       |
+| `application_id` | UUID          | **FK → loan_applications**, NOT NULL   | Loan application being funded                      |
+| `lender_user_id` | UUID          | **FK → users**, NOT NULL               | Lender committing funds                            |
+| `amount`         | DECIMAL(12,2) | NOT NULL, CHECK (amount > 0)           | Committed funding amount                           |
+| `status`         | VARCHAR(20)   | NOT NULL, DEFAULT `'committed'`        | `committed`, `cancelled`                           |
+| `created_at`     | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()                | Commitment timestamp                               |
+| `updated_at`     | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()                | Last status modification                           |
+
+**Primary Key:** `commitment_id`  
+**Unique Constraint:** (`application_id`, `lender_user_id`)  
+**Foreign Keys:** `application_id` → `loan_applications(application_id)` ON DELETE RESTRICT, `lender_user_id` → `users(user_id)` ON DELETE RESTRICT  
+**Relationships:**
+- N → 1 `loan_applications`
+- N → 1 `users` (lender)
+
+**Justification:** Financial commitments must be tracked independently with transaction-level locking. A lender may commit capital to an application, triggering loan creation when the target is fully met. RESTRICT delete rules prevent deleting applications with active capital commitments.
+
+---
+
+### 5.4 `lender_application_matches`
+
+**Purpose** — Priority queue connecting submitted loan applications with potential lenders based on category matching, trust scores, and funding capacities.
+
+| Column            | Type        | Constraints                            | Description                                                 |
+| ----------------- | ----------- | -------------------------------------- | ----------------------------------------------------------- |
+| `match_id`        | UUID        | **PK**                                 | Unique match entry identifier                               |
+| `application_id`  | UUID        | **FK → loan_applications**, NOT NULL   | Suggested loan application                                  |
+| `lender_user_id`  | UUID        | **FK → users**, NOT NULL               | Targeted lender                                             |
+| `priority`        | INTEGER     | NOT NULL, DEFAULT 0                    | Sorting/matching priority score                             |
+| `status`          | VARCHAR(20) | NOT NULL, DEFAULT `'pending'`          | `pending`, `viewed`, `accepted`, `rejected`, `expired`      |
+| `matched_at`      | TIMESTAMPTZ | NOT NULL, DEFAULT NOW()                | When match was algorithmically generated                    |
+| `viewed_at`       | TIMESTAMPTZ |                                        | When lender viewed the opportunity                          |
+| `decided_at`      | TIMESTAMPTZ |                                        | Decision timestamp                                          |
+| `decision_reason` | TEXT        |                                        | Optional notes explaining lender decision                   |
+
+**Primary Key:** `match_id`  
+**Unique Constraint:** (`application_id`, `lender_user_id`)  
+**Foreign Keys:** `application_id` → `loan_applications(application_id)` ON DELETE CASCADE, `lender_user_id` → `users(user_id)` ON DELETE CASCADE  
+**Relationships:**
+- N → 1 `loan_applications`
+- N → 1 `users` (lender)
+
+**Justification:** Matching is an intelligent dispatch mechanism. A separate queue allows tracking lender review response times, opportunity impressions, and conversion rates without polluting the application entity.
+
+---
+
+### 5.5 `loan_offers`
 
 **Purpose** — A partner's counter-offer to an application. The offered terms may differ from what the borrower requested.
 
@@ -342,7 +471,7 @@
 
 ---
 
-### 5.3 `loans`
+### 5.6 `loans`
 
 **Purpose** — An active, approved loan. Exists only after an application has been approved and an offer accepted.
 
@@ -377,7 +506,7 @@
 
 ---
 
-### 5.4 `loan_disbursements`
+### 5.7 `loan_disbursements`
 
 **Purpose** — Records actual money transfers. Loan approval ≠ money transferred. Supports multiple disbursement tranches per loan.
 
@@ -439,6 +568,7 @@
 | `amount_paid`           | DECIMAL(12,2) | NOT NULL                               | Actual amount paid                               |
 | `payment_method`        | VARCHAR(50)   |                                        | `bank_transfer`, `mobile_money`, `cash`, `other` |
 | `transaction_reference` | VARCHAR(100)  |                                        | External transaction reference                   |
+| `provider_reference`    | VARCHAR(100)  |                                        | Payment provider idempotency key/reference       |
 | `status`                | VARCHAR(20)   | NOT NULL, DEFAULT `'completed'`        | `completed`, `failed`, `reversed`                |
 | `paid_at`               | TIMESTAMPTZ   | NOT NULL, DEFAULT NOW()                | Payment timestamp                                |
 
@@ -446,7 +576,7 @@
 **Foreign Keys:** `schedule_id` → `repayment_schedules(schedule_id)`
 **Relationships:** N → 1 `repayment_schedules`
 
-**Justification:** Actual payment events must be recorded immutably. A single installment may receive multiple partial payments or have a failed attempt followed by a successful one. This design preserves the complete financial history required for audit and compliance.
+**Justification:** Actual payment events must be recorded immutably. A single installment may receive multiple partial payments or have a failed attempt followed by a successful one. Storing `provider_reference` guarantees idempotency during external webhook and replay handling.
 
 ---
 
@@ -465,6 +595,9 @@
 | `type`          | VARCHAR(50)  | NOT NULL                | `bank`, `ngo`, `mfi`, `alumni_fund`, `other` |
 | `contact_email` | VARCHAR(255) |                         | Primary contact email                        |
 | `contact_phone` | VARCHAR(20)  |                         | Primary contact phone                        |
+| `address`       | TEXT         |                         | Physical / headquarter address               |
+| `branch`        | VARCHAR(255) |                         | Branch or operational territory              |
+| `goal`          | VARCHAR(255) |                         | Lending mission / microcredit target scope   |
 | `is_active`     | BOOLEAN      | NOT NULL, DEFAULT TRUE  | Whether partner is currently active          |
 | `created_at`    | TIMESTAMPTZ  | NOT NULL, DEFAULT NOW() | Onboarding timestamp                         |
 | `updated_at`    | TIMESTAMPTZ  | NOT NULL, DEFAULT NOW() | Last modification                            |
@@ -473,6 +606,8 @@
 **Foreign Keys:** None
 **Relationships:**
 
+- 1 → N `users` (partner agents linked via `users.partner_id`)
+- 1 → N `loan_products`
 - 1 → N `partner_rules`
 - 1 → N `partner_decisions`
 - 1 → N `loan_applications`
@@ -636,11 +771,13 @@ erDiagram
 
     users {
         UUID user_id PK
+        VARCHAR username
         VARCHAR email UK
         VARCHAR phone UK
         VARCHAR password_hash
         VARCHAR role
         VARCHAR account_status
+        UUID partner_id FK
         BOOLEAN email_verified
         TIMESTAMPTZ created_at
         TIMESTAMPTZ updated_at
@@ -685,6 +822,29 @@ erDiagram
         VARCHAR student_id
         INTEGER enrollment_year
         TEXT profile_photo_url
+        VARCHAR profile_completion_status
+        VARCHAR employment_type
+        VARCHAR employer_name
+        DECIMAL monthly_income
+        DECIMAL monthly_savings
+        VARCHAR income_source
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    investor_profiles {
+        UUID investor_profile_id PK
+        UUID user_id FK "UK"
+        VARCHAR display_name
+        VARCHAR company
+        TEXT address
+        VARCHAR verification_status
+        DECIMAL funding_capacity
+        TEXT_ARRAY preferred_categories
+        VARCHAR risk_preference
+        DECIMAL max_exposure
+        VARCHAR account_status
+        VARCHAR kyc_status
         TIMESTAMPTZ created_at
         TIMESTAMPTZ updated_at
     }
@@ -747,10 +907,29 @@ erDiagram
 
     %% ===== LOAN MANAGEMENT =====
 
+    loan_products {
+        UUID product_id PK
+        UUID partner_id FK
+        VARCHAR name
+        VARCHAR category
+        DECIMAL min_amount
+        DECIMAL max_amount
+        DECIMAL interest_rate
+        INTEGER duration_months
+        TEXT description
+        JSONB eligibility
+        TEXT_ARRAY tags
+        BOOLEAN is_active
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
     loan_applications {
         UUID application_id PK
+        VARCHAR reference_code
         UUID user_id FK
         UUID partner_id FK
+        UUID product_id FK
         DECIMAL requested_amount
         VARCHAR purpose
         TEXT purpose_description
@@ -759,6 +938,28 @@ erDiagram
         TIMESTAMPTZ submitted_at
         TIMESTAMPTZ created_at
         TIMESTAMPTZ updated_at
+    }
+
+    funding_commitments {
+        UUID commitment_id PK
+        UUID application_id FK
+        UUID lender_user_id FK
+        DECIMAL amount
+        VARCHAR status
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    lender_application_matches {
+        UUID match_id PK
+        UUID application_id FK
+        UUID lender_user_id FK
+        INTEGER priority
+        VARCHAR status
+        TIMESTAMPTZ matched_at
+        TIMESTAMPTZ viewed_at
+        TIMESTAMPTZ decided_at
+        TEXT decision_reason
     }
 
     loan_offers {
@@ -818,6 +1019,7 @@ erDiagram
         DECIMAL amount_paid
         VARCHAR payment_method
         VARCHAR transaction_reference
+        VARCHAR provider_reference
         VARCHAR status
         TIMESTAMPTZ paid_at
     }
@@ -830,6 +1032,9 @@ erDiagram
         VARCHAR type
         VARCHAR contact_email
         VARCHAR contact_phone
+        TEXT address
+        VARCHAR branch
+        VARCHAR goal
         BOOLEAN is_active
         TIMESTAMPTZ created_at
         TIMESTAMPTZ updated_at
@@ -911,6 +1116,8 @@ erDiagram
 
     %% User Information
     users ||--|| user_profiles : "has profile"
+    users ||--o| investor_profiles : "has investor profile"
+    funding_partners ||--o{ users : "employs partner agents"
     institutions ||--o{ user_profiles : "enrolls"
 
     %% Verification
@@ -924,8 +1131,14 @@ erDiagram
 
     %% Loan Management
     users ||--o{ loan_applications : "applies"
+    funding_partners ||--o{ loan_products : "offers"
+    loan_products ||--o{ loan_applications : "selected in"
     funding_partners ||--o{ loan_applications : "receives"
     trust_scores ||--o{ loan_applications : "assessed at"
+    loan_applications ||--o{ funding_commitments : "funded via"
+    users ||--o{ funding_commitments : "commits"
+    loan_applications ||--o{ lender_application_matches : "matched to"
+    users ||--o{ lender_application_matches : "receives match"
     loan_applications ||--o| loan_offers : "may receive"
     loan_applications ||--o| loans : "may become"
     funding_partners ||--o{ loan_offers : "offers"
@@ -999,7 +1212,7 @@ This section records the implemented database evidence used for the final demons
 | Transactions                                    | COMPLETE           | Explicit `BEGIN`/`COMMIT`/`ROLLBACK` in registration, funding, reviews, and other workflow routes.                                                                                                           |
 | Triggers                                        | COMPLETE           | Named trigger definitions in `schema.sql`; live, read-only catalog metadata in the showcase.                                                                                                                 |
 | PostgreSQL functions                            | COMPLETE           | `calculate_loan_remaining_balance` and `get_trust_inputs`; the showcase invokes the former live.                                                                                                             |
-| Stored procedure                                | PENDING / TEAMMATE | Excluded from this task by ownership instruction; do not claim it in this submission.                                                                                                                        |
+| Stored procedure                                | COMPLETE           | `process_repayment`, `generate_repayment_schedule`, and `mark_overdue_schedules` implemented in `schema.sql` and used in backend workflows. |
 | Three complex SQL demonstrations                | COMPLETE           | `loanPortfolio`, `lenderFunding`, and `applicationTrust` in `admin.ts`.                                                                                                                                      |
 | Schema features and referential integrity       | COMPLETE           | Foreign keys, constraints, indexes, JSONB/arrays, triggers, functions, transactions, and locks in `schema.sql`.                                                                                              |
 
@@ -1045,7 +1258,31 @@ The showcase endpoint `GET /api/v1/admin/database-showcase/triggers` queries Pos
 
 ## 6. Procedures
 
-**PENDING / TEAMMATE-OWNED.** Stored-procedure work is intentionally outside this database-showcase task. No procedure was implemented, changed, or integrated here, and it must not be presented as complete until the owning teammate confirms and demonstrates it.
+**COMPLETE.** Three core PostgreSQL stored procedures are implemented in `apps/backend/migrations/schema.sql` and utilized across backend workflows:
+
+1. **`process_repayment(...)`**:
+   - Signature:
+     ```sql
+     CALL process_repayment(
+         p_schedule_id, p_amount_paid, p_payment_method, p_txn_reference, p_provider_ref, p_status,
+         out_repayment_id, out_schedule_status, out_loan_id, out_loan_status, out_user_id, out_total_outstanding, out_is_duplicate
+     );
+     ```
+   - Enforces transactional atomicity and concurrency safety with row-level locks (`SELECT ... FOR UPDATE` on `repayment_schedules`).
+   - Ensures payment idempotency by verifying `provider_reference` before inserting repayments.
+   - Computes total cumulative payments against installment amounts and transitions schedule status (`paid` vs `partially_paid`).
+   - Checks loan-wide installments and automatically marks the parent loan `completed` when all installments are fulfilled.
+   - Invoked directly by `repayment.service.ts` during borrower repayment processing.
+
+2. **`generate_repayment_schedule(p_loan_id, p_principal, p_annual_rate, p_tenure_months, p_start_date)`**:
+   - Calculates fixed monthly installments using standard amortization:
+     $$\text{installment} = \frac{P \times r \times (1+r)^n}{(1+r)^n - 1}$$
+   - Loops from 1 to `p_tenure_months` and inserts scheduled installment records with sequential due dates (`p_start_date + i * interval '1 month'`).
+   - Invoked automatically when a loan application is fully funded by lenders in `investor.ts`.
+
+3. **`mark_overdue_schedules()`**:
+   - Scans active loans and marks past-due installments (`due_date < CURRENT_DATE` and status IN `'pending'`, `'partially_paid'`) as `overdue`.
+   - Transitions active loans with overdue installments to `overdue` status.
 
 ## 7. Complex PostgreSQL queries
 

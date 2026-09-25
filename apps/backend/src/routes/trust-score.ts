@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { pool } from "../lib/db.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
-import { 
-  recalculateAndPersistTrustScore, 
-  initializeTrustScoreIfNeeded 
+import {
+  recalculateAndPersistTrustScore,
+  initializeTrustScoreIfNeeded,
 } from "../services/trust-persistence.service.js";
 
 const router = Router();
@@ -19,7 +19,9 @@ router.get("/", async (req: RequestWithAuth, res) => {
       [req.auth!.userId],
     );
     if (summary.rowCount === 0 || summary.rows[0].score === null) {
-      return res.status(404).json({ success: false, error: { message: "Score could not be initialized" } });
+      return res
+        .status(404)
+        .json({ success: false, error: { message: "Score could not be initialized" } });
     }
     const row = summary.rows[0];
     return res.status(200).json({

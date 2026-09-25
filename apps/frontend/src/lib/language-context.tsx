@@ -40,7 +40,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const t = useCallback(
     (key: TranslationKey, varsOrFallback?: Record<string, string | number> | string): string => {
-      let str = translations[language][key] ?? translations.en[key] ?? (typeof varsOrFallback === "string" ? varsOrFallback : key);
+      let str =
+        translations[language][key] ??
+        translations.en[key] ??
+        (typeof varsOrFallback === "string" ? varsOrFallback : key);
       if (varsOrFallback && typeof varsOrFallback === "object") {
         for (const [k, v] of Object.entries(varsOrFallback)) {
           str = str.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));

@@ -144,24 +144,19 @@ export async function getRepaymentSchedule(loanId: string) {
     expectedAmount: schedule.expectedAmount,
     paidAmount: schedule.paidAmount ?? schedule.totalPaid ?? 0,
     outstandingAmount: schedule.outstandingAmount ?? 0,
-    status: (
-      schedule.status === "paid"
-        ? "paid"
-        : schedule.status === "partially_paid"
-          ? "partially_paid"
-          : schedule.status === "overdue"
-            ? "overdue"
-            : schedule.outstandingAmount > 0 && schedule.outstandingAmount < schedule.expectedAmount
-              ? "partially_paid"
-              : "upcoming"
-    ) as RepaymentScheduleRow["status"],
+    status: (schedule.status === "paid"
+      ? "paid"
+      : schedule.status === "partially_paid"
+        ? "partially_paid"
+        : schedule.status === "overdue"
+          ? "overdue"
+          : schedule.outstandingAmount > 0 && schedule.outstandingAmount < schedule.expectedAmount
+            ? "partially_paid"
+            : "upcoming") as RepaymentScheduleRow["status"],
   }));
 }
 
-export async function createRepayment(
-  scheduleId: string,
-  amountPaid: number,
-) {
+export async function createRepayment(scheduleId: string, amountPaid: number) {
   return apiRequest<MvpRepaymentResult>(`/repayments/payments`, {
     method: "POST",
     body: JSON.stringify({
@@ -170,4 +165,3 @@ export async function createRepayment(
     }),
   });
 }
-

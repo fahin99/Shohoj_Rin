@@ -48,10 +48,10 @@ router.put("/username", requireAuth, async (req, res) => {
       });
     }
 
-    await client.query(
-      `UPDATE users SET username = $1, updated_at = NOW() WHERE user_id = $2`,
-      [newUsername, userId],
-    );
+    await client.query(`UPDATE users SET username = $1, updated_at = NOW() WHERE user_id = $2`, [
+      newUsername,
+      userId,
+    ]);
 
     await logAuditEvent(
       userId,
@@ -69,7 +69,9 @@ router.put("/username", requireAuth, async (req, res) => {
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Failed to update username:", error);
-    return res.status(500).json({ success: false, error: { message: "Failed to update username" } });
+    return res
+      .status(500)
+      .json({ success: false, error: { message: "Failed to update username" } });
   } finally {
     client.release();
   }
@@ -102,7 +104,9 @@ router.put("/", requireAuth, requireRole("borrower", "lender"), async (req, res)
     if (error?.code === "23505") {
       return res.status(409).json({
         success: false,
-        error: { message: "This National ID number or username is already registered to another account" },
+        error: {
+          message: "This National ID number or username is already registered to another account",
+        },
       });
     }
     if (error?.code === "23503") {

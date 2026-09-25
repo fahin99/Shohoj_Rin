@@ -5,7 +5,10 @@ export const usernameSchema = z
   .trim()
   .min(3, "Username must be at least 3 characters")
   .max(50, "Username must be at most 50 characters")
-  .regex(/^[a-zA-Z0-9_.-]+$/, "Username can only contain letters, numbers, dots, underscores, or hyphens");
+  .regex(
+    /^[a-zA-Z0-9_.-]+$/,
+    "Username can only contain letters, numbers, dots, underscores, or hyphens",
+  );
 
 export const registerSchema = z.object({
   username: usernameSchema,
@@ -54,7 +57,10 @@ export const usernameUpdateSchema = z.object({
     .trim()
     .min(3, "Username must be at least 3 characters")
     .max(50, "Username must be at most 50 characters")
-    .regex(/^[a-zA-Z0-9_.-]+$/, "Username can only contain letters, numbers, dots, underscores, or hyphens"),
+    .regex(
+      /^[a-zA-Z0-9_.-]+$/,
+      "Username can only contain letters, numbers, dots, underscores, or hyphens",
+    ),
 });
 
 export const profileUpdateSchema = z.object({
@@ -63,7 +69,10 @@ export const profileUpdateSchema = z.object({
     .trim()
     .min(3, "Username must be at least 3 characters")
     .max(50, "Username must be at most 50 characters")
-    .regex(/^[a-zA-Z0-9_.-]+$/, "Username can only contain letters, numbers, dots, underscores, or hyphens")
+    .regex(
+      /^[a-zA-Z0-9_.-]+$/,
+      "Username can only contain letters, numbers, dots, underscores, or hyphens",
+    )
     .optional(),
   fullName: z.string().trim().min(2).optional(),
   dateOfBirth: z.string().optional(),
@@ -91,7 +100,10 @@ export const investorProfileSchema = z.object({
     .trim()
     .min(3, "Username must be at least 3 characters")
     .max(50, "Username must be at most 50 characters")
-    .regex(/^[a-zA-Z0-9_.-]+$/, "Username can only contain letters, numbers, dots, underscores, or hyphens")
+    .regex(
+      /^[a-zA-Z0-9_.-]+$/,
+      "Username can only contain letters, numbers, dots, underscores, or hyphens",
+    )
     .optional(),
   displayName: z.string().trim().min(2).optional(),
   phone: z.string().trim().min(5).optional(),

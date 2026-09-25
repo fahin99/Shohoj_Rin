@@ -129,9 +129,13 @@ export default function LoanApplication({ onNavigate }: Props) {
     const next: Record<string, string> = {};
     if (current === 0) {
       if (!form.amount || form.amount < selectedLoan.minAmount)
-        next.amount = t("application.errorAmountMin", { amount: formatTaka(selectedLoan.minAmount) });
+        next.amount = t("application.errorAmountMin", {
+          amount: formatTaka(selectedLoan.minAmount),
+        });
       if (form.amount > selectedLoan.maxAmount)
-        next.amount = t("application.errorAmountMax", { amount: formatTaka(selectedLoan.maxAmount) });
+        next.amount = t("application.errorAmountMax", {
+          amount: formatTaka(selectedLoan.maxAmount),
+        });
       if (!form.duration) next.duration = t("application.errorDuration");
       if (!form.purpose.trim()) next.purpose = t("application.errorPurpose");
     }
@@ -194,10 +198,16 @@ export default function LoanApplication({ onNavigate }: Props) {
         <DataRow label={t("loanDetails.loanAmount")} value={formatTaka(form.amount || 0)} />
         <DataRow
           label={t("loanDetails.repaymentDuration")}
-          value={t("loanDetails.monthsUnit", { count: form.duration || selectedLoan.durationMonths })}
+          value={t("loanDetails.monthsUnit", {
+            count: form.duration || selectedLoan.durationMonths,
+          })}
         />
         <div className="border-t border-stone-200 mt-2 pt-2">
-          <DataRow label={t("application.estimatedEmi")} value={formatTaka(Math.round(emi))} emphasis />
+          <DataRow
+            label={t("application.estimatedEmi")}
+            value={formatTaka(Math.round(emi))}
+            emphasis
+          />
         </div>
       </CardBody>
     </Card>
@@ -251,7 +261,10 @@ export default function LoanApplication({ onNavigate }: Props) {
                         min={selectedLoan.minAmount}
                         max={selectedLoan.maxAmount}
                         onChange={(e) => update("amount", Number(e.target.value))}
-                        hint={t("loanDetails.loanRange", { min: formatTaka(selectedLoan.minAmount), max: formatTaka(selectedLoan.maxAmount) })}
+                        hint={t("loanDetails.loanRange", {
+                          min: formatTaka(selectedLoan.minAmount),
+                          max: formatTaka(selectedLoan.maxAmount),
+                        })}
                       />
                       <Select
                         label={t("loanDetails.repaymentDuration")}
@@ -331,17 +344,32 @@ export default function LoanApplication({ onNavigate }: Props) {
                           {t("application.stepLoanDetails")}
                         </p>
                         <DataRow label={t("application.loanProduct")} value={selectedLoan.name} />
-                        <DataRow label={t("loanDetails.loanAmount")} value={formatTaka(form.amount)} />
-                        <DataRow label={t("loanDetails.repaymentDuration")} value={t("loanDetails.monthsUnit", { count: form.duration })} />
+                        <DataRow
+                          label={t("loanDetails.loanAmount")}
+                          value={formatTaka(form.amount)}
+                        />
+                        <DataRow
+                          label={t("loanDetails.repaymentDuration")}
+                          value={t("loanDetails.monthsUnit", { count: form.duration })}
+                        />
                         <DataRow label={t("application.purpose")} value={form.purpose || "—"} />
                       </div>
                       <div className="border-t border-stone-200 pt-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">
                           {t("application.stepEmployment")}
                         </p>
-                        <DataRow label={t("profile.personalIdentity")} value={`${t("application.identityVerified")} ✓`} />
-                        <DataRow label={t("lender.address")} value={`${t("application.identityVerified")} ✓`} />
-                        <DataRow label={t("lender.income")} value={`${t("application.identityVerified")} ✓`} />
+                        <DataRow
+                          label={t("profile.personalIdentity")}
+                          value={`${t("application.identityVerified")} ✓`}
+                        />
+                        <DataRow
+                          label={t("lender.address")}
+                          value={`${t("application.identityVerified")} ✓`}
+                        />
+                        <DataRow
+                          label={t("lender.income")}
+                          value={`${t("application.identityVerified")} ✓`}
+                        />
                         <DataRow label={t("application.contactMobile")} value={form.phone || "—"} />
                         <DataRow
                           label={t("application.employmentType")}
@@ -358,9 +386,18 @@ export default function LoanApplication({ onNavigate }: Props) {
                         <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">
                           {t("application.profileKyc")}
                         </p>
-                        <DataRow label={t("profile.personalIdentity")} value={`${t("application.identityVerified")} ✓`} />
-                        <DataRow label={t("lender.address")} value={`${t("application.identityVerified")} ✓`} />
-                        <DataRow label={t("lender.income")} value={`${t("application.identityVerified")} ✓`} />
+                        <DataRow
+                          label={t("profile.personalIdentity")}
+                          value={`${t("application.identityVerified")} ✓`}
+                        />
+                        <DataRow
+                          label={t("lender.address")}
+                          value={`${t("application.identityVerified")} ✓`}
+                        />
+                        <DataRow
+                          label={t("lender.income")}
+                          value={`${t("application.identityVerified")} ✓`}
+                        />
                       </div>
                     </div>
                   )}

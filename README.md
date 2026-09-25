@@ -107,24 +107,27 @@ Reduce verification friction while maintaining:
 
 ## Included
 
-- Authentication
-- Borrower profile management
+- Authentication (Borrower, Lender/Investor, Admin, Partner Agent)
+- Borrower profile management (Personal, Financial, Employment, Education)
+- Investor & Lender profile management (KYC, Risk preferences, Funding capacity)
 - Identity and document verification
-- Trust score generation
+- Explainable Trust score generation & historical tracking
 - Loan application workflow
-- Partner evaluation
-- Fraud detection
-- Audit logging
-- Repayment tracking
-- Notification system
-- Administrative dashboard
+- Intelligent borrower-to-lender matching (by category, risk, and funding capacity)
+- Direct lender funding & automated loan generation
+- Partner evaluation & rule-based decisioning
+- Rule-based fraud detection
+- Immutable audit logging
+- Repayment schedule & ledger tracking (stored-procedure powered)
+- Notification system (In-app, SMS, Email)
+- Administrative and Lender/Investor dashboards
 
 ## Not Included
 
 ShohojRin does **not** attempt to:
 
 - Operate as a licensed bank
-- Provide loan capital
+- Provide loan capital directly from platform reserves
 - Replace financial institutions
 - Guarantee loan approval
 - Eliminate default risk
@@ -134,111 +137,135 @@ ShohojRin does **not** attempt to:
 # Core System Workflow
 
 ```text
-Borrower
+Borrower / Lender
     │
-Authentication
+Authentication & Role Resolution
     │
-Profile Management
+Profile Management & KYC
     │
-Verification
+Verification (Identity, Student, Income, Guarantor)
     │
-Trust Assessment
+Trust Assessment (Explainable Score + Historical Snapshot)
     │
-Loan Application
+Loan Application Submission
     │
-Partner Evaluation
+Automated Lender Matching & Partner Evaluation
     │
-Partner Decision
+Lender Funding / Partner Decision
     │
-Disbursement
+Automated Loan Offer & Disbursement
     │
-Repayment
+Repayment Processing (Stored Procedure Transaction)
     │
-Trust Update
+Trust Score Recalculation & History Log
     │
-Analytics
+Analytics & Portfolio Monitoring
 ```
+
+---
+
+# Monorepo Architecture
+
+The repository is structured as an npm monorepo workspace:
+
+- **`apps/frontend`**: Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Lucide React, and Recharts. Implements role-aware dashboards for Borrowers, Lenders, and Admins.
+- **`apps/backend`**: Express.js 5, TypeScript, Node-Postgres (`pg` Pool). Features raw parameterized SQL, PostgreSQL stored procedures, functions, transactions, and row-level locking.
+- **`packages/shared`**: Shared TypeScript types, utility interfaces, and Zod schemas used across client and server.
 
 ---
 
 # Functional Modules
 
-## 1. Authentication
+## 1. Authentication & Session Management
 
 Responsible for:
 
-- User registration
-- Login
-- Password security
-- Session management
+- User registration (with username, email, phone)
+- Multi-role support (`borrower`, `lender`, `admin`, `partner_agent`)
+- Secure password hashing with bcrypt (12 rounds)
+- Server-side session management (`login_sessions`) with SHA-256 hashed refresh tokens
+- HttpOnly cookie-based session handling (`shohojrin_session`)
 
 ## 2. Profile Management
 
-Stores borrower information, including:
+Stores comprehensive borrower and investor profiles:
 
-- Personal details
-- Education
-- Employment
-- Address
-- Institution
+- **Borrowers**: Personal details, financial profile (monthly income, savings, source), employment information, address, and educational institution.
+- **Lenders / Investors**: Investor display name, company, KYC status, funding capacity, preferred loan categories, and risk tolerance (`conservative`, `moderate`, `aggressive`).
 
 ## 3. Verification Module
 
 Handles:
 
-- Identity verification
-- Student verification
+- Identity verification (NID)
+- Student verification (Student ID, enrollment year, institution verification)
 - Document validation
 - Guarantor verification
 
-The module supports multiple verification attempts while preserving
-historical records.
+The module supports multiple verification attempts while preserving historical records.
 
 ## 4. Trust Engine
 
-Generates an explainable trust score based on borrower reliability.
+Generates an explainable trust score (0–100) based on borrower reliability.
 
 Positive signals include:
 
 - Verified identity
-- Verified institution
-- Consistent repayment history
-- Stable account history
+- Verified educational institution
+- Consistent on-time repayment history
+- Stable account tenure and financial capacity
 
 Negative signals include:
 
 - Duplicate identity
 - Forged or mismatched documents
-- Repeated defaults
+- Repeated defaults or overdue installments
 - Suspicious account activity
 
-The score is intended to assist lenders rather than make lending
-decisions.
+The score is snapshot-based and never overwritten. Each recalculation creates a new immutable record with explainable factor breakdowns.
 
-## 5. Loan Engine
+## 5. Loan Engine & Lifecycle
 
 Responsible for:
 
-- Creating loan applications
-- Managing application status
-- Tracking the loan lifecycle
-- Generating repayment schedules
+- Creating loan applications with reference codes
+- Managing application statuses (`draft`, `submitted`, `under_review`, `approved`, `rejected`, `disbursed`, etc.)
+- Tracking the complete loan lifecycle from application to completion
+- Automating loan creation, loan offer generation, and initial disbursement upon full funding
 
-## 6. Partner Engine
+## 6. Lender Matching & Investor Engine
 
-Represents partner lending organizations.
+Connects borrowers directly with individual or institutional lenders:
+
+- Automatically matches submitted loan applications to active lenders based on `preferred_categories` and funding capacity
+- Generates priority-ranked matching records (`lender_application_matches`) and instant in-app notifications
+- Provides an **Opportunities Feed** for lenders with transparent borrower trust metrics
+- Supports direct funding commitments (`funding_commitments`) and application review/rejection
+
+## 7. Partner Engine
+
+Represents partner lending organizations (banks, NGOs, MFIs).
 
 Each partner defines:
 
 - Minimum trust score
 - Maximum loan amount
-- Supported loan purposes
-- Repayment duration
+- Supported loan categories & purposes
+- Repayment duration and interest rates
 
-The platform evaluates whether an application satisfies a partner's
-published requirements.
+The platform evaluates whether an application satisfies a partner's published requirements.
 
-## 7. Fraud Detection
+## 8. Repayment Module
+
+Handles loan repayment tracking with strict database-level transactional guarantees:
+
+- Installment schedules generated via `generate_repayment_schedule` stored procedure
+- Idempotent payment processing via `process_repayment` stored procedure with row-level locking (`FOR UPDATE`)
+- Automatic schedule status updates (`paid`, `partially_paid`, `overdue`)
+- Automatic loan completion status updates
+- Automated trigger for borrower trust score recalculation on completed payments
+
+## 9. Fraud Detection
 
 The initial implementation uses rule-based detection.
 
@@ -252,7 +279,7 @@ Example indicators:
 
 Flagged cases are reviewed by administrators.
 
-## 8. Audit Module
+## 10. Audit Module
 
 Every important system action generates an audit record.
 
@@ -265,7 +292,7 @@ Examples:
 - Fraud flag
 - Profile modification
 
-## 9. Notification Module
+## 11. Notification Module
 
 Supports:
 
@@ -280,16 +307,13 @@ Examples include:
 - Overdue alerts
 - Loan decisions
 
-## 10. Dashboard
+## 12. Dashboard & Analytics
 
-Provides statistics including:
+Provides role-specific dashboards:
 
-- Verification success rate
-- Loan approval rate
-- Default rate
-- Repayment performance
-- Fraud statistics
-- Partner performance
+- **Borrower Dashboard**: Real-time application status, active loan repayment schedules, trust score history with factor breakdown
+- **Lender / Investor Dashboard**: Portfolio statistics, funded loan tracking, real-time borrower opportunities feed with trust signals
+- **Admin Dashboard**: Verification success rate, loan approval rate, default rate, repayment performance, fraud statistics, and a live database showcase
 
 ---
 
@@ -358,33 +382,42 @@ Need assessment and trust assessment should remain separate concepts.
 
 **Frontend**
 
-- React
+- Next.js 15 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS
+- Lucide React
+- Recharts (Data Visualizations)
 
 **Backend**
 
 - Node.js
-- Express.js
+- Express.js 5
+- TypeScript
+- Zod (Runtime validation & shared schemas)
 
-**Database**
+**Database & Persistence**
 
-- PostgreSQL
+- PostgreSQL 15+
+- Node-Postgres (`pg` Pool) with raw parameterized SQL (No ORM)
+- Database Stored Procedures (`process_repayment`, `generate_repayment_schedule`, `mark_overdue_schedules`)
+- User-defined PostgreSQL Functions (`calculate_loan_remaining_balance`, `get_trust_inputs`)
+- Database Triggers (Append-only immutability, automated timestamps, investor profile creation)
 
-**ORM**
+**Authentication & Security**
 
-- Prisma
-
-**Authentication**
-
-- JWT
-- Refresh Tokens
+- Secure HttpOnly session cookies (`shohojrin_session`)
+- Bcrypt password hashing (12 rounds)
+- Server-side session store (`login_sessions`) with SHA-256 hashed refresh tokens and instant revocation
+- Role-based authorization middleware (`requireAuth`, `requireRole`, `requireAdmin`, `requireOwnership`)
 
 **Storage**
 
-- Local Storage / Cloud Storage
+- Local Storage / Cloud Object Storage (for uploaded verification documents)
 
-**Charts**
+**Charts & Visualizations**
 
-- Chart.js or Recharts
+- Recharts
 
 ---
 
