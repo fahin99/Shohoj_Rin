@@ -7,6 +7,7 @@ import { Logo } from "../components/Logo";
 import { Button } from "../components/Button";
 import { TextInput, PasswordInput, Checkbox } from "../components/Input";
 import { Alert } from "../components/Alert";
+import { LanguageToggle } from "../components/LanguageToggle";
 import type { PageName } from "../types";
 import { apiRequest } from "../lib/api";
 
@@ -152,8 +153,13 @@ export default function AuthPage({ onNavigate, initialMode = "register" }: AuthP
       {/* Right Form */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden mb-8">
-            <Logo onClick={() => onNavigate("landing")} />
+          <div className="flex items-center justify-between gap-3 mb-8">
+            <div className="lg:hidden">
+              <Logo onClick={() => onNavigate("landing")} />
+            </div>
+            <div className="ml-auto flex items-center justify-center bg-white border border-stone-200 shadow-sm rounded-[6px] p-1">
+              <LanguageToggle />
+            </div>
           </div>
 
           {/* Mode Switcher */}
