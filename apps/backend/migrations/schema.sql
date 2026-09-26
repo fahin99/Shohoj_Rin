@@ -469,7 +469,9 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION restrict_trust_scores_update()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.score != OLD.score OR NEW.trust_band != OLD.trust_band OR NEW.user_id != OLD.user_id THEN
+  IF ROW(NEW.user_id, NEW.score, NEW.trust_band, NEW.confidence_score, NEW.trigger_event, NEW.calculated_at)
+     IS DISTINCT FROM
+     ROW(OLD.user_id, OLD.score, OLD.trust_band, OLD.confidence_score, OLD.trigger_event, OLD.calculated_at) THEN
         RAISE EXCEPTION 'Only is_current can be updated on trust_scores';
     END IF;
     RETURN NEW;

@@ -7,6 +7,7 @@ import {
   clearSessionCookie,
   comparePassword,
   generateSessionId,
+  hashToken,
   hashPassword,
   normalizeEmail,
   normalizePhone,
@@ -81,11 +82,19 @@ function serializeUser(row: AuthUserRow) {
     },
   };
 }
-async function createSession(db: Pick<PoolClient, "query">, userId: string, sessionId: string) {
+async function createSession(
+  db: Pick<PoolClient, "query">,
+  userId: string,
+  sessionId: string,
+  ipAddress: string | undefined,
+  userAgent: string | undefined,
+) {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   await db.query(
-    `INSERT INTO login_sessions (session_id, user_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, $4)`,
-    [sessionId, userId, "session-auth", expiresAt],
+    `INSERT INTO login_sessions
+       (session_id, user_id, refresh_token_hash, ip_address, user_agent, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [sessionId, userId, hashToken(sessionId), ipAddress ?? null, userAgent ?? null, expiresAt],
   );
 }
 router.post("/register", async (req, res) => {
@@ -129,7 +138,7 @@ router.post("/register", async (req, res) => {
     );
     const user = userResult.rows[0];
     await client.query(`INSERT INTO user_profiles (user_id) VALUES ($1)`, [user.user_id]);
-    await createSession(client, user.user_id, sessionId);
+    await createSession(client, user.user_id, sessionId, req.ip, req.get("user-agent"));
     await client.query("COMMIT");
     setSessionCookie(res, sessionId);
     return res.status(201).json({
@@ -197,7 +206,7 @@ router.post("/login", async (req, res) => {
     if (user.account_status !== "active")
       return res.status(403).json({ success: false, error: { message: "Account is not active" } });
     const sessionId = generateSessionId();
-    await createSession(client, user.user_id, sessionId);
+    await createSession(client, user.user_id, sessionId, req.ip, req.get("user-agent"));
     setSessionCookie(res, sessionId);
     return res.status(200).json({ success: true, data: { user: serializeUser(user) } });
   } catch (error) {

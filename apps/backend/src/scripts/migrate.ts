@@ -105,17 +105,17 @@ async function ensureApplicationDurationSchema(client: PoolClient) {
   `);
 }
 
-async function ensureRepaymentProcedure(client: PoolClient) {
+async function ensureRepaymentProcedures(client: PoolClient) {
   const schema = await fs.readFile(path.join(migrationDir, schemaFile), "utf8");
   const procedureStart = schema.indexOf("CREATE OR REPLACE PROCEDURE process_repayment(");
-  const nextProcedureStart = schema.indexOf(
-    "CREATE OR REPLACE PROCEDURE generate_repayment_schedule(",
+  const overdueProcedureStart = schema.indexOf(
+    "CREATE OR REPLACE PROCEDURE mark_overdue_schedules(",
     procedureStart,
   );
-  if (procedureStart === -1 || nextProcedureStart === -1) {
-    throw new Error("Unable to locate process_repayment in schema.sql");
+  if (procedureStart === -1 || overdueProcedureStart === -1) {
+    throw new Error("Unable to locate repayment procedures in schema.sql");
   }
-  await client.query(schema.slice(procedureStart, nextProcedureStart));
+  await client.query(schema.slice(procedureStart, overdueProcedureStart));
 }
 
 async function listMigrationFiles() {
@@ -471,6 +471,28 @@ async function ensureDatabaseComputedFunctions(client: PoolClient) {
   `);
 }
 
+async function ensureTrustScoreImmutability(client: PoolClient) {
+  await client.query(`
+    CREATE OR REPLACE FUNCTION restrict_trust_scores_update()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      IF ROW(NEW.user_id, NEW.score, NEW.trust_band, NEW.confidence_score, NEW.trigger_event, NEW.calculated_at)
+         IS DISTINCT FROM
+         ROW(OLD.user_id, OLD.score, OLD.trust_band, OLD.confidence_score, OLD.trigger_event, OLD.calculated_at) THEN
+        RAISE EXCEPTION 'Only is_current can be updated on trust_scores';
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+  await client.query(`
+    DROP TRIGGER IF EXISTS trg_trust_scores_restrict_update ON trust_scores;
+    CREATE TRIGGER trg_trust_scores_restrict_update
+      BEFORE UPDATE ON trust_scores
+      FOR EACH ROW EXECUTE PROCEDURE restrict_trust_scores_update();
+  `);
+}
+
 async function ensurePaymentAccountsSchema(client: PoolClient) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS user_payment_accounts (
@@ -578,10 +600,11 @@ async function migrate() {
       await ensureFundingPartnerNameNormalizedIndex(client);
       await ensureLenderInvestorProfileInvariant(client);
       await ensureApplicationDurationSchema(client);
-      await ensureRepaymentProcedure(client);
+      await ensureRepaymentProcedures(client);
       await ensureLoanApplicationReference(client);
       await ensureBorrowerTrustSummaryView(client);
       await ensureDatabaseComputedFunctions(client);
+      await ensureTrustScoreImmutability(client);
       await ensurePaymentAccountsSchema(client);
 
       console.log("Canonical schema is already installed.");
@@ -599,13 +622,14 @@ async function migrate() {
       await ensureAccountIdentitySchema(client);
       await ensureFundingCommitments(client);
       await ensureApplicationDurationSchema(client);
-      await ensureRepaymentProcedure(client);
+      await ensureRepaymentProcedures(client);
       await ensureLenderMarketplaceSchema(client);
       await ensureFundingPartnerNameNormalizedIndex(client);
       await ensureLenderInvestorProfileInvariant(client);
       await ensureLoanApplicationReference(client);
       await ensureBorrowerTrustSummaryView(client);
       await ensureDatabaseComputedFunctions(client);
+      await ensureTrustScoreImmutability(client);
       await ensurePaymentAccountsSchema(client);
 
       const schemaStillIncomplete = !(await hasCanonicalSchema(client));
@@ -651,6 +675,7 @@ async function migrate() {
     await ensureLoanApplicationReference(client);
     await ensureBorrowerTrustSummaryView(client);
     await ensureDatabaseComputedFunctions(client);
+    await ensureTrustScoreImmutability(client);
     await ensurePaymentAccountsSchema(client);
 
     console.log("Canonical schema installed successfully.");

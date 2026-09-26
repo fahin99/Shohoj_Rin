@@ -8,6 +8,7 @@
     "build": "tsc",
     "db:check": "tsx src/scripts/check-db.ts",
     "db:create-admin": "tsx src/scripts/create-admin.ts",
+    "db:mark-overdue": "tsx src/scripts/mark-overdue-schedules.ts",
     "migrate": "tsx src/scripts/migrate.ts && tsx src/scripts/migrate-account-identity.ts",
     "seed:institutions": "tsx src/scripts/seed-institutions.ts",
     "seed:loan-products": "tsx src/scripts/seed-loan-products.ts",

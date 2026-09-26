@@ -1,5 +1,4 @@
 import type { PoolClient } from "pg";
-import { calculateReducingBalanceSchedule } from "./interest.service.js";
 
 export class LoanFinalizationConfigError extends Error {
   statusCode: number;
@@ -49,26 +48,13 @@ export async function ensureRepaymentSchedules(
   );
   if (existing.rowCount && existing.rowCount > 0) return;
 
-  const schedule = calculateReducingBalanceSchedule(
+  await client.query(`CALL generate_repayment_schedule($1, $2, $3, $4, $5)`, [
+    loanId,
     principal,
     interestRate,
     tenureMonths,
-    new Date(startDate),
-  );
-
-  for (const item of schedule) {
-    await client.query(
-      `INSERT INTO repayment_schedules (loan_id, installment_number, due_date, expected_amount, status)
-       VALUES ($1, $2, $3, $4, 'pending')
-       ON CONFLICT (loan_id, installment_number) DO NOTHING`,
-      [
-        loanId,
-        item.installmentNumber,
-        item.dueDate.toISOString().split("T")[0],
-        Number(item.totalInstallment),
-      ],
-    );
-  }
+    startDate,
+  ]);
 }
 
 export async function finalizeFullyFundedLoan(

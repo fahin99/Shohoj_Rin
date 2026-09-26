@@ -361,6 +361,7 @@ export default function ProfilePage({ onNavigate, user }: Props) {
       maxExposure: toFormValue(investorProfile.maxExposure),
       riskPreference: toFormValue(investorProfile.riskPreference),
       preferredCategories: investorProfile.preferredCategories ?? [],
+      partnerAgentId: "",
     });
     setLenderSaveError(null);
     setLenderSaveSuccess(false);
