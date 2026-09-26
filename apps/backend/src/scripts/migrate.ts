@@ -55,6 +55,14 @@ async function hasCanonicalSchema(client: PoolClient) {
       AND EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = 'repayments' AND column_name = 'payment_account_id'
+      )
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'investor_profiles' AND column_name = 'partner_agent_id'
+      )
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'loans' AND column_name = 'partner_agent_id'
       ) AS complete
   `);
 
@@ -516,6 +524,20 @@ async function ensurePaymentAccountsSchema(client: PoolClient) {
   `);
 }
 
+async function ensurePartnerAgentSchema(client: PoolClient) {
+  await client.query(`
+    ALTER TABLE investor_profiles
+      ADD COLUMN IF NOT EXISTS partner_agent_id UUID REFERENCES users (user_id) ON DELETE SET NULL;
+    CREATE INDEX IF NOT EXISTS idx_investor_profiles_partner_agent
+      ON investor_profiles (partner_agent_id);
+
+    ALTER TABLE loans
+      ADD COLUMN IF NOT EXISTS partner_agent_id UUID REFERENCES users (user_id) ON DELETE SET NULL;
+    CREATE INDEX IF NOT EXISTS idx_loans_partner_agent
+      ON loans (partner_agent_id);
+  `);
+}
+
 async function migrate() {
   const client = await pool.connect();
   try {
@@ -526,6 +548,8 @@ async function migrate() {
         executed_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+
+    await ensurePartnerAgentSchema(client);
 
     const { rows } = await client.query("SELECT name FROM migrations");
     const executedMigrations = new Set(rows.map((r) => r.name));

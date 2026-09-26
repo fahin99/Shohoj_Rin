@@ -109,6 +109,7 @@ export const investorProfileSchema = z.object({
     .optional(),
   displayName: z.string().trim().min(2).optional(),
   phone: z.string().trim().min(5).optional(),
+  partnerAgentId: z.string().uuid().optional().nullable(),
   fundingCapacity: z.number().positive().optional(),
   preferredCategories: z.array(z.string()).optional(),
   riskPreference: z.enum(["conservative", "moderate", "aggressive"]).optional(),

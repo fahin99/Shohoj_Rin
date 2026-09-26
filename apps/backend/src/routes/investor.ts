@@ -417,7 +417,7 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
        FROM loan_applications la
        LEFT JOIN user_payment_accounts upa ON upa.account_id = la.disbursement_account_id AND upa.is_active = TRUE
        WHERE la.application_id = $1
-       FOR UPDATE`,
+      FOR UPDATE OF la`,
       [applicationId],
     );
 
@@ -511,8 +511,9 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
 
       if (existingLoan.rowCount === 0) {
         const partnerResult = await client.query(
-          `SELECT COALESCE(la.partner_id, u.partner_id) AS partner_id
+          `SELECT COALESCE(la.partner_id, lp.partner_id, u.partner_id) AS partner_id
            FROM loan_applications la
+           LEFT JOIN loan_products lp ON lp.product_id = la.product_id
            LEFT JOIN users u ON u.user_id = $2
            WHERE la.application_id = $1`,
           [applicationId, userId],

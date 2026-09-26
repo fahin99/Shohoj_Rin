@@ -150,6 +150,7 @@ CREATE TABLE IF NOT EXISTS investor_profiles (
   max_exposure DECIMAL(14,2),
   account_status VARCHAR(20) NOT NULL DEFAULT 'active',
   kyc_status VARCHAR(30) NOT NULL DEFAULT 'incomplete',
+  partner_agent_id UUID REFERENCES users (user_id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -251,6 +252,7 @@ CREATE TABLE IF NOT EXISTS loans (
   offer_id UUID UNIQUE NOT NULL REFERENCES loan_offers (offer_id) ON DELETE RESTRICT,
   user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE RESTRICT,
   partner_id UUID NOT NULL REFERENCES funding_partners (partner_id) ON DELETE RESTRICT,
+  partner_agent_id UUID REFERENCES users (user_id) ON DELETE SET NULL,
   principal_amount DECIMAL(12,2) NOT NULL,
   interest_rate DECIMAL(5,2) NOT NULL,
   tenure_months INTEGER NOT NULL,
@@ -369,11 +371,13 @@ CREATE INDEX idx_verification_documents_request ON verification_documents(reques
 CREATE INDEX idx_loan_products_category ON loan_products(category);
 CREATE INDEX idx_loan_products_active ON loan_products(is_active) WHERE is_active = TRUE;
 CREATE INDEX idx_investor_profiles_user ON investor_profiles(user_id);
+CREATE INDEX idx_investor_profiles_partner_agent ON investor_profiles(partner_agent_id);
 CREATE INDEX idx_loan_applications_user ON loan_applications(user_id);
 CREATE INDEX idx_loan_applications_status ON loan_applications(status);
 CREATE INDEX idx_loan_applications_disbursement_account ON loan_applications(disbursement_account_id);
 CREATE INDEX idx_loans_user ON loans(user_id);
 CREATE INDEX idx_loans_partner ON loans(partner_id);
+CREATE INDEX idx_loans_partner_agent ON loans(partner_agent_id);
 CREATE INDEX idx_loans_status ON loans(status);
 CREATE INDEX idx_loan_disbursements_payment_account ON loan_disbursements(payment_account_id);
 CREATE INDEX idx_repayments_payment_account ON repayments(payment_account_id);

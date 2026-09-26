@@ -21,10 +21,10 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}) {
     error?: ApiErrorPayload;
   } | null;
   if (!response.ok) {
-    // Server errors may contain implementation details (database constraints,
-    // provider responses, and so on). Callers log the original response in
-    // development when needed, but UI code must use its translated fallback.
-    throw new Error("Request failed");
+    const message = payload?.error?.message || `Request failed with status ${response.status}`;
+    const error = new Error(message);
+    error.name = "ApiRequestError";
+    throw error;
   }
   return payload?.data as T;
 }

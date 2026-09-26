@@ -65,11 +65,20 @@ export interface LoanProductDetail extends LoanProduct {
   partnerId: string;
   isActive: boolean;
 }
+export interface PartnerAgentSummary {
+  userId: string;
+  username?: string | null;
+  fullName?: string | null;
+  email?: string | null;
+}
+
 export interface InvestorProfile {
   investorProfileId: string;
   userId: string;
   username?: string | null;
   displayName: string | null;
+  partnerAgentId?: string | null;
+  partnerAgent?: PartnerAgentSummary | null;
   verificationStatus: VerificationStatus;
   fundingCapacity: number | string | null;
   preferredCategories: string[] | null;
