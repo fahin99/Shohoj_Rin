@@ -195,6 +195,43 @@ export async function recordRepayment(
       });
     }
 
+    if ((input.status ?? "completed") === "completed" && !proc.out_is_duplicate) {
+      await client.query(
+        `UPDATE repayment_schedules rs
+         SET status = CASE
+           WHEN COALESCE((
+             SELECT SUM(r.amount_paid)
+             FROM repayments r
+             WHERE r.schedule_id = rs.schedule_id AND r.status = 'completed'
+           ), 0) >= rs.expected_amount THEN 'paid'
+           WHEN EXISTS (
+             SELECT 1 FROM repayments r
+             WHERE r.schedule_id = rs.schedule_id AND r.status = 'completed'
+           ) THEN 'partially_paid'
+           ELSE rs.status
+         END
+         WHERE rs.schedule_id = $1`,
+        [input.scheduleId],
+      );
+      await client.query(
+        `UPDATE loans l
+         SET status = CASE
+           WHEN NOT EXISTS (
+             SELECT 1 FROM repayment_schedules rs
+             WHERE rs.loan_id = l.loan_id AND rs.status <> 'paid'
+           ) THEN 'completed'
+           WHEN EXISTS (
+             SELECT 1 FROM repayment_schedules rs
+             WHERE rs.loan_id = l.loan_id AND rs.status = 'overdue'
+           ) THEN 'overdue'
+           ELSE 'active'
+         END,
+         updated_at = NOW()
+         WHERE l.loan_id = $1`,
+        [proc.out_loan_id],
+      );
+    }
+
     // Fetch the repayment row for response details
     const repaymentRow = await client.query<RepaymentRow>(
       `SELECT repayment_id, schedule_id, amount_paid, payment_method, transaction_reference, status, paid_at, payment_account_id

@@ -2,7 +2,10 @@ import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../lib/db.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
-import { calculateReducingBalanceSchedule } from "../services/interest.service.js";
+import {
+  finalizeFullyFundedLoan,
+  LoanFinalizationConfigError,
+} from "../services/loan-lifecycle.service.js";
 
 const router = Router();
 
@@ -104,99 +107,36 @@ router.post("/", requireAuth, async (req, res) => {
       });
     }
 
-    const partnerId =
-      app.partner_id ?? (await getFunderPartnerId(client, parsed.data.applicationId));
-    if (!partnerId) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({
-        success: false,
-        error: { message: "Unable to determine a funding partner for this application" },
-      });
-    }
-
-    const interestRate =
-      typeof app.interest_rate === "number" ? app.interest_rate : Number(app.interest_rate ?? 12.0);
-    const tenureMonths =
-      typeof app.application_duration_months === "number"
-        ? app.application_duration_months
-        : Number(app.application_duration_months ?? app.duration_months ?? 12);
-    const principal =
-      typeof app.requested_amount === "number"
-        ? app.requested_amount
-        : Number(app.requested_amount);
-
-    const offerResult = await client.query(
-      `INSERT INTO loan_offers
-        (application_id, partner_id, offered_amount, interest_rate, tenure_months, conditions, status, offered_at)
-       VALUES ($1, $2, $3, $4, $5, $6, 'accepted', NOW())
-       RETURNING offer_id`,
-      [
-        parsed.data.applicationId,
-        partnerId,
-        principal,
-        interestRate,
-        tenureMonths,
-        "Standard terms",
-      ],
-    );
-    const offerId = offerResult.rows[0].offer_id;
-
-    const startDate = new Date();
-    const expectedEndDate = new Date(startDate);
-    expectedEndDate.setMonth(expectedEndDate.getMonth() + tenureMonths);
-
-    const loanResult = await client.query(
-      `INSERT INTO loans
-        (application_id, offer_id, user_id, partner_id, principal_amount, interest_rate, tenure_months, status, start_date, expected_end_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending_disbursement', $8, $9)
-       RETURNING
-         loan_id AS "loanId",
-         application_id AS "applicationId",
-         user_id AS "userId",
-         partner_id AS "partnerId",
-         principal_amount AS "principalAmount",
-         interest_rate AS "interestRate",
-         tenure_months AS "tenureMonths",
-         status,
-         start_date AS "startDate",
-         expected_end_date AS "expectedEndDate",
-         created_at AS "createdAt"`,
-      [
-        parsed.data.applicationId,
-        offerId,
-        app.user_id,
-        partnerId,
-        principal,
-        interestRate,
-        tenureMonths,
-        startDate.toISOString().split("T")[0],
-        expectedEndDate.toISOString().split("T")[0],
-      ],
-    );
-    await client.query(
-      `UPDATE loan_applications SET status = 'approved', updated_at = NOW() WHERE application_id = $1`,
-      [parsed.data.applicationId],
-    );
-
-    await client.query(
-      `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, after_state)
-       VALUES ($1, 'loan_created', 'loan', $2, jsonb_build_object('applicationId', $3::uuid, 'principalAmount', $4::numeric, 'tenureMonths', $5::integer))`,
-      [userId, loanResult.rows[0].loanId, parsed.data.applicationId, principal, tenureMonths],
-    );
+    const finalized = await finalizeFullyFundedLoan(client, {
+      applicationId: parsed.data.applicationId,
+      funderUserId: userId,
+    });
 
     await client.query("COMMIT");
 
-    const loan = loanResult.rows[0] as any;
     return res.status(201).json({
       success: true,
       data: {
-        ...loan,
-        principalAmount: parseFloat(loan.principalAmount),
-        interestRate: parseFloat(loan.interestRate),
+        loanId: finalized.loanId,
+        applicationId: finalized.applicationId,
+        userId: finalized.userId,
+        partnerId: finalized.partnerId,
+        principalAmount: finalized.principalAmount,
+        interestRate: finalized.interestRate,
+        tenureMonths: finalized.tenureMonths,
+        status: finalized.status,
+        startDate: finalized.startDate,
+        expectedEndDate: finalized.expectedEndDate,
       },
     });
   } catch (error) {
     await client.query("ROLLBACK");
+    if (error instanceof LoanFinalizationConfigError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: { message: error.message },
+      });
+    }
     const message = error instanceof Error ? error.message : String(error);
     console.error("Failed to create loan:", message);
     return res.status(500).json({
@@ -207,22 +147,6 @@ router.post("/", requireAuth, async (req, res) => {
     client.release();
   }
 });
-
-async function getFunderPartnerId(
-  client: Pick<any, "query">,
-  applicationId: string,
-): Promise<string | null> {
-  const result = await client.query(
-    `SELECT u.partner_id
-     FROM funding_commitments fc
-     JOIN users u ON u.user_id = fc.lender_user_id
-     WHERE fc.application_id = $1 AND fc.status = 'committed' AND u.partner_id IS NOT NULL
-     ORDER BY fc.created_at ASC
-     LIMIT 1`,
-    [applicationId],
-  );
-  return result.rowCount > 0 ? result.rows[0].partner_id : null;
-}
 
 // GET /api/v1/loans — list user's loans
 router.get("/", requireAuth, async (req, res) => {

@@ -3,7 +3,11 @@ import { z } from "zod";
 import { pool } from "../lib/db.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authenticate.js";
 import { investorProfileSchema } from "@shohojrin/shared";
-import { calculateReducingBalanceSchedule } from "../services/interest.service.js";
+import {
+  finalizeFullyFundedLoan,
+  LoanFinalizationConfigError,
+  ensureRepaymentSchedules,
+} from "../services/loan-lifecycle.service.js";
 
 const router = Router();
 
@@ -17,38 +21,26 @@ function requireLender(req: RequestWithAuth, res: any, next: any) {
   return next();
 }
 
-async function ensureRepaymentSchedules(
-  client: Pick<import("pg").PoolClient, "query">,
-  loanId: string,
-  principal: number,
-  interestRate: number,
-  tenureMonths: number,
-  startDate: Date | string,
-) {
-  const existing = await client.query(
-    `SELECT 1 FROM repayment_schedules WHERE loan_id = $1 LIMIT 1`,
-    [loanId],
-  );
-  if (existing.rowCount) return;
-
-  const schedule = calculateReducingBalanceSchedule(
-    principal,
-    interestRate,
-    tenureMonths,
-    new Date(startDate),
-  );
-  for (const item of schedule) {
-    await client.query(
-      `INSERT INTO repayment_schedules (loan_id, installment_number, due_date, expected_amount, status)
-       VALUES ($1, $2, $3, $4, 'pending')`,
-      [
-        loanId,
-        item.installmentNumber,
-        item.dueDate.toISOString().split("T")[0],
-        Number(item.totalInstallment),
-      ],
-    );
-  }
+function formatInvestorProfile(row: any, company: any) {
+  const {
+    partnerAgentUsername,
+    partnerAgentEmail,
+    partnerAgentFullName,
+    ...rest
+  } = row;
+  const partnerAgent = row.partnerAgentId
+    ? {
+        userId: row.partnerAgentId,
+        username: partnerAgentUsername ?? null,
+        email: partnerAgentEmail ?? null,
+        fullName: partnerAgentFullName ?? null,
+      }
+    : null;
+  return {
+    ...rest,
+    partnerAgent,
+    company,
+  };
 }
 
 async function fetchLenderCompany(userId: string) {
@@ -71,6 +63,43 @@ async function fetchLenderCompany(userId: string) {
   return result.rows[0] ?? null;
 }
 
+// GET /api/v1/investor/partner-agents — available active partner agents for this lender's institutional partner
+router.get("/partner-agents", requireAuth, requireLender, async (req, res) => {
+  const userId = (req as RequestWithAuth).auth!.userId;
+  try {
+    const lenderRow = await pool.query(
+      `SELECT partner_id FROM users WHERE user_id = $1`,
+      [userId],
+    );
+    const partnerId = lenderRow.rows[0]?.partner_id;
+    if (!partnerId) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    const agentsResult = await pool.query(
+      `SELECT
+         u.user_id AS "userId",
+         u.username AS "username",
+         u.email AS "email",
+         up.full_name AS "fullName"
+       FROM users u
+       LEFT JOIN user_profiles up ON up.user_id = u.user_id
+       WHERE u.role = 'partner_agent'
+         AND u.account_status = 'active'
+         AND u.partner_id = $1
+       ORDER BY COALESCE(up.full_name, u.username, u.email) ASC`,
+      [partnerId],
+    );
+
+    return res.status(200).json({ success: true, data: agentsResult.rows });
+  } catch (error) {
+    console.error("Failed to fetch partner agents:", error);
+    return res
+      .status(500)
+      .json({ success: false, error: { message: "Failed to fetch partner agents" } });
+  }
+});
+
 router.get("/profile", requireAuth, requireLender, async (req, res) => {
   const userId = (req as RequestWithAuth).auth!.userId;
 
@@ -81,6 +110,7 @@ router.get("/profile", requireAuth, requireLender, async (req, res) => {
          ip.user_id AS "userId",
          u.username AS "username",
          ip.display_name AS "displayName",
+         ip.partner_agent_id AS "partnerAgentId",
          ip.verification_status AS "verificationStatus",
          ip.funding_capacity AS "fundingCapacity",
          ip.preferred_categories AS "preferredCategories",
@@ -89,9 +119,14 @@ router.get("/profile", requireAuth, requireLender, async (req, res) => {
          ip.account_status AS "accountStatus",
          ip.kyc_status AS "kycStatus",
          ip.created_at AS "createdAt",
-         ip.updated_at AS "updatedAt"
+         ip.updated_at AS "updatedAt",
+         agent_u.username AS "partnerAgentUsername",
+         agent_u.email AS "partnerAgentEmail",
+         agent_up.full_name AS "partnerAgentFullName"
        FROM investor_profiles ip
        JOIN users u ON u.user_id = ip.user_id
+       LEFT JOIN users agent_u ON agent_u.user_id = ip.partner_agent_id
+       LEFT JOIN user_profiles agent_up ON agent_up.user_id = agent_u.user_id
        WHERE ip.user_id = $1`,
       [userId],
     );
@@ -111,6 +146,7 @@ router.get("/profile", requireAuth, requireLender, async (req, res) => {
            ip.user_id AS "userId",
            u.username AS "username",
            ip.display_name AS "displayName",
+           ip.partner_agent_id AS "partnerAgentId",
            ip.verification_status AS "verificationStatus",
            ip.funding_capacity AS "fundingCapacity",
            ip.preferred_categories AS "preferredCategories",
@@ -119,16 +155,21 @@ router.get("/profile", requireAuth, requireLender, async (req, res) => {
            ip.account_status AS "accountStatus",
            ip.kyc_status AS "kycStatus",
            ip.created_at AS "createdAt",
-           ip.updated_at AS "updatedAt"
+           ip.updated_at AS "updatedAt",
+           agent_u.username AS "partnerAgentUsername",
+           agent_u.email AS "partnerAgentEmail",
+           agent_up.full_name AS "partnerAgentFullName"
          FROM investor_profiles ip
          JOIN users u ON u.user_id = ip.user_id
+         LEFT JOIN users agent_u ON agent_u.user_id = ip.partner_agent_id
+         LEFT JOIN user_profiles agent_up ON agent_up.user_id = agent_u.user_id
          WHERE ip.user_id = $1`,
         [userId],
       );
-      return res.status(200).json({ success: true, data: { ...inserted.rows[0], company } });
+      return res.status(200).json({ success: true, data: formatInvestorProfile(inserted.rows[0], company) });
     }
 
-    return res.status(200).json({ success: true, data: { ...result.rows[0], company } });
+    return res.status(200).json({ success: true, data: formatInvestorProfile(result.rows[0], company) });
   } catch (error) {
     console.error("Failed to fetch investor profile:", error);
     return res
@@ -209,23 +250,66 @@ router.put("/profile", requireAuth, requireLender, async (req, res) => {
       ]);
     }
 
+    let partnerAgentId: string | null | undefined = undefined;
+    if (data.partnerAgentId !== undefined) {
+      if (!data.partnerAgentId) {
+        partnerAgentId = null;
+      } else {
+        const lenderCheck = await client.query(
+          `SELECT partner_id FROM users WHERE user_id = $1`,
+          [userId],
+        );
+        const effectivePartnerId = lenderCheck.rows[0]?.partner_id;
+        if (!effectivePartnerId) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({
+            success: false,
+            error: { message: "Cannot assign a partner agent without an institutional partner" },
+          });
+        }
+
+        const agentCheck = await client.query(
+          `SELECT user_id, role, account_status, partner_id FROM users WHERE user_id = $1`,
+          [data.partnerAgentId],
+        );
+        if (
+          agentCheck.rowCount === 0 ||
+          agentCheck.rows[0].role !== "partner_agent" ||
+          agentCheck.rows[0].account_status !== "active" ||
+          agentCheck.rows[0].partner_id !== effectivePartnerId
+        ) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({
+            success: false,
+            error: {
+              message:
+                "Selected partner agent is invalid, inactive, or belongs to a different institution",
+            },
+          });
+        }
+        partnerAgentId = data.partnerAgentId;
+      }
+    }
+
     const result = await client.query(
       `INSERT INTO investor_profiles (
          user_id, display_name, funding_capacity, preferred_categories,
-         risk_preference, max_exposure, verification_status, kyc_status, account_status
+         risk_preference, max_exposure, partner_agent_id, verification_status, kyc_status, account_status
        )
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending', 'incomplete', 'active')
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', 'incomplete', 'active')
        ON CONFLICT (user_id) DO UPDATE SET
          display_name = COALESCE(EXCLUDED.display_name, investor_profiles.display_name),
          funding_capacity = COALESCE(EXCLUDED.funding_capacity, investor_profiles.funding_capacity),
          preferred_categories = COALESCE(EXCLUDED.preferred_categories, investor_profiles.preferred_categories),
          risk_preference = COALESCE(EXCLUDED.risk_preference, investor_profiles.risk_preference),
          max_exposure = COALESCE(EXCLUDED.max_exposure, investor_profiles.max_exposure),
+         partner_agent_id = CASE WHEN $8::boolean THEN EXCLUDED.partner_agent_id ELSE investor_profiles.partner_agent_id END,
          updated_at = NOW()
        RETURNING
          investor_profile_id AS "investorProfileId",
          user_id AS "userId",
          display_name AS "displayName",
+         partner_agent_id AS "partnerAgentId",
          verification_status AS "verificationStatus",
          funding_capacity AS "fundingCapacity",
          preferred_categories AS "preferredCategories",
@@ -242,16 +326,41 @@ router.put("/profile", requireAuth, requireLender, async (req, res) => {
         data.preferredCategories ?? null,
         data.riskPreference ?? null,
         data.maxExposure ?? null,
+        partnerAgentId ?? null,
+        partnerAgentId !== undefined,
       ],
     );
 
     const userRow = await client.query(`SELECT username FROM users WHERE user_id = $1`, [userId]);
     const username = userRow.rows[0]?.username ?? null;
 
+    const savedPartnerAgentId = result.rows[0].partnerAgentId;
+    let partnerAgent: any = null;
+    if (savedPartnerAgentId) {
+      const agentUserRow = await client.query(
+        `SELECT u.username, u.email, up.full_name AS "fullName"
+         FROM users u
+         LEFT JOIN user_profiles up ON up.user_id = u.user_id
+         WHERE u.user_id = $1`,
+        [savedPartnerAgentId],
+      );
+      if (agentUserRow.rowCount && agentUserRow.rowCount > 0) {
+        partnerAgent = {
+          userId: savedPartnerAgentId,
+          username: agentUserRow.rows[0].username ?? null,
+          email: agentUserRow.rows[0].email ?? null,
+          fullName: agentUserRow.rows[0].fullName ?? null,
+        };
+      }
+    }
+
     await client.query("COMMIT");
 
     const company = await fetchLenderCompany(userId);
-    return res.status(200).json({ success: true, data: { ...result.rows[0], username, company } });
+    return res.status(200).json({
+      success: true,
+      data: { ...result.rows[0], partnerAgent, username, company },
+    });
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Failed to update investor profile:", error);
@@ -328,7 +437,7 @@ router.get("/opportunities", requireAuth, requireLender, async (req, res) => {
        FROM lender_application_matches lam
        JOIN loan_applications la ON la.application_id = lam.application_id
        LEFT JOIN loan_products lp ON lp.product_id = la.product_id
-       LEFT JOIN funding_partners fp ON fp.partner_id = la.partner_id
+       LEFT JOIN funding_partners fp ON fp.partner_id = COALESCE(la.partner_id, lp.partner_id)
        LEFT JOIN trust_scores ts ON ts.score_id = la.trust_score_id
        LEFT JOIN user_profiles up ON up.user_id = la.user_id
        WHERE lam.lender_user_id = $1
@@ -375,7 +484,7 @@ router.get("/opportunities", requireAuth, requireLender, async (req, res) => {
 
 router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res) => {
   const userId = (req as RequestWithAuth).auth!.userId;
-  const applicationId = req.params.applicationId;
+  const applicationId = String(req.params.applicationId);
   const parsed = z.object({ amount: z.number().finite().positive() }).safeParse(req.body);
 
   if (!parsed.success) {
@@ -492,154 +601,20 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
     );
     const commitment = commitmentResult.rows[0] as any;
     const totalCommittedAmount = Number(committedResult.rows[0].committed_amount) + fundingAmount;
-    const applicationStatus =
-      totalCommittedAmount >= Number(app.requested_amount) ? "approved" : app.status;
-
-    if (applicationStatus === "approved" && app.status !== "approved") {
-      await client.query(
-        `UPDATE loan_applications SET status = 'approved', updated_at = NOW() WHERE application_id = $1`,
-        [applicationId],
-      );
-    }
+    const isFullFunding = totalCommittedAmount >= Number(app.requested_amount);
 
     let loanId: string | null = null;
-    if (applicationStatus === "approved") {
-      const existingLoan = await client.query(
-        `SELECT loan_id FROM loans WHERE application_id = $1 FOR UPDATE`,
-        [applicationId],
-      );
+    let applicationStatus = app.status;
 
-      if (existingLoan.rowCount === 0) {
-        const partnerResult = await client.query(
-          `SELECT COALESCE(la.partner_id, lp.partner_id, u.partner_id) AS partner_id
-           FROM loan_applications la
-           LEFT JOIN loan_products lp ON lp.product_id = la.product_id
-           LEFT JOIN users u ON u.user_id = $2
-           WHERE la.application_id = $1`,
-          [applicationId, userId],
-        );
-        const partnerId = partnerResult.rows[0]?.partner_id;
-        if (!partnerId) {
-          throw new Error("Unable to determine a funding partner for this application");
-        }
-
-        const productResult = await client.query(
-          `SELECT lp.interest_rate, lp.duration_months
-           FROM loan_applications la
-           LEFT JOIN loan_products lp ON lp.product_id = la.product_id
-           WHERE la.application_id = $1`,
-          [applicationId],
-        );
-        const interestRate = Number(productResult.rows[0]?.interest_rate ?? 12);
-        const tenureMonths = Number(productResult.rows[0]?.duration_months ?? 12);
-        const principal = Number(app.requested_amount);
-        const startDate = new Date();
-        const expectedEndDate = new Date(startDate);
-        expectedEndDate.setMonth(expectedEndDate.getMonth() + tenureMonths);
-
-        const offerResult = await client.query(
-          `INSERT INTO loan_offers
-            (application_id, partner_id, offered_amount, interest_rate, tenure_months, conditions, status, offered_at)
-           VALUES ($1, $2, $3, $4, $5, $6, 'accepted', NOW())
-           RETURNING offer_id`,
-          [applicationId, partnerId, principal, interestRate, tenureMonths, "Standard terms"],
-        );
-        const loanResult = await client.query(
-          `INSERT INTO loans
-            (application_id, offer_id, user_id, partner_id, principal_amount, interest_rate, tenure_months, status, start_date, expected_end_date)
-           SELECT $1, $2, la.user_id, $3, $4, $5, $6, 'pending_disbursement', $7, $8
-           FROM loan_applications la
-           WHERE la.application_id = $1
-           RETURNING loan_id`,
-          [
-            applicationId,
-            offerResult.rows[0].offer_id,
-            partnerId,
-            principal,
-            interestRate,
-            tenureMonths,
-            startDate.toISOString().split("T")[0],
-            expectedEndDate.toISOString().split("T")[0],
-          ],
-        );
-        loanId = loanResult.rows[0].loan_id;
-        if (!loanId) {
-          throw new Error("Loan was not created");
-        }
-
-        await client.query(
-          `INSERT INTO loan_disbursements
-            (loan_id, amount, disbursement_method, reference_number, disbursed_at, payment_account_id)
-           VALUES ($1, $2, $3, $4, NOW(), $5)`,
-          [loanId, principal, disbursementMethod, `AUTO-${applicationId}`, disbursementAccountId],
-        );
-        await client.query(
-          `UPDATE loans SET status = 'active', updated_at = NOW() WHERE loan_id = $1`,
-          [loanId],
-        );
-        await client.query(
-          `UPDATE loan_applications SET status = 'disbursed', updated_at = NOW() WHERE application_id = $1`,
-          [applicationId],
-        );
-        await ensureRepaymentSchedules(
-          client,
-          loanId,
-          principal,
-          interestRate,
-          tenureMonths,
-          startDate,
-        );
-
-        await client.query(
-          `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, after_state)
-           VALUES ($1, 'loan_created', 'loan', $2, jsonb_build_object('applicationId', $3::uuid, 'principalAmount', $4::numeric, 'tenureMonths', $5::integer, 'status', 'active'))`,
-          [userId, loanId, applicationId, principal, tenureMonths],
-        );
-      } else {
-        loanId = existingLoan.rows[0].loan_id;
-      }
-      if (!loanId) {
-        throw new Error("Loan was not found after funding");
-      }
-
-      const loanState = await client.query(
-        `SELECT principal_amount, interest_rate, tenure_months, start_date, status
-         FROM loans WHERE loan_id = $1 FOR UPDATE`,
-        [loanId],
-      );
-      if (loanState.rows[0]?.status === "pending_disbursement") {
-        const disbursementResult = await client.query(
-          `SELECT COALESCE(SUM(amount), 0) AS total_disbursed
-           FROM loan_disbursements
-           WHERE loan_id = $1`,
-          [loanId],
-        );
-        const principalAmount = Number(loanState.rows[0].principal_amount);
-        if (Number(disbursementResult.rows[0].total_disbursed) < principalAmount) {
-          await client.query(
-            `INSERT INTO loan_disbursements
-              (loan_id, amount, disbursement_method, reference_number, disbursed_at, payment_account_id)
-             VALUES ($1, $2, $3, $4, NOW(), $5)`,
-            [loanId, principalAmount, disbursementMethod, `AUTO-${applicationId}`, disbursementAccountId],
-          );
-          await client.query(
-            `UPDATE loans SET status = 'active', updated_at = NOW() WHERE loan_id = $1`,
-            [loanId],
-          );
-          await client.query(
-            `UPDATE loan_applications SET status = 'disbursed', updated_at = NOW() WHERE application_id = $1`,
-            [applicationId],
-          );
-        }
-        await ensureRepaymentSchedules(
-          client,
-          loanId,
-          principalAmount,
-          Number(loanState.rows[0].interest_rate),
-          Number(loanState.rows[0].tenure_months),
-          loanState.rows[0].start_date,
-        );
-      }
+    if (isFullFunding) {
+      const finalized = await finalizeFullyFundedLoan(client, {
+        applicationId,
+        funderUserId: userId,
+        disbursementAccountId,
+        disbursementMethod,
+      });
+      loanId = finalized.loanId;
+      applicationStatus = finalized.applicationStatus;
     }
 
     await client.query(
@@ -673,12 +648,21 @@ router.post("/fund/:applicationId", requireAuth, requireLender, async (req, res)
         status: commitment.status,
         applicationStatus,
         loanId,
+        loanStatus: isFullFunding ? "active" : undefined,
         fundedAt: commitment.created_at,
-        message: "Funding commitment recorded",
+        message: isFullFunding
+          ? "Application fully funded and loan disbursed"
+          : "Funding commitment recorded",
       },
     });
   } catch (error) {
     await client.query("ROLLBACK");
+    if (error instanceof LoanFinalizationConfigError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: { message: error.message },
+      });
+    }
     if (
       typeof error === "object" &&
       error &&
@@ -788,7 +772,7 @@ router.get("/portfolio", requireAuth, requireLender, async (req, res) => {
        JOIN loan_applications la ON la.application_id = fc.application_id
        LEFT JOIN user_profiles up ON up.user_id = la.user_id
        LEFT JOIN loan_products lp ON lp.product_id = la.product_id
-       LEFT JOIN funding_partners fp ON fp.partner_id = la.partner_id
+       LEFT JOIN funding_partners fp ON fp.partner_id = COALESCE(la.partner_id, lp.partner_id)
        LEFT JOIN trust_scores ts ON ts.score_id = la.trust_score_id
        LEFT JOIN loans l ON l.application_id = la.application_id
        LEFT JOIN LATERAL (

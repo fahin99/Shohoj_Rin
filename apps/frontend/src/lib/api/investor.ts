@@ -76,3 +76,14 @@ export async function rejectOpportunity(applicationId: string, reason?: string) 
     body: JSON.stringify({ reason }),
   });
 }
+
+export interface PartnerAgentOption {
+  userId: string;
+  username: string;
+  email: string;
+  fullName: string | null;
+}
+
+export async function getPartnerAgents() {
+  return apiRequest<PartnerAgentOption[]>("/investor/partner-agents");
+}

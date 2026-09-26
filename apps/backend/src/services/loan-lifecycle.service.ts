@@ -23,7 +23,7 @@ export interface FinalizedLoanResult {
   applicationId: string;
   userId: string;
   partnerId: string;
-  partnerAgentId: string;
+  partnerAgentId: string | null;
   principalAmount: number;
   interestRate: number;
   tenureMonths: number;
@@ -241,7 +241,7 @@ export async function finalizeFullyFundedLoan(
     throw new LoanFinalizationConfigError("Funding partner is invalid or inactive", 400);
   }
 
-  // 3. Require a valid lender-assigned partner agent
+  // 3. Preserve an explicitly assigned partner agent when one exists.
   const agentResult = await client.query(
     `SELECT
        ip.partner_agent_id,
@@ -256,32 +256,24 @@ export async function finalizeFullyFundedLoan(
   );
 
   const funderProfile = agentResult.rows[0];
-  if (!funderProfile || !funderProfile.partner_agent_id) {
-    throw new LoanFinalizationConfigError(
-      "A partner agent must be assigned to your lender profile before funding or creating a loan",
-      400,
-    );
-  }
+  let partnerAgentId: string | null = null;
+  if (funderProfile?.partner_agent_id) {
+    if (
+      !funderProfile.agent_id ||
+      funderProfile.agent_role !== "partner_agent" ||
+      funderProfile.agent_status !== "active"
+    ) {
+      throw new LoanFinalizationConfigError("The assigned partner agent is invalid or inactive", 400);
+    }
 
-  if (
-    !funderProfile.agent_id ||
-    funderProfile.agent_role !== "partner_agent" ||
-    funderProfile.agent_status !== "active"
-  ) {
-    throw new LoanFinalizationConfigError(
-      "The assigned partner agent is invalid or inactive",
-      400,
-    );
+    if (funderProfile.agent_partner_id !== resolvedPartnerId) {
+      throw new LoanFinalizationConfigError(
+        "The assigned partner agent belongs to a different institution",
+        400,
+      );
+    }
+    partnerAgentId = funderProfile.agent_id;
   }
-
-  if (funderProfile.agent_partner_id !== resolvedPartnerId) {
-    throw new LoanFinalizationConfigError(
-      "The assigned partner agent belongs to a different institution",
-      400,
-    );
-  }
-
-  const partnerAgentId = funderProfile.agent_id;
   const principal = Number(app.requested_amount);
   const interestRate = Number(app.interest_rate ?? 12.0);
   const tenureMonths = Number(

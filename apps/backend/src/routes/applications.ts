@@ -63,9 +63,11 @@ router.post("/", requireAuth, requireRole("borrower"), async (req, res) => {
     );
     const trustScoreId = trustResult.rows[0]?.score_id ?? null;
 
+    let resolvedPartnerId: string | null = partnerId ?? null;
+
     if (productId) {
       const productResult = await client.query(
-        `SELECT duration_months FROM loan_products WHERE product_id = $1 AND is_active = TRUE`,
+        `SELECT partner_id, duration_months FROM loan_products WHERE product_id = $1 AND is_active = TRUE`,
         [productId],
       );
       if (productResult.rowCount === 0) {
@@ -75,13 +77,22 @@ router.post("/", requireAuth, requireRole("borrower"), async (req, res) => {
           error: { message: "Selected loan product is not available" },
         });
       }
-      if (durationMonths > Number(productResult.rows[0].duration_months)) {
+      const product = productResult.rows[0];
+      if (durationMonths > Number(product.duration_months)) {
         await client.query("ROLLBACK");
         return res.status(400).json({
           success: false,
           error: { message: "Repayment duration exceeds the selected product limit" },
         });
       }
+      if (partnerId && partnerId !== product.partner_id) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false,
+          error: { message: "Specified partner does not match the selected loan product" },
+        });
+      }
+      resolvedPartnerId = partnerId ?? product.partner_id;
     }
 
     let resolvedDisbursementAccountId: string | null = null;
@@ -107,8 +118,6 @@ router.post("/", requireAuth, requireRole("borrower"), async (req, res) => {
         resolvedDisbursementAccountId = defaultAccount.rows[0].account_id;
       }
     }
-
-    const resolvedPartnerId = partnerId ?? null;
 
     const appResult = await client.query(
       `INSERT INTO loan_applications
@@ -206,7 +215,7 @@ router.get("/", requireAuth, async (req, res) => {
         la.application_id AS "applicationId",
         la.reference_code AS "referenceCode",
         la.user_id AS "userId",
-        la.partner_id AS "partnerId",
+        COALESCE(la.partner_id, lp.partner_id) AS "partnerId",
         la.product_id AS "productId",
         la.disbursement_account_id AS "disbursementAccountId",
         la.requested_amount AS "requestedAmount",
@@ -226,7 +235,7 @@ router.get("/", requireAuth, async (req, res) => {
         upa.account_type AS "disbursementAccountType"
        FROM loan_applications la
        LEFT JOIN loan_products lp ON lp.product_id = la.product_id
-       LEFT JOIN funding_partners fp ON fp.partner_id = la.partner_id
+       LEFT JOIN funding_partners fp ON fp.partner_id = COALESCE(la.partner_id, lp.partner_id)
        LEFT JOIN user_profiles up ON up.user_id = la.user_id
        LEFT JOIN user_payment_accounts upa ON upa.account_id = la.disbursement_account_id
        ${whereClause}
@@ -291,7 +300,7 @@ router.get("/:id", requireAuth, async (req, res) => {
         la.application_id AS "applicationId",
         la.reference_code AS "referenceCode",
         la.user_id AS "userId",
-        la.partner_id AS "partnerId",
+        COALESCE(la.partner_id, lp.partner_id) AS "partnerId",
         la.product_id AS "productId",
         la.disbursement_account_id AS "disbursementAccountId",
         la.requested_amount AS "requestedAmount",
@@ -316,7 +325,7 @@ router.get("/:id", requireAuth, async (req, res) => {
         upa.branch_name AS "disbursementBranchName"
        FROM loan_applications la
        LEFT JOIN loan_products lp ON lp.product_id = la.product_id
-       LEFT JOIN funding_partners fp ON fp.partner_id = la.partner_id
+       LEFT JOIN funding_partners fp ON fp.partner_id = COALESCE(la.partner_id, lp.partner_id)
        LEFT JOIN user_profiles up ON up.user_id = la.user_id
        LEFT JOIN user_payment_accounts upa ON upa.account_id = la.disbursement_account_id
        WHERE la.application_id = $1`,

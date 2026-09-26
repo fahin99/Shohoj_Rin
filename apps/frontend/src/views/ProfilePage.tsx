@@ -87,6 +87,7 @@ interface LenderFormState {
   maxExposure: string;
   riskPreference: string;
   preferredCategories: string[];
+  partnerAgentId: string;
 }
 
 const completionStatusLabel: Record<string, string> = {

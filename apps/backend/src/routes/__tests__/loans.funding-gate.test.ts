@@ -40,11 +40,14 @@ function makeClient(options: {
             application_id: APP,
             user_id: "borrower-1",
             partner_id: "11111111-1111-4111-8111-111111111111",
+            app_partner_id: "11111111-1111-4111-8111-111111111111",
+            product_partner_id: "11111111-1111-4111-8111-111111111111",
             product_id: "22222222-2222-4222-8222-222222222222",
             requested_amount: "180000.00",
             application_status: options.appStatus ?? "submitted",
             interest_rate: "8.00",
             duration_months: 48,
+            application_duration_months: 48,
           },
         ],
       };
@@ -78,10 +81,36 @@ function makeClient(options: {
         ],
       };
     }
+    if (text.includes("FROM funding_partners")) {
+      return {
+        rowCount: 1,
+        rows: [{ partner_id: "11111111-1111-4111-8111-111111111111" }],
+      };
+    }
+    if (text.includes("FROM investor_profiles")) {
+      return {
+        rowCount: 1,
+        rows: [
+          {
+            partner_agent_id: "agent-1",
+            agent_id: "agent-1",
+            agent_role: "partner_agent",
+            agent_status: "active",
+            agent_partner_id: "11111111-1111-4111-8111-111111111111",
+          },
+        ],
+      };
+    }
+    if (text.includes("INSERT INTO loan_disbursements")) {
+      return { rowCount: 1, rows: [{ disbursement_id: "disb-1" }] };
+    }
     if (text.includes("UPDATE loan_applications")) {
       return { rowCount: 1, rows: [] };
     }
     if (text.includes("INSERT INTO audit_logs")) {
+      return { rowCount: 1, rows: [] };
+    }
+    if (text.includes("INSERT INTO notifications")) {
       return { rowCount: 1, rows: [] };
     }
     return { rowCount: 0, rows: [] };
@@ -145,12 +174,10 @@ describe("POST /loans funding gate", () => {
     });
     const calls = client.query.mock.calls.map(([sql]: [string]) => String(sql));
     expect(calls).toContain("COMMIT");
-    // Loan creation must move the application to 'approved', NOT 'disbursed'
-    // (a real disbursement row is recorded separately later).
+    // Loan creation moves the application to 'disbursed' with atomic disbursement
     const appUpdate = calls.find((sql) => sql.includes("UPDATE loan_applications"));
     expect(appUpdate).toBeDefined();
-    expect(appUpdate).toContain("'approved'");
-    expect(appUpdate).not.toContain("'disbursed'");
+    expect(appUpdate).toContain("'disbursed'");
   });
 
   it("rejects an application that is already a loan (409 duplicate)", async () => {
